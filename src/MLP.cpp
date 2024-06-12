@@ -214,6 +214,7 @@ void MLP::Train(const std::vector<TrainingSample> &training_sample_set_with_bias
       }
 
       for (size_t j = 0; j < predicted_output.size(); j++) {
+        //TODO AM - Only supports MSE?
         current_iteration_cost_function +=
           (std::pow)((correct_output[j] - predicted_output[j]), 2);
         deriv_error_output[j] =
