@@ -12,10 +12,12 @@
 #include <vector>
 #include <algorithm>
 
+#define EASYLOGGING_ON    0
+#if EASYLOGGING_ON
 #include "easylogging++.h"
+#endif
 
-
-//desired call sintax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
+//desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
 MLP::MLP(const std::vector<uint64_t> & layers_nodes,
          const std::vector<std::string> & layers_activfuncs,
          bool use_constant_weight_init,
@@ -197,6 +199,7 @@ void MLP::Train(const std::vector<TrainingSample> &training_sample_set_with_bias
       assert(correct_output.size() == predicted_output.size());
       std::vector<double> deriv_error_output(predicted_output.size());
 
+#if EASYLOGGING_ON
       if (output_log && ((i % (max_iterations / 10)) == 0)) {
         std::stringstream temp_training;
         temp_training << training_sample_with_bias << "\t\t";
@@ -212,6 +215,7 @@ void MLP::Train(const std::vector<TrainingSample> &training_sample_set_with_bias
         LOG(INFO) << temp_training.str() << std::endl;
 	
       }
+#endif  // EASYLOGGING_ON
 
       for (size_t j = 0; j < predicted_output.size(); j++) {
         //TODO AM - Only supports MSE?
@@ -226,14 +230,22 @@ void MLP::Train(const std::vector<TrainingSample> &training_sample_set_with_bias
                     learning_rate);
     }
 
-
+#if EASYLOGGING_ON
     if (output_log && ((i % (max_iterations / 10)) == 0))
       LOG(INFO) << "Iteration " << i << " cost function f(error): "
       << current_iteration_cost_function << std::endl;
 
-    if (current_iteration_cost_function < min_error_cost)
+#endif  // EASYLOGGING_ON
+
+    // Early stopping
+    // TODO AM early stopping should be optional and metric-dependent
+    if (current_iteration_cost_function < min_error_cost) {
       break;
+    }
+
   }
+
+#if EASYLOGGING_ON
   LOG(INFO) << "Iteration " << i << " cost function f(error): "
     << current_iteration_cost_function  << std::endl;
 
@@ -241,6 +253,7 @@ void MLP::Train(const std::vector<TrainingSample> &training_sample_set_with_bias
   LOG(INFO) << "******* TRAINING ENDED *******" << std::endl;
   LOG(INFO) << "******* " << i << " iters *******" << std::endl;
   LOG(INFO) << "******************************" << std::endl;
+#endif  // EASYLOGGING_ON
 
   //{
   //  int layer_i = -1;

@@ -90,12 +90,15 @@ private:
     AddNewPair("sigmoid", sigmoid, deriv_sigmoid);
     AddNewPair("tanh", hyperbolic_tan, deriv_hyperbolic_tan);
     AddNewPair("linear", linear, deriv_linear);
+    // TODO AM insert RELU
   };
 
   std::unordered_map<std::string,
     std::pair<std::function<double(double)>, std::function<double(double)> > >
     activation_functions_map;
 };
+
+// TODO AM handle loss functions != MSE here
 
 struct gen_rand {
   double factor;

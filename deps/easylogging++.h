@@ -12,7 +12,20 @@ const std::string WARNING = "WARN - ";
 const std::string ERROR = "ERROR - ";
 #endif
 
+class NullBuffer : public std::streambuf
+{
+public:
+  int overflow(int c) { return c; }
+};
+
+NullBuffer null_buffer;
+std::ostream null_stream(&null_buffer);
+
+#if defined(EASYLOGGING_OFF)
+#define LOG(type)   null_stream << type
+#else
 #define LOG(type)   std::cout << type
+#endif  // defined(EASYLOGGING_OFF)
 
 #define INITIALIZE_EASYLOGGINGPP
 
