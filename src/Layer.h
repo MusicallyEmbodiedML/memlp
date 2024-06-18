@@ -125,7 +125,7 @@ public:
 
   void SetWeights( std::vector<std::vector<double>> & weights )
   {
-      if( 0 <= weights.size() && weights.size() <= m_num_nodes )
+      assert(0 <= weights.size() && weights.size() <= m_num_nodes /* Incorrect layer number in SetWeights call */);
       {
           // traverse the list of nodes
           size_t node_i = 0;
@@ -135,8 +135,6 @@ public:
               node_i++;
           }
       }
-      else
-          throw new std::logic_error("Incorrect layer number in SetWeights call");
   };
 
   void SaveLayer(FILE * file) const {

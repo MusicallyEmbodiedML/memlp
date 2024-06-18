@@ -272,7 +272,7 @@ std::vector<std::vector<double>> MLP::GetLayerWeights( size_t layer_i )
 {
     std::vector<std::vector<double>> ret_val;
     // check parameters
-    if( 0 <= layer_i && layer_i < m_layers.size() )
+    assert(0 <= layer_i && layer_i < m_layers.size() /* Incorrect layer number in GetLayerWeights call */);
     {
         Layer current_layer = m_layers[layer_i];
         for( Node & node : current_layer.GetNodesChangeable() )
@@ -281,20 +281,16 @@ std::vector<std::vector<double>> MLP::GetLayerWeights( size_t layer_i )
         }
         return ret_val;
     }
-    else
-        throw new std::logic_error("Incorrect layer number in GetLayerWeights call");
 
 }
 
 void MLP::SetLayerWeights( size_t layer_i, std::vector<std::vector<double>> & weights )
 {
     // check parameters
-    if( 0 <= layer_i && layer_i < m_layers.size() )
+    assert(0 <= layer_i && layer_i < m_layers.size() /* Incorrect layer number in SetLayerWeights call */);
     {
         m_layers[layer_i].SetWeights( weights );
     }
-    else
-        throw new std::logic_error("Incorrect layer number in SetLayerWeights call");
 }
 
 

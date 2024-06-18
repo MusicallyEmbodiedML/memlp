@@ -101,14 +101,14 @@ bool load_data(int *samples,
 
 
 int main(int argc, char *argv[]) {
-  LOG(INFO) << "Train MLP with IRIS dataset using backpropagation.";
+  LOG(INFO) << "Train MLP with IRIS dataset using backpropagation." << std::endl;
   int samples = 0;
   std::vector<double> input;
   std::vector<double> iris_class;
 
   // Load the data from file.
   if (!load_data(&samples, &input, &iris_class)) {
-    LOG(ERROR) << "Error processing input file.";
+    LOG(ERROR) << "Error processing input file." << std::endl;
     return -1;
   }
 
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
     int loops = 5000;
 
     // Train the network with backpropagation.
-    LOG(INFO) << "Training for " << loops << " loops over data.";
+    LOG(INFO) << "Training for " << loops << " loops over data." << std::endl;
     my_mlp.Train(training_sample_set_with_bias, .01, loops, 0.10, false);
 
     my_mlp.SaveMLPNetwork(iris_mlp_weights);
@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
       }
     }
     LOG(INFO) << correct << "/" << samples
-      << " (" << ((double)correct / samples * 100.0) << "%).";
+      << " (" << ((double)correct / samples * 100.0) << "%)." << std::endl;
   }
   return 0;
 }
