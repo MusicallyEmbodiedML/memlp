@@ -265,7 +265,7 @@ UNIT(LearnXOR) {
       FAIL();
     }
   }
-  LOG(INFO) << "Trained with success." << std::endl;  
+  LOG(INFO) << "Trained with success." << std::endl;
 }
 
 int main(int argc, char* argv[]) {

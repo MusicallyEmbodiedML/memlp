@@ -1,0 +1,1 @@
+xcc -std=c++14 -fexceptions -Ideps -o XMOS.xe "C:\Users\virgult\Box\XMOS\sw_usb_audio\app_usb_aud_xk_316_mc\src\core\xk-audio-316-mc.xn" src\MLP.cpp src\MLPTest.cpp

@@ -209,7 +209,7 @@ void MLP::Train(const std::vector<TrainingSample> &training_sample_set_with_bias
         }
         temp_training << "]";
 	
-        LOG(INFO) << temp_training.str();
+        LOG(INFO) << temp_training.str() << std::endl;
 	
       }
 
@@ -229,18 +229,18 @@ void MLP::Train(const std::vector<TrainingSample> &training_sample_set_with_bias
 
     if (output_log && ((i % (max_iterations / 10)) == 0))
       LOG(INFO) << "Iteration " << i << " cost function f(error): "
-      << current_iteration_cost_function;
+      << current_iteration_cost_function << std::endl;
 
     if (current_iteration_cost_function < min_error_cost)
       break;
   }
   LOG(INFO) << "Iteration " << i << " cost function f(error): "
-    << current_iteration_cost_function;
+    << current_iteration_cost_function  << std::endl;
 
-  LOG(INFO) << "******************************";
-  LOG(INFO) << "******* TRAINING ENDED *******";
-  LOG(INFO) << "******* " << i << " iters *******";
-  LOG(INFO) << "******************************";
+  LOG(INFO) << "******************************" << std::endl;
+  LOG(INFO) << "******* TRAINING ENDED *******" << std::endl;
+  LOG(INFO) << "******* " << i << " iters *******" << std::endl;
+  LOG(INFO) << "******************************" << std::endl;
 
   //{
   //  int layer_i = -1;
