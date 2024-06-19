@@ -1,3 +1,13 @@
+# MLP-XMOS
+
+This repo is to support an MLP with back-propagation on the XMOS
+XCore.ai platform. The core code is supposed to be standard-compliant
+C++14. Below is the original README file from the MLP repo.
+
+For queries please contact:
+[Chris Kiefer](https://profiles.sussex.ac.uk/p208667-chris-kiefer)
+[Andrea Martelloni](https://uk.linkedin.com/in/andrea-martelloni-7ab10a60)
+
 
 <img alt="MLP logo" src="logo.png" width="250" align="right" />
 
