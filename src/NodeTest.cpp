@@ -17,16 +17,20 @@
 
 INITIALIZE_EASYLOGGINGPP
 
+
+#define TEST_TYPE    float
+
+
 namespace {
-void Train(Node & node,
-           const std::vector<TrainingSample> &training_sample_set_with_bias,
+void Train(Node<TEST_TYPE> & node,
+           const std::vector<TrainingSample<TEST_TYPE>> &training_sample_set_with_bias,
            double learning_rate,
            int max_iterations,
            bool use_constant_weight_init = true,
            double constant_weight_init = 0.5) {
 
   //initialize weight vector
-  node.WeightInitialization(training_sample_set_with_bias[0].GetInputVectorSize(),
+  node.WeightInitialization(static_cast<int>(training_sample_set_with_bias[0].GetInputVectorSize()),
                             use_constant_weight_init,
                             constant_weight_init);
 
@@ -40,7 +44,7 @@ void Train(Node & node,
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
       bool prediction;
       node.GetBooleanOutput(training_sample_with_bias.input_vector(),
-                            utils::linear,
+                            utils::linear<TEST_TYPE>,
                             &prediction, 
                             0.5);
       bool correct_output = training_sample_with_bias.output_vector()[0] > 0.5 ? true : false;
@@ -65,7 +69,7 @@ void Train(Node & node,
 UNIT(LearnAND) {
   LOG(INFO) << "Train AND function with Node." << std::endl;
 
-  std::vector<TrainingSample> training_set =
+  std::vector<TrainingSample<TEST_TYPE>> training_set =
   {
     { { 0, 0 },{0.0} },
     { { 0, 1 },{0.0} },
@@ -73,7 +77,7 @@ UNIT(LearnAND) {
     { { 1, 1 },{1.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -82,13 +86,13 @@ UNIT(LearnAND) {
   }
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node my_node(num_features);
+  Node<TEST_TYPE> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear,
+                             utils::linear<TEST_TYPE>,
                              &class_id, 
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -100,7 +104,7 @@ UNIT(LearnAND) {
 UNIT(LearnNAND) {
   LOG(INFO) << "Train NAND function with Node." << std::endl;
 
-  std::vector<TrainingSample> training_set =
+  std::vector<TrainingSample<TEST_TYPE>> training_set =
   {
     { { 0, 0 },{1.0} },
     { { 0, 1 },{1.0} },
@@ -108,7 +112,7 @@ UNIT(LearnNAND) {
     { { 1, 1 },{0.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -116,13 +120,13 @@ UNIT(LearnNAND) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node my_node(num_features);
+  Node<TEST_TYPE> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear,
+                             utils::linear<TEST_TYPE>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -134,7 +138,7 @@ UNIT(LearnNAND) {
 UNIT(LearnOR) {
   LOG(INFO) << "Train OR function with Node." << std::endl;
 
-  std::vector<TrainingSample> training_set =
+  std::vector<TrainingSample<TEST_TYPE>> training_set =
   {
     { { 0, 0 },{0.0} },
     { { 0, 1 },{1.0} },
@@ -142,7 +146,7 @@ UNIT(LearnOR) {
     { { 1, 1 },{1.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -150,13 +154,13 @@ UNIT(LearnOR) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node my_node(num_features);
+  Node<TEST_TYPE> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear,
+                             utils::linear<TEST_TYPE>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -167,7 +171,7 @@ UNIT(LearnOR) {
 UNIT(LearnNOR) {
   LOG(INFO) << "Train NOR function with Node." << std::endl;
 
-  std::vector<TrainingSample> training_set =
+  std::vector<TrainingSample<TEST_TYPE>> training_set =
   {
     { { 0, 0 },{1.0} },
     { { 0, 1 },{0.0} },
@@ -175,7 +179,7 @@ UNIT(LearnNOR) {
     { { 1, 1 },{0.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -183,13 +187,13 @@ UNIT(LearnNOR) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node my_node(num_features);
+  Node<TEST_TYPE> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear,
+                             utils::linear<TEST_TYPE>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -201,13 +205,13 @@ UNIT(LearnNOR) {
 UNIT(LearnNOT) {
   LOG(INFO) << "Train NOT function with Node." << std::endl;
 
-  std::vector<TrainingSample> training_set =
+  std::vector<TrainingSample<TEST_TYPE>> training_set =
   {
     { { 0 },{1.0} },
     { { 1 },{0.0}}
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -215,13 +219,13 @@ UNIT(LearnNOT) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node my_node(num_features);
+  Node<TEST_TYPE> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear,
+                             utils::linear<TEST_TYPE>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -233,7 +237,7 @@ UNIT(LearnNOT) {
 UNIT(LearnXOR) {
   LOG(INFO) << "Train XOR function with Node." << std::endl;
 
-  std::vector<TrainingSample> training_set =
+  std::vector<TrainingSample<TEST_TYPE>> training_set =
   {
     { { 0, 0 },{0.0} },
     { { 0, 1 },{1.0} },
@@ -241,7 +245,7 @@ UNIT(LearnXOR) {
     { { 1, 1 },{0.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -249,13 +253,13 @@ UNIT(LearnXOR) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node my_node(num_features);
+  Node<TEST_TYPE> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear,
+                             utils::linear<TEST_TYPE>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;

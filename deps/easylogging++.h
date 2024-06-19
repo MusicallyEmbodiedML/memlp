@@ -12,6 +12,7 @@ const std::string WARNING = "WARN - ";
 const std::string ERROR = "ERROR - ";
 #endif
 
+#if EXPERIMENTAL_NULLBUFFER
 class NullBuffer : public std::streambuf
 {
 public:
@@ -20,8 +21,9 @@ public:
 
 NullBuffer null_buffer;
 std::ostream null_stream(&null_buffer);
+#endif  // EXPERIMENTAL_NULLBUFFER
 
-#if defined(EASYLOGGING_OFF)
+#if EASYLOGGING_OFF && EXPERIMENTAL_NULLBUFFER
 #define LOG(type)   null_stream << type
 #else
 #define LOG(type)   std::cout << type

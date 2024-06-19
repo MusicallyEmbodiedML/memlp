@@ -6,7 +6,6 @@
 #define UTILS_H
 
 #include <stdlib.h>
-#include <math.h>
 #include <numeric>
 #include <chrono>
 #include <string>
@@ -32,39 +31,48 @@
 namespace utils {
 //Typical sigmoid function created from input x
 //Returns the sigmoided value
-inline double sigmoid(double x) {
-  return 1 / (1 + exp(-x));
+template<typename T>
+inline T sigmoid(T x) {
+  return 1 / (1 + std::exp(-x));
 }
 
 // Derivative of sigmoid function
-inline double deriv_sigmoid(double x) {
+template<typename T>
+inline T deriv_sigmoid(T x) {
   return sigmoid(x)*(1 - sigmoid(x));
-};
+}
 
 //Compute hyperbolic tangent (tanh)
 //Returns the hyperbolic tangent of x.
-inline double hyperbolic_tan(double x) {
-  return (tanh)(x);
+template<typename T>
+inline T hyperbolic_tan(T x) {
+    return (std::tanh)(x);
 }
 
 // Derivative of hyperbolic tangent function
-inline double deriv_hyperbolic_tan(double x) {
+template<typename T>
+inline T deriv_hyperbolic_tan(T x) {
   return 1 - (std::pow)(hyperbolic_tan(x), 2);
-};
+}
 
-inline double linear(double x) {
+
+template<typename T>
+inline T linear(T x) {
   return x;
 }
 
 // Derivative of linear function
-inline double deriv_linear(double x) {
-  return 1;
+template<typename T>
+inline T deriv_linear(T x) {
+    return static_cast<T>(1);
 };
 
+
+template<typename T>
 struct ActivationFunctionsManager {
   bool GetActivationFunctionPair(const std::string & activation_name,
-                                    std::pair<std::function<double(double)>,
-                                    std::function<double(double)> > **pair) {
+                                    std::pair<std::function<T(T)>,
+                                    std::function<T(T)> > **pair) {
     auto iter = activation_functions_map.find(activation_name);
     if (iter != activation_functions_map.end())
       *pair = &(iter->second);
@@ -79,43 +87,46 @@ struct ActivationFunctionsManager {
   }
 private:
   void AddNewPair(std::string function_name,
-                  std::function<double(double)> function,
-                  std::function<double(double)> deriv_function) {
+                  std::function<T(T)> function,
+                  std::function<T(T)> deriv_function) {
     activation_functions_map.insert(std::make_pair(function_name,
                                                    std::make_pair(function,
                                                                   deriv_function)));
   };
 
   ActivationFunctionsManager() {
-    AddNewPair("sigmoid", sigmoid, deriv_sigmoid);
-    AddNewPair("tanh", hyperbolic_tan, deriv_hyperbolic_tan);
-    AddNewPair("linear", linear, deriv_linear);
+    AddNewPair("sigmoid", sigmoid<T>, deriv_sigmoid<T>);
+    AddNewPair("tanh", hyperbolic_tan<T>, deriv_hyperbolic_tan<T>);
+    AddNewPair("linear", linear<T>, deriv_linear<T>);
     // TODO AM insert RELU
   };
 
   std::unordered_map<std::string,
-    std::pair<std::function<double(double)>, std::function<double(double)> > >
+    std::pair<std::function<T(T)>, std::function<T(T)> > >
     activation_functions_map;
 };
 
 // TODO AM handle loss functions != MSE here
 
+template<typename T>
 struct gen_rand {
-  double factor;
-  double offset;
+  T factor;
+  T offset;
 public:
-  gen_rand(double r = 2.0) : factor(r / RAND_MAX), offset(r / 2) {}
-  double operator()() {
+  gen_rand(T r = 2.0) : factor(r / RAND_MAX), offset(r / 2) {}
+  T operator()() {
     return rand() * factor - offset;
   }
 };
 
-inline void Softmax(std::vector<double> *output) {
+
+template<typename T>
+inline void Softmax(std::vector<T> *output) {
   size_t num_elements = output->size();
-  std::vector<double> exp_output(num_elements);
-  double exp_total = 0.0;
+  std::vector<T> exp_output(num_elements);
+  T exp_total = 0;
   for (size_t i = 0; i < num_elements; i++) {
-    exp_output[i] = exp((*output)[i]);
+    exp_output[i] = std::exp((*output)[i]);
     exp_total += exp_output[i];
   }
   for (size_t i = 0; i < num_elements; i++) {
@@ -123,10 +134,14 @@ inline void Softmax(std::vector<double> *output) {
   }
 }
 
-inline void  GetIdMaxElement(const std::vector<double> &output, size_t * class_id) {
+
+template<typename T>
+inline void  GetIdMaxElement(const std::vector<T> &output, size_t * class_id) {
   *class_id = std::distance(output.begin(),
                             std::max_element(output.begin(),
                                              output.end()));
 }
-}
+
+}  // namespace utils
+
 #endif // UTILS_H

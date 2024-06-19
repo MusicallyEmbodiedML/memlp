@@ -17,16 +17,18 @@
 
 #define CONSTANT_WEIGHT_INITIALIZATION 0
 
+
+template <typename T>
 class Node {
 public:
   Node() {
     m_num_inputs = 0;
-    m_bias = 0.0;
+    m_bias = 0;
     m_weights.clear();
   };
   Node(int num_inputs,
        bool use_constant_weight_init = true,
-       double constant_weight_init = 0.5) {
+       T constant_weight_init = 0.5) {
     m_num_inputs = num_inputs;
     m_bias = 0.0;
     m_weights.clear();
@@ -44,7 +46,7 @@ public:
 
   void WeightInitialization(int num_inputs,
                             bool use_constant_weight_init = true,
-                            double constant_weight_init = 0.5) {
+                            T constant_weight_init = 0.5) {
     m_num_inputs = num_inputs;
     //initialize weight vector
     if (use_constant_weight_init) {
@@ -53,7 +55,7 @@ public:
       m_weights.resize(m_num_inputs);
       std::generate_n(m_weights.begin(),
                       m_num_inputs,
-                      utils::gen_rand());
+                      utils::gen_rand<T>());
     }
   }
 
@@ -65,22 +67,22 @@ public:
     m_num_inputs = num_inputs;
   }
 
-  double GetBias() const {
+  T GetBias() const {
     return m_bias;
   }
-  void SetBias(double bias) {
+  void SetBias(T bias) {
     m_bias = bias;
   }
 
-  std::vector<double> & GetWeights() {
+  std::vector<T> & GetWeights() {
     return m_weights;
   }
 
-  const std::vector<double> & GetWeights() const {
+  const std::vector<T> & GetWeights() const {
     return m_weights;
   }
 
-  void SetWeights( std::vector<double> & weights ){
+  void SetWeights( std::vector<T> & weights ){
       // check size of the weights vector
       assert(weights.size() == m_num_inputs);
       m_weights = weights;
@@ -90,45 +92,45 @@ public:
     return m_weights.size();
   }
 
-  void GetInputInnerProdWithWeights(const std::vector<double> &input,
-                                    double * output) const {
+  void GetInputInnerProdWithWeights(const std::vector<T> &input,
+                                    T * output) const {
     assert(input.size() == m_weights.size());
-    double inner_prod = std::inner_product(begin(input),
+    T inner_prod = std::inner_product(begin(input),
                                            end(input),
                                            begin(m_weights),
                                            0.0);
     *output = inner_prod;
   }
 
-  void GetOutputAfterActivationFunction(const std::vector<double> &input,
-                                        std::function<double(double)> activation_function,
-                                        double * output) const {
-    double inner_prod = 0.0;
+  void GetOutputAfterActivationFunction(const std::vector<T> &input,
+                                        std::function<T(T)> activation_function,
+                                        T * output) const {
+    T inner_prod = 0.0;
     GetInputInnerProdWithWeights(input, &inner_prod);
     *output = activation_function(inner_prod);
   }
 
-  void GetBooleanOutput(const std::vector<double> &input,
-                        std::function<double(double)> activation_function,
+  void GetBooleanOutput(const std::vector<T> &input,
+                        std::function<T(T)> activation_function,
                         bool * bool_output,
-                        double threshold = 0.5) const {
-    double value;
+                        T threshold = 0.5) const {
+    T value;
     GetOutputAfterActivationFunction(input, activation_function, &value);
     *bool_output = (value > threshold) ? true : false;
   };
 
-  void UpdateWeights(const std::vector<double> &x,
-                     double error,
-                     double learning_rate) {
+  void UpdateWeights(const std::vector<T> &x,
+                     T error,
+                     T learning_rate) {
     assert(x.size() == m_weights.size());
     for (size_t i = 0; i < m_weights.size(); i++)
       m_weights[i] += x[i] * learning_rate *  error;
   };
 
   void UpdateWeight(int weight_id,
-                    double increment,
-                    double learning_rate) {
-    m_weights[weight_id] += learning_rate*increment;
+                    float increment,
+                    float learning_rate) {
+    m_weights[weight_id] += static_cast<T>(learning_rate*increment);
   }
 
   void SaveNode(FILE * file) const {
@@ -147,8 +149,8 @@ public:
 
 protected:
   size_t m_num_inputs{ 0 };
-  double m_bias{ 0.0 };
-  std::vector<double> m_weights;
+  T m_bias{ 0.0 };
+  std::vector<T> m_weights;
 };
 
 #endif //NODE_H

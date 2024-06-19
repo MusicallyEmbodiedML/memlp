@@ -17,6 +17,10 @@
 INITIALIZE_EASYLOGGINGPP
 
 
+// TODO AM support float in Iris dataset vectors
+#define TEST_TYPE    double
+
+
 // Example illustrating practical use of this MLP lib.
 // Disclaimer: This is NOT an example of good machine learning practices
 //              regarding training/testing dataset partitioning.
@@ -112,10 +116,10 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  std::vector<TrainingSample> training_set;
+  std::vector<TrainingSample<TEST_TYPE>> training_set;
   for (int j = 0; j < samples; ++j) {
-    std::vector<double> training_set_input;
-    std::vector<double> training_set_output;
+    std::vector<TEST_TYPE> training_set_input;
+    std::vector<TEST_TYPE> training_set_output;
     training_set_input.reserve(4);
     for (int i = 0; i < 4; i++)
       training_set_input.push_back(*(&(input[0]) + j * 4 + i));
@@ -125,7 +129,7 @@ int main(int argc, char *argv[]) {
     training_set.emplace_back(std::move(training_set_input),
       std::move(training_set_output));
   }
-  std::vector<TrainingSample> training_sample_set_with_bias(std::move(training_set));
+  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(std::move(training_set));
   //set up bias
   for (auto & training_sample_with_bias : training_sample_set_with_bias) {
     training_sample_with_bias.AddBiasValue(1);
@@ -135,23 +139,23 @@ int main(int argc, char *argv[]) {
     // 4 inputs + 1 bias.
     // 1 hidden layer(s) of 4 neurons.
     // 3 outputs (1 per iris_class)
-    MLP my_mlp({ 4 + 1, 4 ,3 }, { "sigmoid", "linear" }, false);
+    MLP<TEST_TYPE> my_mlp({ 4 + 1, 4 ,3 }, { "sigmoid", "linear" }, false);
 
     int loops = 5000;
 
     // Train the network with backpropagation.
     LOG(INFO) << "Training for " << loops << " loops over data." << std::endl;
-    my_mlp.Train(training_sample_set_with_bias, .01, loops, 0.10, false);
+    my_mlp.Train(training_sample_set_with_bias, .01f, loops, 0.10f, false);
 
     my_mlp.SaveMLPNetwork(iris_mlp_weights);
   }
   //Destruction/Construction of a MLP object to show off saving and loading a trained model
   {
-    MLP my_mlp(iris_mlp_weights);
+    MLP<TEST_TYPE> my_mlp(iris_mlp_weights);
 
     int correct = 0;
     for (int j = 0; j < samples; ++j) {
-      std::vector<double> guess;
+      std::vector<TEST_TYPE> guess;
       my_mlp.GetOutput(training_sample_set_with_bias[j].input_vector(), &guess);
       size_t class_id;
       my_mlp.GetOutputClass(guess, &class_id);

@@ -16,6 +16,7 @@
 #include "Node.h"
 #include "Utils.h"
 
+template<typename T>
 class Layer {
 public:
   Layer() {
@@ -27,7 +28,7 @@ public:
         int num_nodes,
         const std::string & activation_function,
         bool use_constant_weight_init = true,
-        double constant_weight_init = 0.5) {
+        T constant_weight_init = 0.5) {
     m_num_inputs_per_node = num_inputs_per_node;
     m_num_nodes = num_nodes;
     m_nodes.resize(num_nodes);
@@ -38,9 +39,9 @@ public:
                                       constant_weight_init);
     }
 
-    std::pair<std::function<double(double)>,
-      std::function<double(double)> > *pair;
-    bool ret_val = utils::ActivationFunctionsManager::Singleton().
+    std::pair<std::function<T(T)>,
+      std::function<T(T)> > *pair;
+    bool ret_val = utils::ActivationFunctionsManager<T>::Singleton().
       GetActivationFunctionPair(activation_function,
                                 &pair);
     assert(ret_val);
@@ -63,20 +64,20 @@ public:
     return m_num_nodes;
   };
 
-  const std::vector<Node> & GetNodes() const {
+  const std::vector<Node<T>> & GetNodes() const {
     return m_nodes;
   }
 
   /**
    * Return the internal list of nodes, but modifiable.
    */
-  std::vector<Node> & GetNodesChangeable() {
+  std::vector<Node<T>> & GetNodesChangeable() {
     return m_nodes;
   }
 
 
-  void GetOutputAfterActivationFunction(const std::vector<double> &input,
-                                        std::vector<double> * output) const {
+  void GetOutputAfterActivationFunction(const std::vector<T> &input,
+                                        std::vector<T> * output) const {
     assert(input.size() == m_num_inputs_per_node);
 
     output->resize(m_num_nodes);
@@ -88,24 +89,24 @@ public:
     }
   }
 
-  void UpdateWeights(const std::vector<double> &input_layer_activation,
-                     const std::vector<double> &deriv_error,
-                     double m_learning_rate,
-                     std::vector<double> * deltas) {
+  void UpdateWeights(const std::vector<T> &input_layer_activation,
+                     const std::vector<T> &deriv_error,
+                     float m_learning_rate,
+                     std::vector<T> * deltas) {
     assert(input_layer_activation.size() == m_num_inputs_per_node);
     assert(deriv_error.size() == m_nodes.size());
 
     deltas->resize(m_num_inputs_per_node, 0);
 
     for (size_t i = 0; i < m_nodes.size(); i++) {
-      double net_sum;
+      T net_sum;
       m_nodes[i].GetInputInnerProdWithWeights(input_layer_activation,
                                               &net_sum);
 
       //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
-      double dE_doj = 0.0;
-      double doj_dnetj = 0.0;
-      double dnetj_dwij = 0.0;
+      T dE_doj = 0;
+      T doj_dnetj = 0;
+      T dnetj_dwij = 0;
 
       dE_doj = deriv_error[i];
       doj_dnetj = m_deriv_activation_function(net_sum);
@@ -123,13 +124,13 @@ public:
   };
 
 
-  void SetWeights( std::vector<std::vector<double>> & weights )
+  void SetWeights( std::vector<std::vector<T>> & weights )
   {
       assert(0 <= weights.size() && weights.size() <= m_num_nodes /* Incorrect layer number in SetWeights call */);
       {
           // traverse the list of nodes
           size_t node_i = 0;
-          for( Node & node : m_nodes )
+          for( Node<T> & node : m_nodes )
           {
               node.SetWeights( weights[node_i] );
               node_i++;
@@ -160,9 +161,9 @@ public:
     m_activation_function_str.resize(str_size);
     fread(&(m_activation_function_str[0]), sizeof(char), str_size, file);
 
-    std::pair<std::function<double(double)>,
-      std::function<double(double)> > *pair;
-    bool ret_val = utils::ActivationFunctionsManager::Singleton().
+    std::pair<std::function<T(T)>,
+      std::function<T(T)> > *pair;
+    bool ret_val = utils::ActivationFunctionsManager<T>::Singleton().
       GetActivationFunctionPair(m_activation_function_str,
                                 &pair);
     assert(ret_val);
@@ -179,11 +180,11 @@ public:
 protected:
   size_t m_num_inputs_per_node{ 0 };
   size_t m_num_nodes{ 0 };
-  std::vector<Node> m_nodes;
+  std::vector<Node<T>> m_nodes;
 
   std::string m_activation_function_str;
-  std::function<double(double)>  m_activation_function;
-  std::function<double(double)>  m_deriv_activation_function;
+  std::function<T(T)>  m_activation_function;
+  std::function<T(T)>  m_deriv_activation_function;
 };
 
 #endif //LAYER_H
