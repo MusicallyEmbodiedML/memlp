@@ -1,6 +1,6 @@
 #!/bin/bash
 # Makefile for MLP
-CC = xcc
+CC = g++
 DEBUG = -g3
 PROJNAME = mlp
 
