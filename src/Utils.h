@@ -28,16 +28,29 @@
 #include <sys/time.h>
 #endif
 
+#if defined(__XS3A__)
+
+#define MLP_ACTIVATION_FN __attribute__(( fptrgroup("mlp_activation") ))
+
+#else
+
+#warning PC compiler definitions enabled - check this is OK
+#define MLP_ACTIVATION_FN
+
+#endif
+
 namespace utils {
 //Typical sigmoid function created from input x
 //Returns the sigmoided value
 template<typename T>
+MLP_ACTIVATION_FN
 inline T sigmoid(T x) {
   return 1 / (1 + std::exp(-x));
 }
 
 // Derivative of sigmoid function
 template<typename T>
+MLP_ACTIVATION_FN
 inline T deriv_sigmoid(T x) {
   return sigmoid(x)*(1 - sigmoid(x));
 }
@@ -45,24 +58,28 @@ inline T deriv_sigmoid(T x) {
 //Compute hyperbolic tangent (tanh)
 //Returns the hyperbolic tangent of x.
 template<typename T>
+MLP_ACTIVATION_FN
 inline T hyperbolic_tan(T x) {
     return (std::tanh)(x);
 }
 
 // Derivative of hyperbolic tangent function
 template<typename T>
+MLP_ACTIVATION_FN
 inline T deriv_hyperbolic_tan(T x) {
   return 1 - (std::pow)(hyperbolic_tan(x), 2);
 }
 
-
+// Linear function
 template<typename T>
+MLP_ACTIVATION_FN
 inline T linear(T x) {
   return x;
 }
 
 // Derivative of linear function
 template<typename T>
+MLP_ACTIVATION_FN
 inline T deriv_linear(T x) {
     return static_cast<T>(1);
 };
@@ -87,8 +104,8 @@ struct ActivationFunctionsManager {
   }
 private:
   void AddNewPair(std::string function_name,
-                  std::function<T(T)> function,
-                  std::function<T(T)> deriv_function) {
+                  MLP_ACTIVATION_FN std::function<T(T)> function,
+                  MLP_ACTIVATION_FN std::function<T(T)> deriv_function) {
     activation_functions_map.insert(std::make_pair(function_name,
                                                    std::make_pair(function,
                                                                   deriv_function)));
@@ -121,6 +138,7 @@ public:
 
 
 template<typename T>
+MLP_ACTIVATION_FN
 inline void Softmax(std::vector<T> *output) {
   size_t num_elements = output->size();
   std::vector<T> exp_output(num_elements);
@@ -136,7 +154,8 @@ inline void Softmax(std::vector<T> *output) {
 
 
 template<typename T>
-inline void  GetIdMaxElement(const std::vector<T> &output, size_t * class_id) {
+MLP_ACTIVATION_FN
+inline void GetIdMaxElement(const std::vector<T> &output, size_t * class_id) {
   *class_id = std::distance(output.begin(),
                             std::max_element(output.begin(),
                                              output.end()));
