@@ -16,7 +16,6 @@
 #include <unordered_map>
 #include <vector>
 #include <cmath>
-#include <functional>
 #include <typeinfo>
 #include <typeindex>
 #include <cassert>
@@ -34,7 +33,7 @@
 
 #else
 
-#warning PC compiler definitions enabled - check this is OK
+#pragma message ( "PC compiler definitions enabled - check this is OK" )
 #define MLP_ACTIVATION_FN
 
 #endif
@@ -85,11 +84,16 @@ inline T deriv_linear(T x) {
 };
 
 
+// Definition of activation function pointer
+template<typename T>
+using activation_func_t = T(*)(T);
+
+
 template<typename T>
 struct ActivationFunctionsManager {
   bool GetActivationFunctionPair(const std::string & activation_name,
-                                    std::pair<std::function<T(T)>,
-                                    std::function<T(T)> > **pair) {
+                                    std::pair<activation_func_t<T>,
+                                    activation_func_t<T>> **pair) {
     auto iter = activation_functions_map.find(activation_name);
     if (iter != activation_functions_map.end())
       *pair = &(iter->second);
@@ -104,23 +108,24 @@ struct ActivationFunctionsManager {
   }
 private:
   void AddNewPair(std::string function_name,
-                  MLP_ACTIVATION_FN std::function<T(T)> function,
-                  MLP_ACTIVATION_FN std::function<T(T)> deriv_function) {
+                  activation_func_t<T> function,
+                  activation_func_t<T> deriv_function) {
     activation_functions_map.insert(std::make_pair(function_name,
                                                    std::make_pair(function,
                                                                   deriv_function)));
   };
 
   ActivationFunctionsManager() {
-    AddNewPair("sigmoid", sigmoid<T>, deriv_sigmoid<T>);
-    AddNewPair("tanh", hyperbolic_tan<T>, deriv_hyperbolic_tan<T>);
-    AddNewPair("linear", linear<T>, deriv_linear<T>);
+    AddNewPair("sigmoid", &sigmoid<T>, &deriv_sigmoid<T>);
+    AddNewPair("tanh", &hyperbolic_tan<T>, &deriv_hyperbolic_tan<T>);
+    AddNewPair("linear", &linear<T>, &deriv_linear<T>);
     // TODO AM insert RELU
   };
 
-  std::unordered_map<std::string,
-    std::pair<std::function<T(T)>, std::function<T(T)> > >
-    activation_functions_map;
+  std::unordered_map<
+    std::string,
+    std::pair< activation_func_t<T>, activation_func_t<T> >
+  > activation_functions_map;
 };
 
 // TODO AM handle loss functions != MSE here

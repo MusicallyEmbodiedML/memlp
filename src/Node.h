@@ -18,6 +18,11 @@
 #define CONSTANT_WEIGHT_INITIALIZATION 0
 
 
+// Definition of activation function pointer
+template<typename T>
+using activation_func_t = T(*)(T);
+
+
 template <typename T>
 class Node {
 public:
@@ -98,12 +103,12 @@ public:
     T inner_prod = std::inner_product(begin(input),
                                            end(input),
                                            begin(m_weights),
-                                           0.0);
+                                           0);
     *output = inner_prod;
   }
 
   void GetOutputAfterActivationFunction(const std::vector<T> &input,
-                                        std::function<T(T)> activation_function,
+                                        MLP_ACTIVATION_FN activation_func_t<T> activation_function,
                                         T * output) const {
     T inner_prod = 0.0;
     GetInputInnerProdWithWeights(input, &inner_prod);
@@ -111,7 +116,7 @@ public:
   }
 
   void GetBooleanOutput(const std::vector<T> &input,
-                        std::function<T(T)> activation_function,
+                        MLP_ACTIVATION_FN activation_func_t<T> activation_function,
                         bool * bool_output,
                         T threshold = 0.5) const {
     T value;

@@ -16,6 +16,12 @@
 #include "Node.h"
 #include "Utils.h"
 
+
+// Definition of activation function pointer
+template<typename T>
+using activation_func_t = T(*)(T);
+
+
 template<typename T>
 class Layer {
 public:
@@ -39,8 +45,8 @@ public:
                                       constant_weight_init);
     }
 
-    std::pair<std::function<T(T)>,
-      std::function<T(T)> > *pair;
+    std::pair<activation_func_t<T>,
+        activation_func_t<T> > *pair;
     bool ret_val = utils::ActivationFunctionsManager<T>::Singleton().
       GetActivationFunctionPair(activation_function,
                                 &pair);
@@ -117,7 +123,7 @@ public:
         dnetj_dwij = input_layer_activation[j];
 
         m_nodes[i].UpdateWeight(j,
-                                -(dE_doj * doj_dnetj * dnetj_dwij),
+                                static_cast<float>( -(dE_doj * doj_dnetj * dnetj_dwij) ),
                                 m_learning_rate);
       }
     }
@@ -161,8 +167,8 @@ public:
     m_activation_function_str.resize(str_size);
     fread(&(m_activation_function_str[0]), sizeof(char), str_size, file);
 
-    std::pair<std::function<T(T)>,
-      std::function<T(T)> > *pair;
+    std::pair<activation_func_t<T>,
+        activation_func_t<T> > *pair;
     bool ret_val = utils::ActivationFunctionsManager<T>::Singleton().
       GetActivationFunctionPair(m_activation_function_str,
                                 &pair);
@@ -183,8 +189,8 @@ protected:
   std::vector<Node<T>> m_nodes;
 
   std::string m_activation_function_str;
-  std::function<T(T)>  m_activation_function;
-  std::function<T(T)>  m_deriv_activation_function;
+  MLP_ACTIVATION_FN activation_func_t<T> m_activation_function;
+  MLP_ACTIVATION_FN activation_func_t<T> m_deriv_activation_function;
 };
 
 #endif //LAYER_H
