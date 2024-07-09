@@ -84,6 +84,22 @@ inline T deriv_linear(T x) {
 };
 
 
+// ReLU function
+template<typename T>
+MLP_ACTIVATION_FN
+inline T relu(T x) {
+    return (x > 0) ? x : 0;
+}
+
+
+// Derivative of ReLU function
+template<typename T>
+MLP_ACTIVATION_FN
+inline T deriv_relu(T x) {
+    return (x > 0) ? 1 : 0;
+}
+
+
 // Definition of activation function pointer
 template<typename T>
 using activation_func_t = T(*)(T);
@@ -119,7 +135,7 @@ private:
     AddNewPair("sigmoid", &sigmoid<T>, &deriv_sigmoid<T>);
     AddNewPair("tanh", &hyperbolic_tan<T>, &deriv_hyperbolic_tan<T>);
     AddNewPair("linear", &linear<T>, &deriv_linear<T>);
-    // TODO AM insert RELU
+    AddNewPair("relu", &relu<T>, &deriv_relu<T>);
   };
 
   std::unordered_map<

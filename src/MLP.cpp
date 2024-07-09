@@ -12,7 +12,7 @@
 #include <vector>
 #include <algorithm>
 
-#define EASYLOGGING_ON    0
+#define EASYLOGGING_ON    1
 #if EASYLOGGING_ON
 #include "easylogging++.h"
 #endif
@@ -296,6 +296,92 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
   //  }
   //}
 };
+
+
+
+template<typename T>
+void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
+    float learning_rate,
+    int max_iterations,
+    float min_error_cost,
+    bool output_log) {
+
+    int i = 0;
+    float current_iteration_cost_function = 0.f;
+
+    for (i = 0; i < max_iterations; i++) {
+        current_iteration_cost_function = 0.f;
+
+        auto training_features = training_sample_set_with_bias.first;
+        auto training_labels = training_sample_set_with_bias.second;
+        auto t_feat = training_features.begin();
+        auto t_label = training_labels.begin();
+
+        while (t_feat != training_features.end() || t_label != training_labels.end()) {
+
+            // Payload
+            std::vector<T> predicted_output;
+            std::vector< std::vector<T> > all_layers_activations;
+
+            GetOutput({*t_feat},
+                &predicted_output,
+                &all_layers_activations);
+
+            const std::vector<T>& correct_output{ *t_label };
+
+            assert(correct_output.size() == predicted_output.size());
+            std::vector<T> deriv_error_output(predicted_output.size());
+
+            for (size_t j = 0; j < predicted_output.size(); j++) {
+                //TODO AM - Only supports MSE?
+                current_iteration_cost_function += static_cast<float>(
+                    (std::pow)((correct_output[j] - predicted_output[j]), 2)
+                    );
+                deriv_error_output[j] =
+                    -2 * (correct_output[j] - predicted_output[j]);
+            }
+
+            UpdateWeights(all_layers_activations,
+                deriv_error_output,
+                learning_rate);
+
+            // \Payload
+            if (t_feat != training_features.end())
+            {
+                ++t_feat;
+    }
+            if (t_label != training_labels.end())
+            {
+                ++t_label;
+            }
+        }
+
+#if EASYLOGGING_ON
+        if (output_log /*&& ((i % (max_iterations / 10)) == 0)*/)
+            LOG(INFO) << "Iteration " << i << " cost function f(error): "
+            << current_iteration_cost_function << std::endl;
+
+#endif  // EASYLOGGING_ON
+
+        // Early stopping
+        // TODO AM early stopping should be optional and metric-dependent
+        if (current_iteration_cost_function < min_error_cost) {
+            break;
+        }
+
+    }
+
+#if EASYLOGGING_ON
+    LOG(INFO) << "Iteration " << i << " cost function f(error): "
+        << current_iteration_cost_function << std::endl;
+
+    LOG(INFO) << "******************************" << std::endl;
+    LOG(INFO) << "******* TRAINING ENDED *******" << std::endl;
+    LOG(INFO) << "******* " << i << " iters *******" << std::endl;
+    LOG(INFO) << "******************************" << std::endl;
+#endif  // EASYLOGGING_ON
+};
+
 
 
 template<typename T>

@@ -21,6 +21,7 @@
 template<typename T>
 class MLP {
 public:
+    using training_pair_t = std::pair< std::vector<T>, std::vector<T> >;
   //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
   MLP(const std::vector<uint64_t> & layers_nodes,
       const std::vector<std::string> & layers_activfuncs,
@@ -42,6 +43,13 @@ public:
                        int max_iterations = 5000,
                        float min_error_cost = 0.001,
                        bool output_log = true);
+
+  void Train(const training_pair_t& training_sample_set_with_bias,
+             float learning_rate,
+             int max_iterations = 5000,
+             float min_error_cost = 0.001,
+             bool output_log = true);
+
   size_t GetNumLayers();
   std::vector<std::vector<T>> GetLayerWeights( size_t layer_i );
   void SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weights );

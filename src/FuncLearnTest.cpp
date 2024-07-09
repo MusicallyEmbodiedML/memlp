@@ -4,6 +4,9 @@
 #include <utility>
 #include <memory>
 
+#include "MLP.h"
+#include "Utils.h"
+
 
 #define number_t    float
 
@@ -125,22 +128,73 @@ FuncLearnDataset::FuncLearnDataset(number_t lower_point,
 }
 
 
+class FuncLearnRunner {
+
+public:
+
+    void MakeData(const unsigned int n_examples);
+    void MakeModel(void);
+    void TrainModel(const unsigned int n_epochs);
+
+protected:
+
+    unsigned int n_examples_;
+    std::shared_ptr<pair_of_vectors> training_set_;
+    std::shared_ptr<pair_of_vectors> validation_set_;
+    std::unique_ptr< MLP<number_t> > mlp_;
+};
 
 
-int main(int argc, char* argv[]) {
-    
-    const unsigned int n_examples = 500;
+void FuncLearnRunner::MakeData(const unsigned int n_examples)
+{
+    n_examples_ = n_examples;
 
     auto dataset = std::make_unique<FuncLearnDataset>(
         -5.f,
         5.f,
         n_examples,
-        static_cast<unsigned int>(n_examples/100.*23.),
+        static_cast<unsigned int>(n_examples / 100. * 23.),
         &groundtruth_fn
     );
 
-    auto training_set = dataset->training();
-    auto validation_set = dataset->validation();
+    training_set_ = dataset->training();
+    validation_set_ = dataset->validation();
+}
+
+
+void FuncLearnRunner::MakeModel()
+{
+    const std::vector<uint64_t> layers_nodes = {
+        1, 4, 4, 1
+    };
+    const std::vector<std::string> layers_activfuncs = {
+        "relu", "relu", "tanh"
+    };
+    bool use_constant_weight_init = false;
+    number_t constant_weight_init = 0.5;
+    mlp_ = std::make_unique< MLP<number_t> >(layers_nodes,
+                                             layers_activfuncs,
+                                             use_constant_weight_init,
+                                             constant_weight_init);
+}
+
+
+void FuncLearnRunner::TrainModel(const unsigned int n_epochs)
+{
+    mlp_->Train(*training_set_, .001f, n_epochs, 0.10f, true);
+}
+
+
+int main(int argc, char* argv[]) {
+    
+    const unsigned int n_examples = 500;
+    const unsigned int n_epochs = 500;
+    
+    FuncLearnRunner runner;
+    runner.MakeData(n_examples);
+    runner.MakeModel();
+    runner.TrainModel(n_epochs);
+
 
     LOG(INFO) << "Test completed." << std::endl;
 }
