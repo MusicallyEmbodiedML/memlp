@@ -10,9 +10,16 @@
 
 #define number_t    float
 
+#if defined(__XS3A__)
+#define FUNCLEARNTEST_C_FN __attribute__(( fptrgroup("funclearntest") ))
+#else
+#define FUNCLEARNTEST_C_FN
+#endif
+
 /**
  * Public functions
  */
+FUNCLEARNTEST_C_FN
 void groundtruth_fn(std::vector<number_t>& x, std::vector<number_t>& y);
 std::vector<number_t> arange(number_t start, number_t stop, number_t step);
 
@@ -70,13 +77,9 @@ protected:
 /**
  * C wrapper interface
  */
-#if defined(__XS3A__)
-#define FUNCLEARNTEST_C_FN __attribute__(( fptrgroup("funclearntest") ))
-#else
-#define FUNCLEARNTEST_C_FN
-#endif
 
-extern "C" {
+extern "C"
+{
     void funclearntest_main(void);
 }
 

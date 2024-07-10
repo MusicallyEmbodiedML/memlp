@@ -5,13 +5,14 @@
 #include "Utils.h"
 
 
+FUNCLEARNTEST_C_FN
 void groundtruth_fn(
     std::vector<number_t>& x,
     std::vector<number_t>& y)
 {
     static const number_t x_shift = 1.f, y_shift = 0.f;
 
-    assert(x.size == y.size);
+    assert(x.size() == y.size());
     
     // Iterate through the two vectors at the same time
     auto x_n = x.begin();
@@ -67,6 +68,7 @@ FuncLearnDataset::FuncLearnDataset(number_t lower_point,
                                    number_t upper_point,
                                    unsigned int training_points,
                                    unsigned int validation_points,
+                                   FUNCLEARNTEST_C_FN
                                    groundtruth_fn_t groundtruth_fn_ptr) :
     training_points_(training_points),
     validation_points_(validation_points),
@@ -134,9 +136,9 @@ void funclearntest_main()
     const unsigned int n_examples = 500;
     const unsigned int n_epochs = 500;
 
-    LOG(INFO) << std::endl << "-------------------------" << std::endl;
-    LOG(INFO) << std::endl << "--- FuncLearnTest run ---" << std::endl;
-    LOG(INFO) << std::endl << "-------------------------" << std::endl;
+    LOG(INFO) << "-------------------------" << std::endl;
+    LOG(INFO) << "--- FuncLearnTest run ---" << std::endl;
+    LOG(INFO) << "-------------------------" << std::endl;
 
     FuncLearnRunner runner;
     runner.MakeData(n_examples);
@@ -148,8 +150,12 @@ void funclearntest_main()
 }
 
 
+#if defined(FUNCLEARN_MAIN)
+
 int main(int argc, char* argv[])
 {
     funclearntest_main();
     return 0;
 }
+
+#endif  // defined(FUNCLEARN_MAIN)
