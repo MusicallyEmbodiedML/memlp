@@ -5,11 +5,6 @@
 #ifndef LAYER_H
 #define LAYER_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <sstream>
-#include <fstream>
 #include <vector>
 #include <algorithm>
 #include <cassert> // for assert()

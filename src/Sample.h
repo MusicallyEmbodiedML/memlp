@@ -5,9 +5,12 @@
 #ifndef TRAININGSAMPLE_H
 #define TRAININGSAMPLE_H
 
-#include <iostream>
 #include <stdlib.h>
 #include <vector>
+
+#if defined(MLP_DEBUG_BUILD)
+#include <iostream>
+#endif
 
 template<typename T>
 class Sample {
@@ -30,6 +33,7 @@ public:
     return stream;
   };
 protected:
+#if defined(MLP_DEBUG_BUILD)
   virtual void PrintMyself(std::ostream& stream) const {
     stream << "Input vector: [";
     for (size_t i = 0; i < m_input_vector.size(); i++) {
@@ -39,6 +43,7 @@ protected:
     }
     stream << "]";
   }
+#endif
 
   std::vector<T> m_input_vector;
 };
@@ -62,6 +67,8 @@ public:
   }
 
 protected:
+
+#if defined(MLP_DEBUG_BUILD)
   virtual void PrintMyself(std::ostream& stream) const {
     stream << "Input vector: [";
     for (size_t i = 0; i < m_input_vector.size(); i++) {
@@ -81,6 +88,7 @@ protected:
     }
     stream << "]";
   }
+#endif
 
   std::vector<T> m_output_vector;
 };

@@ -5,15 +5,12 @@
 #ifndef NODE_H
 #define NODE_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <vector>
-#include <algorithm>
-#include <cassert> // for assert()
 #include "Utils.h"
+
+#include <vector>
+#include <cassert> // for assert()
+#include <numeric>
+#include <algorithm>
 
 #define CONSTANT_WEIGHT_INITIALIZATION 0
 

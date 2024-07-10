@@ -1,8 +1,8 @@
 #include "FuncLearnTest.hpp"
-
-#include "easylogging++.h"
-
 #include "Utils.h"
+#if defined(MLP_VERBOSE)
+#include <stdio.h>
+#endif
 
 
 FUNCLEARNTEST_C_FN
@@ -131,22 +131,25 @@ void FuncLearnRunner::TrainModel(const unsigned int n_epochs)
 }
 
 
+FUNCLEARNTEST_C_FN
 void funclearntest_main()
 {
     const unsigned int n_examples = 500;
     const unsigned int n_epochs = 500;
-
-    LOG(INFO) << "-------------------------" << std::endl;
-    LOG(INFO) << "--- FuncLearnTest run ---" << std::endl;
-    LOG(INFO) << "-------------------------" << std::endl;
+#if defined(MLP_VERBOSE)
+    printf("-------------------------\n");
+    printf("--- FuncLearnTest run ---\n");
+    printf("-------------------------\n");
+#endif
 
     FuncLearnRunner runner;
     runner.MakeData(n_examples);
     runner.MakeModel();
     runner.TrainModel(n_epochs);
 
-
-    LOG(INFO) << std::endl << "--- FuncLearnTest completed. ---" << std::endl;
+#if defined(MLP_VERBOSE)
+    printf("--- FuncLearnTest completed. ---\n");
+#endif
 }
 
 

@@ -4,18 +4,18 @@
 //============================================================================
 #include "MLP.h"
 
-#include <stdio.h>
+
 #include <stdlib.h>
-#include <iostream>
 #include <sstream>
 #include <fstream>
 #include <vector>
 #include <algorithm>
 
-#define EASYLOGGING_ON    1
-#if EASYLOGGING_ON
-#include "easylogging++.h"
+
+#if defined(MLP_VERBOSE)
+#include <stdio.h>
 #endif
+
 
 //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
 template<typename T>
@@ -66,6 +66,36 @@ void MLP<T>::CreateMLP(const std::vector<uint64_t> & layers_nodes,
                                    use_constant_weight_init,
                                    constant_weight_init));
   }
+}
+
+
+template<typename T>
+void MLP<T>::ReportProgress(const bool output_log,
+    const unsigned int every_n_iter,
+    const unsigned int i,
+    const float current_iteration_cost_function)
+{
+#if defined(MLP_VERBOSE)
+    if (output_log && ((i % every_n_iter) == 0)) {
+        printf("Iteration %i cost function f(error): %f\n",
+                i, current_iteration_cost_function);
+    }
+#endif
+}
+
+
+template<typename T>
+void MLP<T>::ReportFinish(const unsigned int i, const float current_iteration_cost_function)
+{
+#if defined(MLP_VERBOSE)
+    printf("Iteration %i cost function f(error): %f\n",
+        i, current_iteration_cost_function);
+
+    printf("******************************\n");
+    printf("******* TRAINING ENDED *******\n");
+    printf("******* %d iters *******\n", i);
+    printf("******************************\n");;
+#endif
 };
 
 
@@ -220,24 +250,6 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
       assert(correct_output.size() == predicted_output.size());
       std::vector<T> deriv_error_output(predicted_output.size());
 
-#if EASYLOGGING_ON
-      if (output_log && ((i % (max_iterations / 10)) == 0)) {
-        std::stringstream temp_training;
-        temp_training << training_sample_with_bias << "\t\t";
-
-        temp_training << "Predicted output: [";
-        for (size_t i = 0; i < predicted_output.size(); i++) {
-          if (i != 0)
-            temp_training << ", ";
-          temp_training << predicted_output[i];
-        }
-        temp_training << "]";
-	
-        LOG(INFO) << temp_training.str() << std::endl;
-	
-      }
-#endif  // EASYLOGGING_ON
-
       for (size_t j = 0; j < predicted_output.size(); j++) {
           //TODO AM - Only supports MSE?
           current_iteration_cost_function += static_cast<float>(
@@ -252,10 +264,8 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
                     learning_rate);
     }
 
-#if EASYLOGGING_ON
-    if (output_log && ((i % (max_iterations / 10)) == 0))
-      LOG(INFO) << "Iteration " << i << " cost function f(error): "
-      << current_iteration_cost_function << std::endl;
+#if defined(MLP_VERBOSE)
+    ReportProgress(output_log, 1, i, current_iteration_cost_function);
 
 #endif  // EASYLOGGING_ON
 
@@ -267,14 +277,8 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
 
   }
 
-#if EASYLOGGING_ON
-  LOG(INFO) << "Iteration " << i << " cost function f(error): "
-    << current_iteration_cost_function  << std::endl;
-
-  LOG(INFO) << "******************************" << std::endl;
-  LOG(INFO) << "******* TRAINING ENDED *******" << std::endl;
-  LOG(INFO) << "******* " << i << " iters *******" << std::endl;
-  LOG(INFO) << "******************************" << std::endl;
+#if defined(MLP_VERBOSE)
+  ReportFinish(i, current_iteration_cost_function);
 #endif  // EASYLOGGING_ON
 
   //{

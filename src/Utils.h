@@ -5,27 +5,12 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdlib.h>
-#include <numeric>
-#include <chrono>
 #include <string>
-#include <algorithm>
-#include <iostream>
-#include <sstream>
-#include <iterator>
 #include <unordered_map>
 #include <vector>
 #include <cmath>
-#include <typeinfo>
-#include <typeindex>
-#include <cassert>
+#include <utility>
 
-#include "Chrono.h"
-#ifdef _WIN32
-#include <time.h>
-#else
-#include <sys/time.h>
-#endif
 
 #if defined(__XS3A__)
 

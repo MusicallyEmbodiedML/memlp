@@ -5,14 +5,6 @@
 #ifndef MLP_H
 #define MLP_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <vector>
-#include <algorithm>
-#include <exception>
 #include "Layer.h"
 #include "Sample.h"
 #include "Utils.h"
@@ -58,11 +50,18 @@ protected:
   void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                      const std::vector<T> &error,
                      float learning_rate);
+
 private:
   void CreateMLP(const std::vector<uint64_t> & layers_nodes,
                  const std::vector<std::string> & layers_activfuncs,
                  bool use_constant_weight_init,
                  T constant_weight_init = 0.5);
+  void ReportProgress(const bool output_log,
+      const unsigned int every_n_iter,
+      const unsigned int i,
+      const float current_iteration_cost_function);
+  void ReportFinish(const unsigned int i,
+      const float current_iteration_cost_function);
   size_t m_num_inputs{ 0 };
   int m_num_outputs{ 0 };
   int m_num_hidden_layers{ 0 };

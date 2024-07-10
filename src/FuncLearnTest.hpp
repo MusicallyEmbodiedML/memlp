@@ -80,6 +80,7 @@ protected:
 
 extern "C"
 {
+    FUNCLEARNTEST_C_FN
     void funclearntest_main(void);
 }
 

@@ -1,4 +1,3 @@
-#include <iostream>
 #include <xcore/hwtimer.h>
 #include "MLP.h"
 
@@ -29,7 +28,7 @@ void TestMLP() {
 
     // Timer init
     auto timer = hwtimer_alloc();
-    std::cout << "Benchmark starting (" << epochs << " epochs)..." << std::endl;
+    printf("Benchmark starting (%d epochs)...\n", epochs);
     auto now = hwtimer_get_time(timer);
 
     // Benchmarked code
@@ -45,9 +44,9 @@ void TestMLP() {
 
 int main() {
 
-    std::cout << "--- Test float32 MLP ---" << std::endl;
+    printf("--- Test float32 MLP ---\n");
     TestMLP<float>();
 
-    std::cout << "--- Test float64 MLP ---" << std::endl;
+    printf("--- Test float64 MLP ---\n");
     TestMLP<double>();
 }
