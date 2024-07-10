@@ -153,6 +153,9 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\FuncLearnTest.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\FuncLearnTest.hpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -39,6 +39,8 @@
 #endif
 
 namespace utils {
+
+
 //Typical sigmoid function created from input x
 //Returns the sigmoided value
 template<typename T>
@@ -97,6 +99,13 @@ template<typename T>
 MLP_ACTIVATION_FN
 inline T deriv_relu(T x) {
     return (x > 0) ? 1 : 0;
+}
+
+
+template<typename T>
+MLP_ACTIVATION_FN
+inline T sgn(T val) {
+    return static_cast<T>( (T(0) < val) - (val < T(0)) );
 }
 
 

@@ -1,19 +1,8 @@
+#include "FuncLearnTest.hpp"
+
 #include "easylogging++.h"
-#include <vector>
-#include <cassert>
-#include <utility>
-#include <memory>
 
-#include "MLP.h"
 #include "Utils.h"
-
-
-#define number_t    float
-
-
-number_t sgn(number_t val) {
-    return (number_t(0) < val) - (val < number_t(0));
-}
 
 
 void groundtruth_fn(
@@ -62,7 +51,7 @@ std::vector<number_t> arange(number_t start, number_t stop, number_t step = 1.f)
     std::vector<number_t> out(static_cast<unsigned int>(n_steps));
 
     // Mitigation for float rounding
-    number_t epsilon = 0.00001 * sgn(stop);
+    number_t epsilon = 0.00001f * utils::sgn<number_t>(stop);
 
     unsigned int counter = 0;
     for (number_t n = start; n < stop-epsilon; n += step) {
@@ -72,34 +61,6 @@ std::vector<number_t> arange(number_t start, number_t stop, number_t step = 1.f)
 
     return out;
 }
-
-
-using pair_of_vectors = std::pair< std::vector<number_t>, std::vector<number_t> >;
-using groundtruth_fn_t = void (*)(std::vector<number_t>&, std::vector<number_t>&);
-
-
-class FuncLearnDataset {
-
-public:
-    FuncLearnDataset(number_t lower_point,
-                     number_t upper_point,
-                     unsigned int training_points,
-                     unsigned int validation_points,
-                     groundtruth_fn_t groundtruth_fn_ptr);
-    std::shared_ptr<pair_of_vectors> training() {
-        return training_set_;
-    }
-    std::shared_ptr<pair_of_vectors> validation() {
-        return validation_set_;
-    }
-
-protected:
-    unsigned int training_points_;
-    unsigned int validation_points_;
-    groundtruth_fn_t groundtruth_fn_ptr_;
-    std::shared_ptr<pair_of_vectors> training_set_;
-    std::shared_ptr<pair_of_vectors> validation_set_;
-};
 
 
 FuncLearnDataset::FuncLearnDataset(number_t lower_point,
@@ -126,23 +87,6 @@ FuncLearnDataset::FuncLearnDataset(number_t lower_point,
     validation_set_->second.resize(validation_set_->first.size());
     groundtruth_fn_ptr(validation_set_->first, validation_set_->second);
 }
-
-
-class FuncLearnRunner {
-
-public:
-
-    void MakeData(const unsigned int n_examples);
-    void MakeModel(void);
-    void TrainModel(const unsigned int n_epochs);
-
-protected:
-
-    unsigned int n_examples_;
-    std::shared_ptr<pair_of_vectors> training_set_;
-    std::shared_ptr<pair_of_vectors> validation_set_;
-    std::unique_ptr< MLP<number_t> > mlp_;
-};
 
 
 void FuncLearnRunner::MakeData(const unsigned int n_examples)
@@ -181,20 +125,31 @@ void FuncLearnRunner::MakeModel()
 
 void FuncLearnRunner::TrainModel(const unsigned int n_epochs)
 {
-    mlp_->Train(*training_set_, .001f, n_epochs, 0.10f, true);
+    mlp_->Train(*training_set_, .001f, static_cast<int>(n_epochs), 0.10f, true);
 }
 
 
-int main(int argc, char* argv[]) {
-    
+void funclearntest_main()
+{
     const unsigned int n_examples = 500;
     const unsigned int n_epochs = 500;
-    
+
+    LOG(INFO) << std::endl << "-------------------------" << std::endl;
+    LOG(INFO) << std::endl << "--- FuncLearnTest run ---" << std::endl;
+    LOG(INFO) << std::endl << "-------------------------" << std::endl;
+
     FuncLearnRunner runner;
     runner.MakeData(n_examples);
     runner.MakeModel();
     runner.TrainModel(n_epochs);
 
 
-    LOG(INFO) << "Test completed." << std::endl;
+    LOG(INFO) << std::endl << "--- FuncLearnTest completed. ---" << std::endl;
+}
+
+
+int main(int argc, char* argv[])
+{
+    funclearntest_main();
+    return 0;
 }
