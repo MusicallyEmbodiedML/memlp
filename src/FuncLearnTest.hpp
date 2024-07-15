@@ -61,13 +61,14 @@ class FuncLearnRunner {
 
 public:
 
-    void MakeData(const unsigned int n_examples);
+    void FUNCLEARNTEST_C_FN MakeData(const unsigned int n_examples);
     void MakeModel(void);
     void TrainModel(const unsigned int n_epochs);
 
 protected:
 
     unsigned int n_examples_;
+    std::unique_ptr<FuncLearnDataset> dataset_;
     std::shared_ptr<pair_of_vectors> training_set_;
     std::shared_ptr<pair_of_vectors> validation_set_;
     std::unique_ptr< MLP<number_t> > mlp_;

@@ -91,11 +91,12 @@ FuncLearnDataset::FuncLearnDataset(number_t lower_point,
 }
 
 
-void FuncLearnRunner::MakeData(const unsigned int n_examples)
+#pragma stackfunction 10
+void FUNCLEARNTEST_C_FN FuncLearnRunner::MakeData(const unsigned int n_examples)
 {
     n_examples_ = n_examples;
 
-    auto dataset = std::make_unique<FuncLearnDataset>(
+    dataset_ = std::make_unique<FuncLearnDataset>(
         -5.f,
         5.f,
         n_examples,
@@ -103,8 +104,8 @@ void FuncLearnRunner::MakeData(const unsigned int n_examples)
         &groundtruth_fn
     );
 
-    training_set_ = dataset->training();
-    validation_set_ = dataset->validation();
+    training_set_ = dataset_->training();
+    validation_set_ = dataset_->validation();
 }
 
 

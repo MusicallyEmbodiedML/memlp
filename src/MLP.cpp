@@ -360,10 +360,8 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
             }
         }
 
-#if EASYLOGGING_ON
-        if (output_log /*&& ((i % (max_iterations / 10)) == 0)*/)
-            LOG(INFO) << "Iteration " << i << " cost function f(error): "
-            << current_iteration_cost_function << std::endl;
+#if defined(MLP_VERBOSE)
+        ReportProgress(output_log, 1, i, current_iteration_cost_function);
 
 #endif  // EASYLOGGING_ON
 
@@ -375,14 +373,8 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
     }
 
-#if EASYLOGGING_ON
-    LOG(INFO) << "Iteration " << i << " cost function f(error): "
-        << current_iteration_cost_function << std::endl;
-
-    LOG(INFO) << "******************************" << std::endl;
-    LOG(INFO) << "******* TRAINING ENDED *******" << std::endl;
-    LOG(INFO) << "******* " << i << " iters *******" << std::endl;
-    LOG(INFO) << "******************************" << std::endl;
+#if defined(MLP_VERBOSE)
+    ReportFinish(i, current_iteration_cost_function);
 #endif  // EASYLOGGING_ON
 };
 
