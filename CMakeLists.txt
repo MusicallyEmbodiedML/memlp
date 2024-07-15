@@ -1,4 +1,4 @@
-if (${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
+if (CMAKE_SYSTEM_NAME STREQUAL "XCORE_XS3A")
 	##
 	# XMOS build
 	##
@@ -26,6 +26,7 @@ else ()
 	##
 	# PC build
 	##
+	cmake_policy(SET CMP0048 NEW)
 
 	project(MLP VERSION 1.0)
 

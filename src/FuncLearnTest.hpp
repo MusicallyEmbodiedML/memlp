@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "MLP.h"
+#include "Probe.hpp"
 
 #define number_t    float
 
@@ -60,7 +61,8 @@ protected:
 class FuncLearnRunner {
 
 public:
-
+    FuncLearnRunner(void) :
+        data_probe_(0) {};
     void FUNCLEARNTEST_C_FN MakeData(const unsigned int n_examples);
     void MakeModel(void);
     void TrainModel(const unsigned int n_epochs);
@@ -72,6 +74,7 @@ protected:
     std::shared_ptr<pair_of_vectors> training_set_;
     std::shared_ptr<pair_of_vectors> validation_set_;
     std::unique_ptr< MLP<number_t> > mlp_;
+    Probe<float> data_probe_;
 };
 
 

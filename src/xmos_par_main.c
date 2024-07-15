@@ -19,6 +19,7 @@ DECLARE_JOB(boo, (void));
 void boo(void)
 {
     printf("\n---\nThread1:\nBoo!\n---\n");
+    for(;;);
 }
 
 extern FUNCLEARNTEST_C_FN void funclearntest_main(void);

@@ -106,6 +106,9 @@ void FUNCLEARNTEST_C_FN FuncLearnRunner::MakeData(const unsigned int n_examples)
 
     training_set_ = dataset_->training();
     validation_set_ = dataset_->validation();
+
+    // Xscope debug probes
+    data_probe_.log_vector(training_set_->first);
 }
 
 
