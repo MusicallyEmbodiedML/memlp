@@ -11,6 +11,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
 	)
 	set(MLP_SOURCES
 		${CMAKE_CURRENT_LIST_DIR}/src/MLP.cpp
+		${CMAKE_CURRENT_LIST_DIR}/src/FuncLearnTest.cpp
 	)
 
 	# Append in local scope
