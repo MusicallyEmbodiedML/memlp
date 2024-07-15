@@ -1,4 +1,6 @@
-if (${CMAKE_SYSTEM_NAME} STREQUAL XCORE_XS3A)
+cmake_minimum_required(VERSION 3.28)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "XCORE_XS3A")
 	##
 	# XMOS build
 	##
