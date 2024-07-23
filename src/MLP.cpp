@@ -19,7 +19,7 @@
 
 //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
 template<typename T>
-MLP<T>::MLP(const std::vector<uint64_t> & layers_nodes,
+MLP<T>::MLP(const std::vector<unsigned int> & layers_nodes,
          const std::vector<std::string> & layers_activfuncs,
          bool use_constant_weight_init,
          T constant_weight_init) {
@@ -50,7 +50,7 @@ MLP<T>::~MLP() {
 
 
 template<typename T>
-void MLP<T>::CreateMLP(const std::vector<uint64_t> & layers_nodes,
+void MLP<T>::CreateMLP(const std::vector<unsigned int> & layers_nodes,
                     const std::vector<std::string> & layers_activfuncs,
                     bool use_constant_weight_init,
                     T constant_weight_init) {

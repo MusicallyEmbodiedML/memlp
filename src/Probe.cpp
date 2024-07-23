@@ -3,7 +3,10 @@
 template <>
 void Probe<int>::log(int value)
 {
+    printf("+");
+#if defined(__XS3A__)
     xscope_int(index_, value);
+#endif
 }
 
 
@@ -11,7 +14,9 @@ template <>
 void Probe<float>::log(float value)
 {
     printf(".");
+#if defined(__XS3A__)
     xscope_float(index_, value);
+#endif
 }
 
 

@@ -224,3 +224,5 @@ ModelManifest.xml
 /mlp.so
 
 /*.xe
+/*.o
+/*.vcd

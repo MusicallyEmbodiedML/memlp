@@ -3,7 +3,9 @@
 
 extern "C" {
 #include <stdio.h>
+#if defined(__XS3A__)
 #include <xscope.h>
+#endif
 }
 #include <vector>
 

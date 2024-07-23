@@ -62,7 +62,8 @@ class FuncLearnRunner {
 
 public:
     FuncLearnRunner(void) :
-        data_probe_(0) {};
+        probes_{Probe<float>(0), Probe<float>(1)}
+        {};
     void FUNCLEARNTEST_C_FN MakeData(const unsigned int n_examples);
     void MakeModel(void);
     void TrainModel(const unsigned int n_epochs);
@@ -74,7 +75,7 @@ protected:
     std::shared_ptr<pair_of_vectors> training_set_;
     std::shared_ptr<pair_of_vectors> validation_set_;
     std::unique_ptr< MLP<number_t> > mlp_;
-    Probe<float> data_probe_;
+    std::vector< Probe<float> > probes_;
 };
 
 

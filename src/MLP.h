@@ -10,12 +10,13 @@
 #include "Utils.h"
 
 
+
 template<typename T>
 class MLP {
 public:
     using training_pair_t = std::pair< std::vector<T>, std::vector<T> >;
   //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
-  MLP(const std::vector<uint64_t> & layers_nodes,
+  MLP(const std::vector<unsigned int> & layers_nodes,
       const std::vector<std::string> & layers_activfuncs,
       bool use_constant_weight_init = false,
       T constant_weight_init = 0.5);
@@ -52,7 +53,7 @@ protected:
                      float learning_rate);
 
 private:
-  void CreateMLP(const std::vector<uint64_t> & layers_nodes,
+  void CreateMLP(const std::vector<unsigned int> & layers_nodes,
                  const std::vector<std::string> & layers_activfuncs,
                  bool use_constant_weight_init,
                  T constant_weight_init = 0.5);
@@ -65,7 +66,7 @@ private:
   size_t m_num_inputs{ 0 };
   int m_num_outputs{ 0 };
   int m_num_hidden_layers{ 0 };
-  std::vector<uint64_t> m_layers_nodes;
+  std::vector<unsigned int> m_layers_nodes;
   std::vector<Layer<T>> m_layers;
 };
 

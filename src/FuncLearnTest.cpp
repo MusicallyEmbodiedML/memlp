@@ -91,7 +91,9 @@ FuncLearnDataset::FuncLearnDataset(number_t lower_point,
 }
 
 
+#if defined(__XS3A__)
 #pragma stackfunction 10
+#endif
 void FUNCLEARNTEST_C_FN FuncLearnRunner::MakeData(const unsigned int n_examples)
 {
     n_examples_ = n_examples;
@@ -108,13 +110,15 @@ void FUNCLEARNTEST_C_FN FuncLearnRunner::MakeData(const unsigned int n_examples)
     validation_set_ = dataset_->validation();
 
     // Xscope debug probes
-    data_probe_.log_vector(training_set_->first);
+    probes_[0].log_vector(training_set_->first);
+    probes_[1].log_vector(training_set_->second);
+    printf("\n");
 }
 
 
 void FuncLearnRunner::MakeModel()
 {
-    const std::vector<uint64_t> layers_nodes = {
+    const std::vector<unsigned int> layers_nodes = {
         1, 4, 4, 1
     };
     const std::vector<std::string> layers_activfuncs = {

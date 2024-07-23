@@ -1,6 +1,53 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.30)
 
-if (CMAKE_SYSTEM_NAME STREQUAL "XCORE_XS3A")
+
+### Command line arguments
+option(MLP_XMOS "MLP_XMOS")
+
+
+if (${MLP_XMOS})
+
+	##
+	# XMOS private build (tests)
+	##
+
+	message("---")
+	message("- XMOS test build")
+	message("---")
+
+	set(CMAKE_CXX_STANDARD 14)
+
+	project("MLP_XMOS")
+
+	set(COMMON_FLAGS "-target=XK-EVK-XU316 -Wall -DMLP_VERBOSE -D__XS3A__ -fxscope ${CMAKE_CURRENT_SOURCE_DIR}/config.xscope")
+	set(CMAKE_C_FLAGS ${COMMON_FLAGS})
+	set(CMAKE_CXX_FLAGS ${COMMON_FLAGS})
+	set(CMAKE_EXE_LINKER_FLAGS "-fxscope -Wl --gc-sections -report")
+
+	set(XMOS_XE "MLP_XMOS")
+
+	set(XMOS_SOURCES
+		"${CMAKE_CURRENT_SOURCE_DIR}/src/MLP.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/src/Probe.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/src/FuncLearnTest.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/src/xmos_par_main.c")
+	
+	set(XMOS_INCLUDES
+		"${CMAKE_CURRENT_SOURCE_DIR}/src"
+		"${CMAKE_CURRENT_SOURCE_DIR}/deps")
+
+	set(XMOS_CXX_COMPILE_OPTIONS)
+
+	set(XMOS_C_COMPILE_OPTIONS) 
+
+	add_executable(${XMOS_XE} ${XMOS_SOURCES})
+	target_include_directories(${XMOS_XE} PUBLIC ${XMOS_INCLUDES})
+	#target_compile_features(${XMOS_XE} PUBLIC cxx_std_14)
+	target_compile_options(${XMOS_XE} PUBLIC -Wall -DMLP_VERBOSE -D__XS3A__)
+	#target_link_libraries(${XMOS_XE} PUBLIC
+	#    "/home/virgult/Frameworks/XMOS/XTC/15.2.1/target/lib/xs3a/libxscope.a")
+
+elseif (CMAKE_SYSTEM_NAME STREQUAL "XCORE_XS3A")
 	##
 	# XMOS build
 	##
@@ -25,6 +72,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "XCORE_XS3A")
 	set(MEML_SOURCES ${MEML_SOURCES} PARENT_SCOPE)
 
 else ()
+
 	##
 	# PC build
 	##
@@ -34,13 +82,16 @@ else ()
 
 	set(SHARED_LIB_NAME ${PROJECT_NAME})
 	set(STATIC_LIB_NAME ${PROJECT_NAME}_static)
-	set(MLP_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/MLP.cpp")
+	set(MLP_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/MLP.cpp"
+						 "${CMAKE_CURRENT_SOURCE_DIR}/src/Probe.cpp")
 	set(MLP_HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/MLP.h"
 						"${CMAKE_CURRENT_SOURCE_DIR}/src/Layer.h"
 						"${CMAKE_CURRENT_SOURCE_DIR}/src/Node.h"
 						"${CMAKE_CURRENT_SOURCE_DIR}/src/Sample.h"
 						"${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.h")
 
+	set(EXEC_NAME FuncLearnTest)
+	set(EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/FuncLearnTest.cpp")
 
 	#### STATIC LIBRARY
 	add_library(${STATIC_LIB_NAME} STATIC ${MLP_HEADER_FILES} ${MLP_SOURCE_FILES})
@@ -60,6 +111,18 @@ else ()
 	target_include_directories(${SHARED_LIB_NAME} PRIVATE ".")
 	target_include_directories(${SHARED_LIB_NAME} PRIVATE "src")
 	target_include_directories(${SHARED_LIB_NAME} PRIVATE "deps")
+
+	#### RUN TEST
+	set(CMAKE_DEBUG_POSTFIX _d)
+	add_executable(${EXEC_NAME} ${MLP_SOURCE_FILES} ${EXEC_MAIN_PATH})
+	target_compile_definitions(${EXEC_NAME} PUBLIC
+			FUNCLEARN_MAIN MLP_VERBOSE)
+	target_compile_options(${EXEC_NAME} PUBLIC
+			"-Wall")
+	set_target_properties(${EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+	target_include_directories(${EXEC_NAME} PUBLIC ".")
+	target_include_directories(${EXEC_NAME} PUBLIC "src")
+	target_include_directories(${EXEC_NAME} PUBLIC "deps")
 
 	if(UNIX) ## Install shared lib
 		include(GNUInstallDirs)
