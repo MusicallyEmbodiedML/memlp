@@ -96,11 +96,14 @@ public:
 
   void GetInputInnerProdWithWeights(const std::vector<T> &input,
                                     T * output) const {
+    
+    static const T kInit(0);
+
     assert(input.size() == m_weights.size());
     T inner_prod = std::inner_product(begin(input),
                                            end(input),
                                            begin(m_weights),
-                                           0);
+                                           kInit);
     *output = inner_prod;
   }
 

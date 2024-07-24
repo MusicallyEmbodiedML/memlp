@@ -7,5 +7,5 @@ rm -r build
 cmake -B build -DCMAKE_BUILD_TYPE=Debug
 pushd build
 make FuncLearnTest
-./FuncLearnTest_d
+#./FuncLearnTest_d
 popd

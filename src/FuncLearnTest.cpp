@@ -23,9 +23,9 @@ void groundtruth_fn(
         auto _x_n = *x_n;
         // Calculation body here
         _x_n -= x_shift;
-        if (_x_n < 1.f) {
+        if (_x_n < -1.f) {
             *y_n = 1.f;
-        } else if (_x_n > 1) {
+        } else if (_x_n > 1.f) {
             *y_n = 1.f;
         } else {
             *y_n = _x_n * _x_n;

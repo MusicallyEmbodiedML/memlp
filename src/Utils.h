@@ -71,11 +71,13 @@ inline T deriv_linear(T x) {
 };
 
 
+static const float kReLUSlope = 0.01f;
+
 // ReLU function
 template<typename T>
 MLP_ACTIVATION_FN
 inline T relu(T x) {
-    return (x > 0) ? x : 0;
+    return (x > 0) ? x : kReLUSlope * x;
 }
 
 
@@ -83,7 +85,7 @@ inline T relu(T x) {
 template<typename T>
 MLP_ACTIVATION_FN
 inline T deriv_relu(T x) {
-    return (x > 0) ? 1 : 0;
+    return (x > 0) ? 1 : kReLUSlope;
 }
 
 
