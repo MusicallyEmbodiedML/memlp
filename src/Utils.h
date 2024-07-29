@@ -10,6 +10,7 @@
 #include <vector>
 #include <cmath>
 #include <utility>
+#include <algorithm>
 
 
 #if defined(__XS3A__)
@@ -18,7 +19,7 @@
 
 #else
 
-#pragma message ( "PC compiler definitions enabled - check this is OK" )
+//#pragma message ( "PC compiler definitions enabled - check this is OK" )
 #define MLP_ACTIVATION_FN
 
 #endif
@@ -177,6 +178,20 @@ inline void GetIdMaxElement(const std::vector<T> &output, size_t * class_id) {
                             std::max_element(output.begin(),
                                              output.end()));
 }
+
+
+template<typename T>
+inline bool is_close(T a, T b) {
+
+    static const T kRelTolerance = 0.0001;
+
+    a = std::abs(a);
+    b = std::abs(b);
+    T abs_tolerance = b*kRelTolerance;
+
+    return (a < b + abs_tolerance) && (a > b - abs_tolerance);
+}
+
 
 }  // namespace utils
 

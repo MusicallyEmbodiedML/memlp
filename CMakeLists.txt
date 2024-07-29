@@ -90,8 +90,15 @@ else ()
 						"${CMAKE_CURRENT_SOURCE_DIR}/src/Sample.h"
 						"${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.h")
 
-	set(EXEC_NAME FuncLearnTest)
-	set(EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/FuncLearnTest.cpp")
+	# FuncLearnTest
+	set(FUNCLEARN_EXEC_NAME FuncLearnTest)
+	set(FUNCLEARN_EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/FuncLearnTest.cpp")
+	# LayerTest
+	set(LAYER_EXEC_NAME LayerTest)
+	set(LAYER_EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/LayerTest.cpp")
+	# LossTest
+	set(LOSS_EXEC_NAME LossTest)
+	set(LOSS_EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/LossTest.cpp")
 
 	#### STATIC LIBRARY
 	add_library(${STATIC_LIB_NAME} STATIC ${MLP_HEADER_FILES} ${MLP_SOURCE_FILES})
@@ -112,17 +119,43 @@ else ()
 	target_include_directories(${SHARED_LIB_NAME} PRIVATE "src")
 	target_include_directories(${SHARED_LIB_NAME} PRIVATE "deps")
 
-	#### RUN TEST
+	#### RUN TESTS
+
+	###### FuncLearnTest
 	set(CMAKE_DEBUG_POSTFIX _d)
-	add_executable(${EXEC_NAME} ${MLP_SOURCE_FILES} ${EXEC_MAIN_PATH})
-	target_compile_definitions(${EXEC_NAME} PUBLIC
+	add_executable(${FUNCLEARN_EXEC_NAME} ${MLP_SOURCE_FILES} ${FUNCLEARN_EXEC_MAIN_PATH})
+	target_compile_definitions(${FUNCLEARN_EXEC_NAME} PUBLIC
 			FUNCLEARN_MAIN MLP_VERBOSE)
-	target_compile_options(${EXEC_NAME} PUBLIC
+	target_compile_options(${FUNCLEARN_EXEC_NAME} PUBLIC
 			"-Wall")
-	set_target_properties(${EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
-	target_include_directories(${EXEC_NAME} PUBLIC ".")
-	target_include_directories(${EXEC_NAME} PUBLIC "src")
-	target_include_directories(${EXEC_NAME} PUBLIC "deps")
+	set_target_properties(${FUNCLEARN_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+	target_include_directories(${FUNCLEARN_EXEC_NAME} PUBLIC ".")
+	target_include_directories(${FUNCLEARN_EXEC_NAME} PUBLIC "src")
+	target_include_directories(${FUNCLEARN_EXEC_NAME} PUBLIC "deps")
+
+	###### LayerTest
+	set(CMAKE_DEBUG_POSTFIX _d)
+	add_executable(${LAYER_EXEC_NAME} ${MLP_SOURCE_FILES} ${LAYER_EXEC_MAIN_PATH})
+	target_compile_definitions(${LAYER_EXEC_NAME} PUBLIC
+	)
+	target_compile_options(${LAYER_EXEC_NAME} PUBLIC
+			"-Wall")
+	set_target_properties(${LAYER_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+	target_include_directories(${LAYER_EXEC_NAME} PUBLIC ".")
+	target_include_directories(${LAYER_EXEC_NAME} PUBLIC "src")
+	target_include_directories(${LAYER_EXEC_NAME} PUBLIC "deps")
+
+	###### LossTest
+	set(CMAKE_DEBUG_POSTFIX _d)
+	add_executable(${LOSS_EXEC_NAME} ${MLP_SOURCE_FILES} ${LOSS_EXEC_MAIN_PATH})
+	target_compile_definitions(${LOSS_EXEC_NAME} PUBLIC
+	)
+	target_compile_options(${LOSS_EXEC_NAME} PUBLIC
+			"-Wall")
+	set_target_properties(${LOSS_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+	target_include_directories(${LOSS_EXEC_NAME} PUBLIC ".")
+	target_include_directories(${LOSS_EXEC_NAME} PUBLIC "src")
+	target_include_directories(${LOSS_EXEC_NAME} PUBLIC "deps")
 
 	if(UNIX) ## Install shared lib
 		include(GNUInstallDirs)
