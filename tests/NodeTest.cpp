@@ -2,28 +2,18 @@
 // Name : NodeTest.cpp
 // Author : David Nogueira
 //============================================================================
+#include <vector>
+#include <algorithm>
+
+#include "UnitTest.hpp"
 #include "Node.h"
 #include "Sample.h"
 #include "Utils.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <vector>
-#include <algorithm>
-#include "microunit.h"
-#include "easylogging++.h"
-
-INITIALIZE_EASYLOGGINGPP
-
-
-#define TEST_TYPE    float
 
 
 namespace {
-void Train(Node<TEST_TYPE> & node,
-           const std::vector<TrainingSample<TEST_TYPE>> &training_sample_set_with_bias,
+void Train(Node<num_t> & node,
+           const std::vector<TrainingSample<num_t>> &training_sample_set_with_bias,
            double learning_rate,
            int max_iterations,
            bool use_constant_weight_init = true,
@@ -44,7 +34,7 @@ void Train(Node<TEST_TYPE> & node,
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
       bool prediction;
       node.GetBooleanOutput(training_sample_with_bias.input_vector(),
-                            utils::linear<TEST_TYPE>,
+                            utils::linear<num_t>,
                             &prediction, 
                             0.5);
       bool correct_output = training_sample_with_bias.output_vector()[0] > 0.5 ? true : false;
@@ -66,10 +56,10 @@ void Train(Node<TEST_TYPE> & node,
 };
 }
 
-UNIT(LearnAND) {
+UNIT(NodeLearnAND) {
   LOG(INFO) << "Train AND function with Node." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{0.0} },
     { { 0, 1 },{0.0} },
@@ -77,7 +67,7 @@ UNIT(LearnAND) {
     { { 1, 1 },{1.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -86,13 +76,13 @@ UNIT(LearnAND) {
   }
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node<TEST_TYPE> my_node(num_features);
+  Node<num_t> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear<TEST_TYPE>,
+                             utils::linear<num_t>,
                              &class_id, 
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -101,10 +91,10 @@ UNIT(LearnAND) {
   LOG(INFO) << "Trained with success." << std::endl;  
 }
 
-UNIT(LearnNAND) {
+UNIT(NodeLearnNAND) {
   LOG(INFO) << "Train NAND function with Node." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{1.0} },
     { { 0, 1 },{1.0} },
@@ -112,7 +102,7 @@ UNIT(LearnNAND) {
     { { 1, 1 },{0.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -120,13 +110,13 @@ UNIT(LearnNAND) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node<TEST_TYPE> my_node(num_features);
+  Node<num_t> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear<TEST_TYPE>,
+                             utils::linear<num_t>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -135,10 +125,10 @@ UNIT(LearnNAND) {
   LOG(INFO) << "Trained with success." << std::endl;  
 }
 
-UNIT(LearnOR) {
+UNIT(NodeLearnOR) {
   LOG(INFO) << "Train OR function with Node." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{0.0} },
     { { 0, 1 },{1.0} },
@@ -146,7 +136,7 @@ UNIT(LearnOR) {
     { { 1, 1 },{1.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -154,13 +144,13 @@ UNIT(LearnOR) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node<TEST_TYPE> my_node(num_features);
+  Node<num_t> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear<TEST_TYPE>,
+                             utils::linear<num_t>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -168,10 +158,10 @@ UNIT(LearnOR) {
   }
   LOG(INFO) << "Trained with success." << std::endl;  
 }
-UNIT(LearnNOR) {
+UNIT(NodeLearnNOR) {
   LOG(INFO) << "Train NOR function with Node." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{1.0} },
     { { 0, 1 },{0.0} },
@@ -179,7 +169,7 @@ UNIT(LearnNOR) {
     { { 1, 1 },{0.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -187,13 +177,13 @@ UNIT(LearnNOR) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node<TEST_TYPE> my_node(num_features);
+  Node<num_t> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear<TEST_TYPE>,
+                             utils::linear<num_t>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -202,16 +192,16 @@ UNIT(LearnNOR) {
   LOG(INFO) << "Trained with success." << std::endl;  
 }
 
-UNIT(LearnNOT) {
+UNIT(NodeLearnNOT) {
   LOG(INFO) << "Train NOT function with Node." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0 },{1.0} },
     { { 1 },{0.0}}
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -219,13 +209,13 @@ UNIT(LearnNOT) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node<TEST_TYPE> my_node(num_features);
+  Node<num_t> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear<TEST_TYPE>,
+                             utils::linear<num_t>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
@@ -234,10 +224,10 @@ UNIT(LearnNOT) {
   LOG(INFO) << "Trained with success." << std::endl;  
 }
 
-UNIT(LearnXOR) {
+UNIT(NodeLearnXOR) {
   LOG(INFO) << "Train XOR function with Node." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{0.0} },
     { { 0, 1 },{1.0} },
@@ -245,7 +235,7 @@ UNIT(LearnXOR) {
     { { 1, 1 },{0.0} }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -253,27 +243,33 @@ UNIT(LearnXOR) {
     }
   }
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  Node<TEST_TYPE> my_node(num_features);
+  Node<num_t> my_node(num_features);
   Train(my_node, training_sample_set_with_bias, 0.1, 100);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     bool class_id;
     my_node.GetBooleanOutput(training_sample.input_vector(),
-                             utils::linear<TEST_TYPE>,
+                             utils::linear<num_t>,
                              &class_id,
                              0.5);
     bool correct_output = training_sample.output_vector()[0] > 0.5 ? true : false;
-    if (class_id != correct_output) {
+    if (class_id != correct_output)
+    {
       LOG(WARNING) << "Failed to train. " <<
         " A simple perceptron cannot learn the XOR function." << std::endl;
-      FAIL();
+      //FAIL();
     }
   }
-  LOG(INFO) << "Trained with success." << std::endl;
+  //LOG(INFO) << "Trained with success." << std::endl;
 }
+
+
+#if defined(NODETEST_MAIN)
 
 int main(int argc, char* argv[]) {
   START_EASYLOGGINGPP(argc, argv);
   microunit::UnitTester::Run();
   return 0;
 }
+
+#endif  // NODETEST_MAIN

@@ -1,17 +1,9 @@
-#include "Loss.h"
-#include "Utils.h"
-
 #include <vector>
 #include <memory>
-#include "microunit.h"
-#include "easylogging++.h"
 
-INITIALIZE_EASYLOGGINGPP
-
-
-using num_t = float;
-using d_vector = std::vector<num_t>;
-using nd_vector = std::vector< std::vector<num_t> >;
+#include "UnitTest.hpp"
+#include "Loss.h"
+#include "Utils.h"
 
 
 UNIT(TestMSE) {
@@ -29,8 +21,12 @@ UNIT(TestMSE) {
 }
 
 
+#if defined(LOSSTEST_MAIN)
+
 int main(int argc, char* argv[]) {
     START_EASYLOGGINGPP(argc, argv);
     microunit::UnitTester::Run();
     return 0;
 }
+
+#endif  // LOSSTEST_MAIN

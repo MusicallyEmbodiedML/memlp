@@ -2,25 +2,17 @@
 // Name : Main.cpp
 // Author : David Nogueira
 //============================================================================
-#include "MLP.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <sstream>
-#include <fstream>
 #include <vector>
 #include <algorithm>
-#include "microunit.h"
-#include "easylogging++.h"
 
-INITIALIZE_EASYLOGGINGPP
+#include "UnitTest.hpp"
+#include "MLP.h"
 
-#define TEST_TYPE    float
 
-UNIT(LearnAND) {
+UNIT(MLPLearnAND) {
   LOG(INFO) << "Train AND function with mlp." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{ 0.0 } },
     { { 0, 1 },{ 0.0 } },
@@ -30,7 +22,7 @@ UNIT(LearnAND) {
     { { 1, 1 },{ 1.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -40,12 +32,12 @@ UNIT(LearnAND) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -56,10 +48,10 @@ UNIT(LearnAND) {
   LOG(INFO) << "Trained with success." << std::endl;
 }
 
-UNIT(LearnNAND) {
+UNIT(MLPLearnNAND) {
   LOG(INFO) << "Train NAND function with mlp." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{ 1.0 } },
     { { 0, 1 },{ 1.0 } },
@@ -69,7 +61,7 @@ UNIT(LearnNAND) {
     { { 1, 1 },{ 0.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -79,12 +71,12 @@ UNIT(LearnNAND) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -95,10 +87,10 @@ UNIT(LearnNAND) {
   LOG(INFO) << "Trained with success." << std::endl;
 }
 
-UNIT(LearnOR) {
+UNIT(MLPLearnOR) {
   LOG(INFO) << "Train OR function with mlp." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{ 0.0 } },
     { { 0, 0 },{ 0.0 } },
@@ -108,7 +100,7 @@ UNIT(LearnOR) {
     { { 1, 1 },{ 1.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -118,12 +110,12 @@ UNIT(LearnOR) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -134,10 +126,10 @@ UNIT(LearnOR) {
   LOG(INFO) << "Trained with success." << std::endl;
 }
 
-UNIT(LearnNOR) {
+UNIT(MLPLearnNOR) {
   LOG(INFO) << "Train NOR function with mlp." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{ 1.0 } },
     { { 0, 0 },{ 1.0 } },
@@ -147,7 +139,7 @@ UNIT(LearnNOR) {
     { { 1, 1 },{ 0.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -157,12 +149,12 @@ UNIT(LearnNOR) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -173,10 +165,10 @@ UNIT(LearnNOR) {
   LOG(INFO) << "Trained with success." << std::endl;
 }
 
-UNIT(LearnXOR) {
+UNIT(MLPLearnXOR) {
   LOG(INFO) << "Train XOR function with mlp." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{ 0.0 } },
     { { 0, 1 },{ 1.0 } },
@@ -184,7 +176,7 @@ UNIT(LearnXOR) {
     { { 1, 1 },{ 0.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -194,12 +186,12 @@ UNIT(LearnXOR) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -210,16 +202,16 @@ UNIT(LearnXOR) {
   LOG(INFO) << "Trained with success." << std::endl;
 }
 
-UNIT(LearnNOT) {
+UNIT(MLPLearnNOT) {
   LOG(INFO) << "Train NOT function with mlp." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0},{ 1.0 } },
     { { 1},{ 0.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -229,12 +221,12 @@ UNIT(LearnNOT) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE> output;
+    std::vector<num_t> output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -245,10 +237,10 @@ UNIT(LearnNOT) {
   LOG(INFO) << "Trained with success." << std::endl;
 }
 
-UNIT(LearnX1) {
+UNIT(MLPLearnX1) {
   LOG(INFO) << "Train X1 function with mlp." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{ 0.0 } },
     { { 0, 1 },{ 0.0 } },
@@ -256,7 +248,7 @@ UNIT(LearnX1) {
     { { 1, 1 },{ 1.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -266,12 +258,12 @@ UNIT(LearnX1) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -282,10 +274,10 @@ UNIT(LearnX1) {
   LOG(INFO) << "Trained with success." << std::endl;
 }
 
-UNIT(LearnX2) {
+UNIT(MLPLearnX2) {
   LOG(INFO) << "Train X2 function with mlp." << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{ 0.0 } },
     { { 0, 1 },{ 1.0 } },
@@ -293,7 +285,7 @@ UNIT(LearnX2) {
     { { 1, 1 },{ 1.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -303,12 +295,12 @@ UNIT(LearnX2) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -321,10 +313,10 @@ UNIT(LearnX2) {
 
 
 
-UNIT(GetWeightsSetWeights) {
+UNIT(MLPGetWeightsSetWeights) {
   LOG(INFO) << "Train X2 function, read internal weights" << std::endl;
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set =
+  std::vector<TrainingSample<num_t>> training_set =
   {
     { { 0, 0 },{ 0.0 } },
     { { 0, 1 },{ 1.0 } },
@@ -332,7 +324,7 @@ UNIT(GetWeightsSetWeights) {
     { { 1, 1 },{ 1.0 } }
   };
   bool bias_already_in = false;
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(training_set);
+  std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
   //set up bias
   if (!bias_already_in) {
     for (auto & training_sample_with_bias : training_sample_set_with_bias) {
@@ -342,15 +334,15 @@ UNIT(GetWeightsSetWeights) {
 
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
-  MLP<TEST_TYPE> my_mlp({ num_features, 2, num_outputs }, { "sigmoid", "linear" });
+  MLP<num_t> my_mlp({ num_features, 2, num_outputs }, { "sigmoid", "linear" });
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
 
   // get layer weights
-  std::vector<std::vector<TEST_TYPE>> weights = my_mlp.GetLayerWeights( 1 );
+  std::vector<std::vector<num_t>> weights = my_mlp.GetLayerWeights( 1 );
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       bool predicted_output = output[i] > 0.5 ? true : false;
@@ -368,12 +360,12 @@ UNIT(GetWeightsSetWeights) {
 
   // now, we are going to inject a weight value of 0.0
   // and check that the new output value is nonsense
-  std::vector<std::vector<TEST_TYPE>> zeroWeights = { { 0.0, 0.0 } };
+  std::vector<std::vector<num_t>> zeroWeights = { { 0.0, 0.0 } };
 
   my_mlp.SetLayerWeights( 1, zeroWeights );
 
   for (const auto & training_sample : training_sample_set_with_bias) {
-    std::vector<TEST_TYPE>  output;
+    std::vector<num_t>  output;
     my_mlp.GetOutput(training_sample.input_vector(), &output);
     for (size_t i = 0; i < num_outputs; i++) {
       ASSERT_TRUE( -0.0001L <= output[i] && output[i] <= 0.0001L );
@@ -384,9 +376,12 @@ UNIT(GetWeightsSetWeights) {
 }
 
 
+#if defined(MLPTEST_MAIN)
 
 int main(int argc, char* argv[]) {
   START_EASYLOGGINGPP(argc, argv);
   microunit::UnitTester::Run();
   return 0;
 }
+
+#endif  // MLPTEST_MAIN

@@ -3,20 +3,12 @@
 // Author : David Nogueira
 //============================================================================
 
-#include "Layer.h"
-#include "Utils.h"
-
 #include <vector>
 #include <memory>
-#include "microunit.h"
-#include "easylogging++.h"
 
-INITIALIZE_EASYLOGGINGPP
-
-
-using num_t = float;
-using nd_vector = std::vector< std::vector<num_t> >;
-
+#include "UnitTest.hpp"
+#include "Layer.h"
+#include "Utils.h"
 
 /**
  * Compare output after activation function of first layer
@@ -64,9 +56,12 @@ UNIT(TestGetOutputAfterActivationFunction) {
     }
 }
 
+#if defined(LAYERTEST_MAIN)
 
 int main(int argc, char* argv[]) {
     START_EASYLOGGINGPP(argc, argv);
     microunit::UnitTester::Run();
     return 0;
 }
+
+#endif  // LAYERTEST_MAIN

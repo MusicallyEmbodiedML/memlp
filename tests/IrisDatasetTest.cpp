@@ -2,7 +2,6 @@
 // Name : Main.cpp
 // Author : David Nogueira
 //============================================================================
-#include "MLP.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -11,14 +10,9 @@
 #include <vector>
 #include <array>
 #include <algorithm>
-#include "microunit.h"
-#include "easylogging++.h"
 
-INITIALIZE_EASYLOGGINGPP
-
-
-// TODO AM support float in Iris dataset vectors
-#define TEST_TYPE    double
+#include "UnitTest.hpp"
+#include "MLP.h"
 
 
 // Example illustrating practical use of this MLP lib.
@@ -31,8 +25,8 @@ const int number_classes = 3;
 const char *iris_dataset = "../../data/iris.data";
 const std::string iris_mlp_weights = "../../data/iris.mlp";
 #else
-const char *iris_dataset = "./data/iris.data";
-const std::string iris_mlp_weights = "./data/iris.mlp";
+const char *iris_dataset = "../data/iris.data";
+const std::string iris_mlp_weights = "../data/iris.mlp";
 #endif
 const std::array<std::string, number_classes> class_names =
 { "Iris-setosa", "Iris-versicolor", "Iris-virginica" };
@@ -104,7 +98,7 @@ bool load_data(int *samples,
 }
 
 
-int main(int argc, char *argv[]) {
+UNIT(TestIrisDataset) {
   LOG(INFO) << "Train MLP with IRIS dataset using backpropagation." << std::endl;
   int samples = 0;
   std::vector<double> input;
@@ -113,13 +107,13 @@ int main(int argc, char *argv[]) {
   // Load the data from file.
   if (!load_data(&samples, &input, &iris_class)) {
     LOG(ERROR) << "Error processing input file." << std::endl;
-    return -1;
+    FAIL();
   }
 
-  std::vector<TrainingSample<TEST_TYPE>> training_set;
+  std::vector<TrainingSample<iris_num_t>> training_set;
   for (int j = 0; j < samples; ++j) {
-    std::vector<TEST_TYPE> training_set_input;
-    std::vector<TEST_TYPE> training_set_output;
+    std::vector<iris_num_t> training_set_input;
+    std::vector<iris_num_t> training_set_output;
     training_set_input.reserve(4);
     for (int i = 0; i < 4; i++)
       training_set_input.push_back(*(&(input[0]) + j * 4 + i));
@@ -129,7 +123,7 @@ int main(int argc, char *argv[]) {
     training_set.emplace_back(std::move(training_set_input),
       std::move(training_set_output));
   }
-  std::vector<TrainingSample<TEST_TYPE>> training_sample_set_with_bias(std::move(training_set));
+  std::vector<TrainingSample<iris_num_t>> training_sample_set_with_bias(std::move(training_set));
   //set up bias
   for (auto & training_sample_with_bias : training_sample_set_with_bias) {
     training_sample_with_bias.AddBiasValue(1);
@@ -139,7 +133,7 @@ int main(int argc, char *argv[]) {
     // 4 inputs + 1 bias.
     // 1 hidden layer(s) of 4 neurons.
     // 3 outputs (1 per iris_class)
-    MLP<TEST_TYPE> my_mlp({ 4 + 1, 4 ,3 }, { "sigmoid", "linear" }, false);
+    MLP<iris_num_t> my_mlp({ 4 + 1, 4 ,3 }, { "sigmoid", "linear" }, false);
 
     int loops = 5000;
 
@@ -151,11 +145,11 @@ int main(int argc, char *argv[]) {
   }
   //Destruction/Construction of a MLP object to show off saving and loading a trained model
   {
-    MLP<TEST_TYPE> my_mlp(iris_mlp_weights);
+    MLP<iris_num_t> my_mlp(iris_mlp_weights);
 
     int correct = 0;
     for (int j = 0; j < samples; ++j) {
-      std::vector<TEST_TYPE> guess;
+      std::vector<iris_num_t> guess;
       my_mlp.GetOutput(training_sample_set_with_bias[j].input_vector(), &guess);
       size_t class_id;
       my_mlp.GetOutputClass(guess, &class_id);
@@ -172,6 +166,7 @@ int main(int argc, char *argv[]) {
     }
     LOG(INFO) << correct << "/" << samples
       << " (" << ((double)correct / samples * 100.0) << "%)." << std::endl;
+
+    ASSERT_TRUE(((double)correct / samples) > 0.992);
   }
-  return 0;
 }
