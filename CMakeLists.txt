@@ -103,6 +103,10 @@ else ()
     set(LOSS_EXEC_NAME LossTest)
     set(LOSS_EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests/LossTest.cpp")
     set(LOSS_DEFINES LOSSTEST_MAIN)
+    # MLPTest
+    set(MLP_EXEC_NAME MLPTest)
+    set(MLP_EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests/MLPTest.cpp")
+    set(MLP_DEFINES MLPTEST_MAIN MLP_VERBOSE)
     # Unit test main
     set(UNITTESTS_EXEC_NAME UnitTests)
     set(UNITTESTS_EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests/_TestMain.cpp")
@@ -167,6 +171,19 @@ else ()
     target_include_directories(${LOSS_EXEC_NAME} PUBLIC "src")
     target_include_directories(${LOSS_EXEC_NAME} PUBLIC "deps")
     target_include_directories(${LOSS_EXEC_NAME} PUBLIC "tests")
+
+    ###### MLPTest
+    set(CMAKE_DEBUG_POSTFIX _d)
+    add_executable(${MLP_EXEC_NAME} ${MLP_SOURCE_FILES} ${MLP_EXEC_MAIN_PATH})
+    target_compile_definitions(${MLP_EXEC_NAME} PUBLIC
+            ${MLP_DEFINES})
+    target_compile_options(${MLP_EXEC_NAME} PUBLIC
+            "-Wall")
+    set_target_properties(${MLP_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+    target_include_directories(${MLP_EXEC_NAME} PUBLIC ".")
+    target_include_directories(${MLP_EXEC_NAME} PUBLIC "src")
+    target_include_directories(${MLP_EXEC_NAME} PUBLIC "deps")
+    target_include_directories(${MLP_EXEC_NAME} PUBLIC "tests")
 
     ###### UnitTest MAIN
     set(CMAKE_DEBUG_POSTFIX _d)

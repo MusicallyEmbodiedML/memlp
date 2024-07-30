@@ -215,6 +215,9 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
                           int max_iterations,
                           float min_error_cost,
                           bool output_log) {
+  
+  //TODO AM this signature shouldn't exist - TrainingSample should be removed
+
   //rlunaro.03/01/2019. the compiler says that these variables are unused
   //int num_examples = training_sample_set_with_bias.size();
   //int num_features = training_sample_set_with_bias[0].GetInputVectorSize();
@@ -258,14 +261,11 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
       assert(correct_output.size() == predicted_output.size());
       std::vector<T> deriv_error_output(predicted_output.size());
 
-      for (size_t j = 0; j < predicted_output.size(); j++) {
-          //TODO AM - Only supports MSE?
-          current_iteration_cost_function += static_cast<float>(
-              (std::pow)((correct_output[j] - predicted_output[j]), 2)
-          );
-          deriv_error_output[j] =
-              -2 * (correct_output[j] - predicted_output[j]);
-      }
+      // FIXME AM Weight update should happen at every BATCH,
+      // not for every example!!!
+      // Loss funtion
+      current_iteration_cost_function =
+          this->loss_fn_(correct_output, predicted_output, deriv_error_output);
 
       UpdateWeights(all_layers_activations,
                     deriv_error_output,
@@ -335,7 +335,7 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
             std::vector<T> predicted_output;
             std::vector< std::vector<T> > all_layers_activations;
 
-            GetOutput({*t_feat},
+            GetOutput(*t_feat,
                 &predicted_output,
                 &all_layers_activations);
 
@@ -345,7 +345,8 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
             std::vector<T> deriv_error_output(predicted_output.size());
 
             // Loss funtion
-            this->loss_fn_(correct_output, predicted_output, deriv_error_output);
+            current_iteration_cost_function =
+                this->loss_fn_(correct_output, predicted_output, deriv_error_output);
 
             UpdateWeights(all_layers_activations,
                 deriv_error_output,

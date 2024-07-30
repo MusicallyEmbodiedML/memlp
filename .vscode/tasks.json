@@ -8,6 +8,7 @@
 			"targets": [
 				"LayerTest",
 				"LossTest",
+				"MLPTest",
 				"UnitTests"
 			],
 			"group": {

@@ -4,6 +4,7 @@
 //============================================================================
 #include <vector>
 #include <algorithm>
+#include <memory>
 
 #include "UnitTest.hpp"
 #include "MLP.h"
@@ -34,7 +35,7 @@ UNIT(MLPLearnAND) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.025);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -373,6 +374,78 @@ UNIT(MLPGetWeightsSetWeights) {
   }
 
   LOG(INFO) << "Trained with success." << std::endl;
+}
+
+
+UNIT(MLPUpdateWeigthsMSE) {
+    // Weights from PyTorch reference
+    // See: https://colab.research.google.com/drive/1DgNlTbtpo8XD8YEmGqpKu2ma4BiHRW_B
+    std::vector< std::vector< std::vector<num_t> > > weights {
+        { { -0.5226030349731445, 0.09498977661132812 }
+        , { -0.28878581523895264, -0.34213435649871826 }
+        , { -0.647223949432373, -0.10152232646942139 }
+        , { 0.42996883392333984, -0.019827842712402344 }
+        },
+        { { 0.4287152886390686, 0.4463331699371338, -0.3849239945411682, 0.1832484006881714 }
+        , { 0.1930738091468811, 0.19118380546569824, -0.06816577911376953, 0.125044047832489 }
+        , { 0.12581825256347656, 0.48664939403533936, -0.4792138934135437, -0.18973785638809204 }
+        , { -0.33640098571777344, -0.24253511428833008, 0.09816908836364746, 0.3049418330192566 }
+        },
+        { { -0.3781070113182068, 0.32520592212677, 0.41765105724334717, -0.24645352363586426 }
+        }
+    };
+    // In and out
+    const nd_vector input { {1., /*plus bias*/ 1.} };
+    const nd_vector expected_output { {1.} };
+    // Weights after update
+    std::vector< std::vector< std::vector<num_t> > > expected_weights {
+        { { -0.521845817565918, 0.0957469642162323 }
+        , { -0.2854526937007904, -0.33880123496055603 }
+        , { -0.6493763327598572, -0.10367471724748611 }
+        , { 0.04061141610145569, -0.4091852605342865 }
+        },
+        { { 0.43217340111732483, 0.4514354467391968, -0.37886887788772583, -0.14843356609344482 }
+        , { 0.1900908648967743, 0.1867826282978058, -0.07338888943195343, 0.41115042567253113 }
+        , { 0.1220010370016098, 0.4810172915458679, -0.48589780926704407, 0.17638686299324036 }
+        , { -0.3341711163520813, -0.23924507200717926, 0.1020735502243042, 0.09106685221195221 }
+        },
+        { { -0.22057375311851501, 0.4321286976337433, 0.2506052851676941, 0.02582395076751709 }
+        }
+    };
+
+    // Actual unit test
+    std::vector<size_t> nodes{ 2, 4, 4, 1 };
+    std::vector<std::string> activations{ "relu", "tanh", "linear" };
+    auto model = std::make_unique< MLP<num_t> >(
+        nodes, activations
+    );
+    // Set weights
+    for (unsigned int n=0; n<weights.size(); n++) {
+        model->SetLayerWeights(n, weights[n]);
+    }
+    // Train once
+    model->Train(
+        std::make_pair(input, expected_output),
+        1.,    // learning_rate
+        1,     // max_iteration
+        0.,    // min_error_cost
+        false  // output_log
+    );
+
+    // Check weights
+    for (unsigned int l=0; l<model->GetNumLayers(); l++) {
+        auto layer_weights = model->GetLayerWeights(l);
+        for (unsigned int n=0; n<layer_weights.size(); n++) {
+            for (unsigned int k=0; k<layer_weights[n].size(); k++) {
+                
+                ASSERT_TRUE(utils::is_close(
+                    layer_weights[n][k],
+                    expected_weights[l][n][k]
+                ));
+
+            }  // for k
+        }  // for n
+    }  // for l
 }
 
 

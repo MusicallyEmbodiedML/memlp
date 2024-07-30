@@ -14,8 +14,12 @@
 template<typename T>
 class MLP {
 public:
-    using training_pair_t = std::pair< std::vector<T>, std::vector<T> >;
-  //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
+    //using training_pair_t = std::pair< std::vector<T>, std::vector<T> >;
+    using training_pair_t = std::pair<
+      std::vector< std::vector<T> >,
+      std::vector< std::vector<T> >
+    >;
+  //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"}, 
   MLP(const std::vector<size_t> & layers_nodes,
       const std::vector<std::string> & layers_activfuncs,
       std::string loss_function = "mse",

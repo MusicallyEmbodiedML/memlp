@@ -8,7 +8,7 @@
             "name": "(gdb) Launch FuncLearnTest",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/LossTest_d",
+            "program": "${workspaceFolder}/build/MLPTest_d",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
