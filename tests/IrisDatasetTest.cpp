@@ -133,7 +133,7 @@ UNIT(TestIrisDataset) {
     // 4 inputs + 1 bias.
     // 1 hidden layer(s) of 4 neurons.
     // 3 outputs (1 per iris_class)
-    MLP<iris_num_t> my_mlp({ 4 + 1, 4 ,3 }, { "sigmoid", "linear" }, false);
+    MLP<iris_num_t> my_mlp({ 4 + 1, 4 ,3 }, { "sigmoid", "linear" }, "mse", false);
 
     int loops = 5000;
 

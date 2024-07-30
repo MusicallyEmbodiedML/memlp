@@ -45,7 +45,7 @@ inline T MSE(const std::vector<T> &expected, const std::vector<T> &actual,
 
 // Definition of loss function pointer
 template<typename T>
-using loss_func_t = T(*)(T);
+using loss_func_t = T(*)(const std::vector<T> &, const std::vector<T> &, std::vector<T> &);
 
 
 template<typename T>
@@ -57,7 +57,7 @@ class LossFunctionsManager {
         
         auto iter = loss_functions_map.find(loss_name);
         if (iter != loss_functions_map.end()) {
-            *loss_fun = iter;
+            *loss_fun = iter->second;
         } else {
             return false;
         }

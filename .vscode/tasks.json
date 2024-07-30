@@ -6,7 +6,9 @@
 			"label": "CMake: clean rebuild",
 			"command": "cleanRebuild",
 			"targets": [
-				"LayerTest"
+				"LayerTest",
+				"LossTest",
+				"UnitTests"
 			],
 			"group": {
 				"kind": "build",

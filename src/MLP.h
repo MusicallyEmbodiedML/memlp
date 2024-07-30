@@ -8,7 +8,7 @@
 #include "Layer.h"
 #include "Sample.h"
 #include "Utils.h"
-
+#include "Loss.h"
 
 
 template<typename T>
@@ -18,6 +18,7 @@ public:
   //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
   MLP(const std::vector<size_t> & layers_nodes,
       const std::vector<std::string> & layers_activfuncs,
+      std::string loss_function = "mse",
       bool use_constant_weight_init = false,
       T constant_weight_init = 0.5);
   MLP(const std::string & filename);
@@ -55,7 +56,8 @@ protected:
 private:
   void CreateMLP(const std::vector<size_t> & layers_nodes,
                  const std::vector<std::string> & layers_activfuncs,
-                 bool use_constant_weight_init,
+                 std::string loss_function = "mse",
+                 bool use_constant_weight_init = false,
                  T constant_weight_init = 0.5);
   void ReportProgress(const bool output_log,
       const unsigned int every_n_iter,
@@ -68,6 +70,7 @@ private:
   int m_num_hidden_layers{ 0 };
   std::vector<size_t> m_layers_nodes;
   std::vector<Layer<T>> m_layers;
+  loss::loss_func_t<T> loss_fn_;
 };
 
 #endif //MLP_H

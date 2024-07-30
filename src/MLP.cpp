@@ -21,6 +21,7 @@
 template<typename T>
 MLP<T>::MLP(const std::vector<size_t> & layers_nodes,
          const std::vector<std::string> & layers_activfuncs,
+         std::string loss_function,
          bool use_constant_weight_init,
          T constant_weight_init) {
   assert(layers_nodes.size() >= 2);
@@ -28,6 +29,7 @@ MLP<T>::MLP(const std::vector<size_t> & layers_nodes,
 
   CreateMLP(layers_nodes,
             layers_activfuncs,
+            loss_function,
             use_constant_weight_init,
             constant_weight_init);
 };
@@ -52,12 +54,18 @@ MLP<T>::~MLP() {
 template<typename T>
 void MLP<T>::CreateMLP(const std::vector<size_t> & layers_nodes,
                     const std::vector<std::string> & layers_activfuncs,
+                    std::string loss_function,
                     bool use_constant_weight_init,
                     T constant_weight_init) {
   m_layers_nodes = layers_nodes;
   m_num_inputs = m_layers_nodes[0];
   m_num_outputs = m_layers_nodes[m_layers_nodes.size() - 1];
   m_num_hidden_layers = m_layers_nodes.size() - 2;
+
+  // Loss function selection
+  loss::LossFunctionsManager<T> loss_mgr =
+      loss::LossFunctionsManager<T>::Singleton();
+  assert(loss_mgr.GetLossFunction(loss_function, &(this->loss_fn_)));
 
   for (size_t i = 0; i < m_layers_nodes.size() - 1; i++) {
     m_layers.emplace_back(Layer<T>(m_layers_nodes[i],
@@ -336,14 +344,8 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
             assert(correct_output.size() == predicted_output.size());
             std::vector<T> deriv_error_output(predicted_output.size());
 
-            for (size_t j = 0; j < predicted_output.size(); j++) {
-                //TODO AM - Only supports MSE?
-                current_iteration_cost_function += static_cast<float>(
-                    (std::pow)((correct_output[j] - predicted_output[j]), 2)
-                    );
-                deriv_error_output[j] =
-                    -2 * (correct_output[j] - predicted_output[j]);
-            }
+            // Loss funtion
+            this->loss_fn_(correct_output, predicted_output, deriv_error_output);
 
             UpdateWeights(all_layers_activations,
                 deriv_error_output,
