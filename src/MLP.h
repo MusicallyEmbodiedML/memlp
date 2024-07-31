@@ -74,7 +74,7 @@ private:
   int m_num_hidden_layers{ 0 };
   std::vector<size_t> m_layers_nodes;
   std::vector<Layer<T>> m_layers;
-  loss::loss_func_t<T> loss_fn_;
+  MLP_LOSS_FN loss::loss_func_t<T> loss_fn_;
 };
 
 #endif //MLP_H

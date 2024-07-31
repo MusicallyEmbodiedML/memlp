@@ -7,8 +7,8 @@
 
 FUNCLEARNTEST_C_FN
 void groundtruth_fn(
-    std::vector<number_t>& x,
-    std::vector<number_t>& y)
+    d_vector<number_t>& x,
+    d_vector<number_t>& y)
 {
     static const number_t x_shift = 1.f, y_shift = 0.f;
 
@@ -77,17 +77,36 @@ FuncLearnDataset::FuncLearnDataset(number_t lower_point,
     training_set_ = std::make_shared<pair_of_vectors>();
     validation_set_ = std::make_shared<pair_of_vectors>();
 
-    training_set_->first = arange(lower_point, upper_point,
+    auto temp_train_features = std::make_unique<d_vector<num_t>>();
+    auto temp_train_labels = std::make_unique<d_vector<num_t>>();
+    auto temp_valid_features = std::make_unique<d_vector<num_t>>();
+    auto temp_valid_labels = std::make_unique<d_vector<num_t>>();
+
+    *temp_train_features = arange(lower_point, upper_point,
         static_cast<number_t>(upper_point - lower_point) /
         static_cast<number_t>(training_points));
-    training_set_->second.resize(training_set_->first.size());
-    groundtruth_fn_ptr(training_set_->first, training_set_->second);
+    temp_train_labels->resize(temp_train_features->size());
+    groundtruth_fn_ptr(*temp_train_features, *temp_train_labels);
 
-    validation_set_->first = arange(lower_point, upper_point,
+    *temp_valid_features = arange(lower_point, upper_point,
         static_cast<number_t>(upper_point - lower_point) /
         static_cast<number_t>(validation_points));
-    validation_set_->second.resize(validation_set_->first.size());
-    groundtruth_fn_ptr(validation_set_->first, validation_set_->second);
+    temp_valid_labels->resize(temp_valid_features->size());
+    groundtruth_fn_ptr(*temp_valid_features, *temp_valid_labels);
+
+    // Reshape into (-1, 1)
+    training_set_->first.resize(temp_train_features->size());
+    training_set_->second.resize(temp_train_features->size());
+    for(unsigned int n = 0; n < temp_train_features->size(); n++) {
+        training_set_->first[n] = { (*temp_train_features)[n] };
+        training_set_->second[n] = { (*temp_train_labels)[n] };
+    }
+    validation_set_->first.resize(temp_valid_features->size());
+    validation_set_->second.resize(temp_valid_features->size());
+    for(unsigned int n = 0; n < temp_valid_features->size(); n++) {
+        validation_set_->first[n] = { (*temp_valid_features)[n] };
+        validation_set_->second[n] = { (*temp_valid_labels)[n] };
+    }
 }
 
 
@@ -110,8 +129,9 @@ void FUNCLEARNTEST_C_FN FuncLearnRunner::MakeData(const unsigned int n_examples)
     validation_set_ = dataset_->validation();
 
     // Xscope debug probes
-    probes_[0].log_vector(training_set_->first);
-    probes_[1].log_vector(training_set_->second);
+    // TODO AM overload log vector to save ndarrays
+    //probes_[0].log_vector(training_set_->first);
+    //probes_[1].log_vector(training_set_->second);
     printf("\n");
 }
 
@@ -128,6 +148,7 @@ void FuncLearnRunner::MakeModel()
     number_t constant_weight_init = 0.5;
     mlp_ = std::make_unique< MLP<number_t> >(layers_nodes,
                                              layers_activfuncs,
+                                             "mse",
                                              use_constant_weight_init,
                                              constant_weight_init);
 }
@@ -135,7 +156,7 @@ void FuncLearnRunner::MakeModel()
 
 void FuncLearnRunner::TrainModel(const unsigned int n_epochs)
 {
-    mlp_->Train(*training_set_, .001f, static_cast<int>(n_epochs), 0.10f, true);
+    mlp_->Train(*training_set_, .001f, static_cast<int>(n_epochs), 0.f, true);
 }
 
 

@@ -36,6 +36,8 @@ xrun --xscope --xscope-file xscope.vcd XMOS.xe
 
 `./cmake_automate_xmos.sh`
 
+xrun --xscope --xscope-file xscope.vcd build/MLP_XMOS.xe
+
 ### Linux
 
 `./cmake_automate_linux.sh`

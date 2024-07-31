@@ -6,6 +6,7 @@
 #include <utility>
 #include <memory>
 
+#include "Data.h"
 #include "MLP.h"
 #include "Probe.hpp"
 
@@ -28,8 +29,8 @@ std::vector<number_t> arange(number_t start, number_t stop, number_t step);
  * Public definitions
  */
 
-using pair_of_vectors = std::pair< std::vector<number_t>, std::vector<number_t> >;
-using groundtruth_fn_t = void (*)(std::vector<number_t>&, std::vector<number_t>&);
+using pair_of_vectors = std::pair< nd_vector<number_t>, nd_vector<number_t> >;
+using groundtruth_fn_t = void (*)(d_vector<number_t>&, d_vector<number_t>&);
 
 /**
  * Public classes
