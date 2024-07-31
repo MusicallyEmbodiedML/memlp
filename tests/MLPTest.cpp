@@ -35,7 +35,7 @@ UNIT(MLPLearnAND) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.025);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -74,7 +74,7 @@ UNIT(MLPLearnNAND) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -113,7 +113,7 @@ UNIT(MLPLearnOR) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -152,7 +152,7 @@ UNIT(MLPLearnNOR) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -189,7 +189,7 @@ UNIT(MLPLearnXOR) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -224,7 +224,7 @@ UNIT(MLPLearnNOT) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t> output;
@@ -261,7 +261,7 @@ UNIT(MLPLearnX1) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -298,7 +298,7 @@ UNIT(MLPLearnX2) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -337,7 +337,7 @@ UNIT(MLPGetWeightsSetWeights) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2, num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.25);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
   // get layer weights
   std::vector<std::vector<num_t>> weights = my_mlp.GetLayerWeights( 1 );

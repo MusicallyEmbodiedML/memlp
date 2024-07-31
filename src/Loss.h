@@ -21,6 +21,12 @@
 
 namespace loss {
 
+/* TODO AM Only SGD is supported - support batch/minibatch GD
+ * Problem is that minibatch requires total rewrite of backprop.
+ * I don't know how to handle activation functions for each example
+ * and how they relate to backprop.
+ */
+
 
 template<typename T>
 MLP_LOSS_FN
