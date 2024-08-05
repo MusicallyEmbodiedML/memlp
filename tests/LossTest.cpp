@@ -24,7 +24,7 @@ UNIT(TestMSE) {
 UNIT(TestLossFunctionsManager) {
     auto loss_mgr = loss::LossFunctionsManager<num_t>::Singleton();
 
-    loss::loss_func_t<num_t> loss_func;
+    MLP_LOSS_FN loss::loss_func_t<num_t> loss_func;
 
     bool function_found = loss_mgr.GetLossFunction("mse", &loss_func);
     ASSERT_TRUE(function_found);

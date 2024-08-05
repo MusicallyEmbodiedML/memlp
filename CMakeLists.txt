@@ -30,11 +30,14 @@ if (${MLP_XMOS})
         "${CMAKE_CURRENT_SOURCE_DIR}/src/MLP.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/Probe.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/FuncLearnTest.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/xmos_par_main.c")
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/xmos_par_main.c"
+        #"${CMAKE_CURRENT_SOURCE_DIR}/tests/_TestMain.cpp"
+    )
     
     set(XMOS_INCLUDES
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        "${CMAKE_CURRENT_SOURCE_DIR}/deps")
+        "${CMAKE_CURRENT_SOURCE_DIR}/deps"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 
     set(XMOS_CXX_COMPILE_OPTIONS)
 
