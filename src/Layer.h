@@ -101,6 +101,7 @@ public:
 
     for (size_t i = 0; i < m_nodes.size(); i++) {
       T net_sum;
+      //TODO AM cache this result rather than computing it again!
       m_nodes[i].GetInputInnerProdWithWeights(input_layer_activation,
                                               &net_sum);
 
