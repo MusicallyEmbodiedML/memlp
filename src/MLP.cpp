@@ -173,9 +173,13 @@ void MLP<T>::GetOutput(const std::vector<T> &input,
     m_layers[i].GetOutputAfterActivationFunction(temp_in, &temp_out);
   }
 
+  /*FIXME AM Why is it forcing a softmax even when doing regression???
+             Also, softmax is not backprop'ed */
+#if 0
   if (temp_out.size() > 1) {
       utils::Softmax(&temp_out);
   }
+#endif
   *output = temp_out;
 
   //Add last layer activation
