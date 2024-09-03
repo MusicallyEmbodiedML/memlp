@@ -51,6 +51,8 @@ public:
   size_t GetNumLayers();
   std::vector<std::vector<T>> GetLayerWeights( size_t layer_i );
   void SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weights );
+  
+  std::vector<Layer<T>> m_layers;
 
 protected:
   void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
@@ -73,7 +75,6 @@ private:
   int m_num_outputs{ 0 };
   int m_num_hidden_layers{ 0 };
   std::vector<size_t> m_layers_nodes;
-  std::vector<Layer<T>> m_layers;
   MLP_LOSS_FN loss::loss_func_t<T> loss_fn_;
 };
 

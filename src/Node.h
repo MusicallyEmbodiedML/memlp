@@ -151,11 +151,12 @@ public:
     m_weights.resize(m_num_inputs);
     fread(&m_weights[0], sizeof(m_weights[0]), m_weights.size(), file);
   };
+  
+  std::vector<T> m_weights;
 
 protected:
   size_t m_num_inputs{ 0 };
   T m_bias{ 0.0 };
-  std::vector<T> m_weights;
 };
 
 #endif //NODE_H

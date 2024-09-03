@@ -12,7 +12,7 @@
 #include <algorithm>
 
 
-#if defined(MLP_VERBOSE)
+#if 1
 #include <stdio.h>
 #endif
 
@@ -83,7 +83,7 @@ void MLP<T>::ReportProgress(const bool output_log,
     const unsigned int i,
     const float current_iteration_cost_function)
 {
-#if defined(MLP_VERBOSE)
+#if 1
     if (output_log && ((i % every_n_iter) == 0)) {
         printf("Iteration %i cost function f(error): %f\n",
                 i, current_iteration_cost_function);
@@ -95,7 +95,7 @@ void MLP<T>::ReportProgress(const bool output_log,
 template<typename T>
 void MLP<T>::ReportFinish(const unsigned int i, const float current_iteration_cost_function)
 {
-#if defined(MLP_VERBOSE)
+#if 1
     printf("Iteration %i cost function f(error): %f\n",
         i, current_iteration_cost_function);
 
@@ -356,15 +356,15 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
             if (t_feat != training_features.end())
             {
                 ++t_feat;
-    }
+            }
             if (t_label != training_labels.end())
             {
                 ++t_label;
             }
         }
 
-#if defined(MLP_VERBOSE)
-        ReportProgress(output_log, 1, i, current_iteration_cost_function);
+#if 1
+        ReportProgress(true, 100, i, current_iteration_cost_function);
 
 #endif  // EASYLOGGING_ON
 
@@ -376,7 +376,7 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
     }
 
-#if defined(MLP_VERBOSE)
+#if 1
     ReportFinish(i, current_iteration_cost_function);
 #endif  // EASYLOGGING_ON
 };

@@ -178,10 +178,11 @@ public:
 
   };
 
+  std::vector<Node<T>> m_nodes;
+
 protected:
   size_t m_num_inputs_per_node{ 0 };
   size_t m_num_nodes{ 0 };
-  std::vector<Node<T>> m_nodes;
 
   std::string m_activation_function_str;
   MLP_ACTIVATION_FN activation_func_t<T> m_activation_function;
