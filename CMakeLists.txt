@@ -19,7 +19,13 @@ if (${MLP_XMOS})
 
     project("MLP_XMOS")
 
-    set(COMMON_FLAGS "-target=XK-EVK-XU316 -Wall -DMLP_VERBOSE -D__XS3A__ -fxscope ${CMAKE_CURRENT_SOURCE_DIR}/config.xscope")
+    string(JOIN " " COMMON_FLAGS
+        "-target=XK-EVK-XU316"
+        "-Wall"
+        "-DMLP_VERBOSE"
+        "-D__XS3A__"
+        "-fxscope ${CMAKE_CURRENT_SOURCE_DIR}/config.xscope"
+        "-lquadflash")
     set(CMAKE_C_FLAGS ${COMMON_FLAGS})
     set(CMAKE_CXX_FLAGS ${COMMON_FLAGS})
     set(CMAKE_EXE_LINKER_FLAGS "-fxscope -Wl --gc-sections -report")
@@ -28,10 +34,13 @@ if (${MLP_XMOS})
 
     set(XMOS_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/src/MLP.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/Probe.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/FuncLearnTest.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/xmos_par_main.c"
-        #"${CMAKE_CURRENT_SOURCE_DIR}/tests/_TestMain.cpp"
+        #"${CMAKE_CURRENT_SOURCE_DIR}/src/Probe.cpp"
+        #"${CMAKE_CURRENT_SOURCE_DIR}/src/FuncLearnTest.cpp"
+        #"${CMAKE_CURRENT_SOURCE_DIR}/src/xmos_par_main.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/_TestMain.cpp"
+        #"${CMAKE_CURRENT_SOURCE_DIR}/tests/SerialiseTest.cpp"
+        #"${CMAKE_CURRENT_SOURCE_DIR}/tests/FlashTest.cpp"
+        #"${CMAKE_CURRENT_SOURCE_DIR}/tests/MLPTest.cpp"
     )
     
     set(XMOS_INCLUDES

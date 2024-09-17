@@ -80,5 +80,9 @@
         "span": "cpp",
         "stop_token": "cpp",
         "variant": "cpp"
+    },
+    "cmake.configureSettings": {
+        "CMAKE_TOOLCHAIN_FILE": "xmos_cmake_toolchain/xs3a.cmake",
+        "MLP_XMOS": "ON"
     }
 }

@@ -99,6 +99,14 @@ bool load_data(int *samples,
 
 
 UNIT(TestIrisDataset) {
+
+#if defined(__XS3A__)
+
+  LOG(WARNING) << "TestIrisDataset cannot be run on XMOS." << std::endl;
+  return;
+
+#else  // __XS3A__
+
   LOG(INFO) << "Train MLP with IRIS dataset using backpropagation." << std::endl;
   int samples = 0;
   std::vector<double> input;
@@ -169,4 +177,6 @@ UNIT(TestIrisDataset) {
 
     ASSERT_TRUE(((double)correct / samples) > 0.992);
   }
+
+#endif  // __XS3A__
 }
