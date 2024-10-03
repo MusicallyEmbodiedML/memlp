@@ -87,3 +87,13 @@ Saving and loading models is also very intuitive:
   //...
 }
 ```
+
+## Building
+
+```
+cmake -B build -DMLP_XMOS=ON -DCMAKE_TOOLCHAIN_FILE=xmos_cmake_toolchain/xs3a.cmake
+```
+
+```
+xrun --xscope MLP_XMOS.xe
+```

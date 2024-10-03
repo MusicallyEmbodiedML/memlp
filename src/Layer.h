@@ -78,7 +78,7 @@ public:
 
 
   void GetOutputAfterActivationFunction(const std::vector<T> &input,
-                                        std::vector<T> * output) const {
+                                        std::vector<T> * output) {
     assert(input.size() == m_num_inputs_per_node);
 
     output->resize(m_num_nodes);
@@ -102,8 +102,7 @@ public:
     for (size_t i = 0; i < m_nodes.size(); i++) {
       T net_sum;
       //TODO AM cache this result rather than computing it again!
-      m_nodes[i].GetInputInnerProdWithWeights(input_layer_activation,
-                                              &net_sum);
+      m_nodes[i].GetInputInnerProdWithWeights(input_layer_activation);
 
       //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
       T dE_doj = 0;

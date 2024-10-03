@@ -33,7 +33,7 @@ public:
 
   void GetOutput(const std::vector<T> &input,
                  std::vector<T> * output,
-                 std::vector<std::vector<T>> * all_layers_activations = nullptr) const;
+                 std::vector<std::vector<T>> * all_layers_activations = nullptr);
   void GetOutputClass(const std::vector<T> &output, size_t * class_id) const;
 
   void Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,

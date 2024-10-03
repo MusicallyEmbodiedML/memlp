@@ -94,24 +94,24 @@ public:
     return m_weights.size();
   }
 
-  void GetInputInnerProdWithWeights(const std::vector<T> &input,
-                                    T * output) const {
+  void GetInputInnerProdWithWeights(const std::vector<T> &input) {
     
     static const T kInit(0);
 
     assert(input.size() == m_weights.size());
-    T inner_prod = std::inner_product(begin(input),
+    T res = std::inner_product(begin(input),
                                            end(input),
                                            begin(m_weights),
                                            kInit);
-    *output = inner_prod;
+    // *output = res;
+    inner_prod = res;
   }
 
   void GetOutputAfterActivationFunction(const std::vector<T> &input,
                                         MLP_ACTIVATION_FN activation_func_t<T> activation_function,
-                                        T * output) const {
-    T inner_prod = 0.0;
-    GetInputInnerProdWithWeights(input, &inner_prod);
+                                        T * output) {
+    // T inner_prod = 0.0;
+    GetInputInnerProdWithWeights(input);
     *output = activation_function(inner_prod);
   }
 
@@ -157,6 +157,8 @@ public:
 protected:
   size_t m_num_inputs{ 0 };
   T m_bias{ 0.0 };
+private:
+  T inner_prod;
 };
 
 #endif //NODE_H

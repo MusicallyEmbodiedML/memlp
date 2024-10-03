@@ -147,7 +147,7 @@ void MLP<T>::LoadMLPNetwork(const std::string & filename) {
 template<typename T>
 void MLP<T>::GetOutput(const std::vector<T> &input,
                     std::vector<T> * output,
-                    std::vector<std::vector<T>> * all_layers_activations) const {
+                    std::vector<std::vector<T>> * all_layers_activations) {
   assert(input.size() == m_num_inputs);
   int temp_size;
   if (m_num_hidden_layers == 0)
