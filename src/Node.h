@@ -94,7 +94,7 @@ public:
     return m_weights.size();
   }
 
-  void GetInputInnerProdWithWeights(const std::vector<T> &input) {
+  T GetInputInnerProdWithWeights(const std::vector<T> &input) {
     
     static const T kInit(0);
 
@@ -105,6 +105,7 @@ public:
                                            kInit);
     // *output = res;
     inner_prod = res;
+    return inner_prod;
   }
 
   void GetOutputAfterActivationFunction(const std::vector<T> &input,
@@ -153,12 +154,12 @@ public:
   };
   
   std::vector<T> m_weights;
+  T inner_prod;
 
 protected:
   size_t m_num_inputs{ 0 };
   T m_bias{ 0.0 };
 private:
-  T inner_prod;
 };
 
 #endif //NODE_H

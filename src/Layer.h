@@ -100,9 +100,6 @@ public:
     deltas->resize(m_num_inputs_per_node, 0);
 
     for (size_t i = 0; i < m_nodes.size(); i++) {
-      T net_sum;
-      //TODO AM cache this result rather than computing it again!
-      m_nodes[i].GetInputInnerProdWithWeights(input_layer_activation);
 
       //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
       T dE_doj = 0;
@@ -110,7 +107,7 @@ public:
       T dnetj_dwij = 0;
 
       dE_doj = deriv_error[i];
-      doj_dnetj = m_deriv_activation_function(net_sum);
+      doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod); //cached from earlier calculation
 
       for (size_t j = 0; j < m_num_inputs_per_node; j++) {
         (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
@@ -151,6 +148,7 @@ public:
       m_nodes[i].SaveNode(file);
     }
   };
+  
   void LoadLayer(FILE * file) {
     m_nodes.clear();
 
