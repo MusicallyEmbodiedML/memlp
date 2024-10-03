@@ -12,7 +12,7 @@ if (${MLP_XMOS})
     ##
 
     message("---")
-    message("- XMOS test build")
+    message("- MLP: XMOS standalone test build")
     message("---")
 
     set(CMAKE_CXX_STANDARD 14)
@@ -59,29 +59,20 @@ if (${MLP_XMOS})
     #target_link_libraries(${XMOS_XE} PUBLIC
     #    "/home/virgult/Frameworks/XMOS/XTC/15.2.1/target/lib/xs3a/libxscope.a")
 
-elseif (CMAKE_SYSTEM_NAME STREQUAL "XCORE_XS3A")
+elseif (NOT DEFINED $ENV{XMOS_CMAKE_PATH})
+
     ##
-    # XMOS build
+    # XMOS "new style" build
     ##
 
-    message("--- MLP ---")
+    message("--- MLP (XMOS 'new-style' build) ---")
 
-    set(MLP_HEADERS
-        ${CMAKE_CURRENT_LIST_DIR}/src
-        ${CMAKE_CURRENT_LIST_DIR}/deps
-    )
-    set(MLP_SOURCES
-        ${CMAKE_CURRENT_LIST_DIR}/src/MLP.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/FuncLearnTest.cpp
-    )
-
-    # Append in local scope
-    list(APPEND MEML_HEADERS ${MLP_HEADERS})
-    list(APPEND MEML_SOURCES ${MLP_SOURCES})
-
-    # Propagate in parent scope
-    set(MEML_HEADERS ${MEML_HEADERS} PARENT_SCOPE)
-    set(MEML_SOURCES ${MEML_SOURCES} PARENT_SCOPE)
+    cmake_minimum_required(VERSION 3.21)
+    include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
+    project(lib_mlp)
+    
+    set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../..)
+    include(lib_build_info.cmake)
 
 else ()
 
@@ -90,18 +81,20 @@ else ()
     ##
     cmake_policy(SET CMP0048 NEW)
 
+    message("--- MLP (PC build) ---")
+
     project(MLP VERSION 1.0)
 
     set(SHARED_LIB_NAME ${PROJECT_NAME})
     set(STATIC_LIB_NAME ${PROJECT_NAME}_static)
     set(MLP_SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/MLP.cpp"
                          "${CMAKE_CURRENT_SOURCE_DIR}/src/Probe.cpp")
-    set(MLP_HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/MLP.h"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/Layer.h"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/Node.h"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/Sample.h"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/Utils.h"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/src/Loss.h")
+    set(MLP_HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/api/MLP.h"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api/Layer.h"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api/Node.h"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api/Sample.h"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api/Utils.h"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/api/Loss.h")
 
     # FuncLearnTest
     set(FUNCLEARN_EXEC_NAME FuncLearnTest)
@@ -155,6 +148,7 @@ else ()
     set_target_properties(${FUNCLEARN_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     target_include_directories(${FUNCLEARN_EXEC_NAME} PUBLIC ".")
     target_include_directories(${FUNCLEARN_EXEC_NAME} PUBLIC "src")
+    target_include_directories(${FUNCLEARN_EXEC_NAME} PUBLIC "api")
     target_include_directories(${FUNCLEARN_EXEC_NAME} PUBLIC "deps")
     target_include_directories(${FUNCLEARN_EXEC_NAME} PUBLIC "tests")
 
@@ -168,6 +162,7 @@ else ()
     set_target_properties(${LAYER_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     target_include_directories(${LAYER_EXEC_NAME} PUBLIC ".")
     target_include_directories(${LAYER_EXEC_NAME} PUBLIC "src")
+    target_include_directories(${LAYER_EXEC_NAME} PUBLIC "api")
     target_include_directories(${LAYER_EXEC_NAME} PUBLIC "deps")
     target_include_directories(${LAYER_EXEC_NAME} PUBLIC "tests")
 
@@ -181,6 +176,7 @@ else ()
     set_target_properties(${LOSS_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     target_include_directories(${LOSS_EXEC_NAME} PUBLIC ".")
     target_include_directories(${LOSS_EXEC_NAME} PUBLIC "src")
+    target_include_directories(${LOSS_EXEC_NAME} PUBLIC "api")
     target_include_directories(${LOSS_EXEC_NAME} PUBLIC "deps")
     target_include_directories(${LOSS_EXEC_NAME} PUBLIC "tests")
 
@@ -194,6 +190,7 @@ else ()
     set_target_properties(${MLP_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     target_include_directories(${MLP_EXEC_NAME} PUBLIC ".")
     target_include_directories(${MLP_EXEC_NAME} PUBLIC "src")
+    target_include_directories(${MLP_EXEC_NAME} PUBLIC "api")
     target_include_directories(${MLP_EXEC_NAME} PUBLIC "deps")
     target_include_directories(${MLP_EXEC_NAME} PUBLIC "tests")
 
@@ -207,6 +204,7 @@ else ()
     set_target_properties(${UNITTESTS_EXEC_NAME} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     target_include_directories(${UNITTESTS_EXEC_NAME} PUBLIC ".")
     target_include_directories(${UNITTESTS_EXEC_NAME} PUBLIC "src")
+    target_include_directories(${UNITTESTS_EXEC_NAME} PUBLIC "api")
     target_include_directories(${UNITTESTS_EXEC_NAME} PUBLIC "deps")
     target_include_directories(${UNITTESTS_EXEC_NAME} PUBLIC "tests")
 
