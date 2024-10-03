@@ -148,7 +148,7 @@ public:
       m_nodes[i].SaveNode(file);
     }
   };
-  
+
   void LoadLayer(FILE * file) {
     m_nodes.clear();
 
@@ -177,6 +177,12 @@ public:
   };
 
   std::vector<Node<T>> m_nodes;
+
+  void prepareForOptimisation(size_t maxBatchSize) {
+    for(auto &v: m_nodes) {
+      v.prepareForOptimisation(maxBatchSize);
+    }
+  }
 
 protected:
   size_t m_num_inputs_per_node{ 0 };

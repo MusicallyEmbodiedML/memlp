@@ -386,6 +386,83 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 };
 
 
+template<typename T>
+void MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
+    float learning_rate,
+    int max_iterations,
+    float min_error_cost,
+    bool output_log) {
+
+    int i = 0;
+    float current_iteration_cost_function = 0.f;
+
+    for (i = 0; i < max_iterations; i++) {
+        current_iteration_cost_function = 0.f;
+
+        auto training_features = training_sample_set_with_bias.first;
+        auto training_labels = training_sample_set_with_bias.second;
+        auto t_feat = training_features.begin();
+        auto t_label = training_labels.begin();
+
+        for(auto &v: m_layers) {
+          v.prepareForOptimisation(training_features.size());
+        }
+
+
+
+        while (t_feat != training_features.end() || t_label != training_labels.end()) {
+
+            // Payload
+            std::vector<T> predicted_output;
+            std::vector< std::vector<T> > all_layers_activations;
+
+            GetOutput(*t_feat,
+                &predicted_output,
+                &all_layers_activations);
+
+            const std::vector<T>& correct_output{ *t_label };
+
+            assert(correct_output.size() == predicted_output.size());
+            std::vector<T> deriv_error_output(predicted_output.size());
+
+            // Loss funtion
+            current_iteration_cost_function =
+                this->loss_fn_(correct_output, predicted_output, deriv_error_output);
+
+            UpdateWeights(all_layers_activations,
+                deriv_error_output,
+                learning_rate);
+
+            // \Payload
+            if (t_feat != training_features.end())
+            {
+                ++t_feat;
+            }
+            if (t_label != training_labels.end())
+            {
+                ++t_label;
+            }
+        }
+
+#if 1
+        ReportProgress(true, 100, i, current_iteration_cost_function);
+
+#endif  // EASYLOGGING_ON
+
+        // Early stopping
+        // TODO AM early stopping should be optional and metric-dependent
+        if (current_iteration_cost_function < min_error_cost) {
+            break;
+        }
+
+    }
+
+#if 1
+    ReportFinish(i, current_iteration_cost_function);
+#endif  // EASYLOGGING_ON
+};
+
+
 
 template<typename T>
 size_t MLP<T>::GetNumLayers()

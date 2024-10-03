@@ -156,6 +156,12 @@ public:
   std::vector<T> m_weights;
   T inner_prod;
 
+  std::vector<T> inner_products;
+
+  void prepareForOptimisation(size_t maxBatchSize) {
+    inner_products.resize(maxBatchSize);
+  }
+
 protected:
   size_t m_num_inputs{ 0 };
   T m_bias{ 0.0 };
