@@ -178,11 +178,11 @@ public:
 
   std::vector<Node<T>> m_nodes;
 
-  void prepareForOptimisation(size_t maxBatchSize) {
-    for(auto &v: m_nodes) {
-      v.prepareForOptimisation(maxBatchSize);
-    }
-  }
+  // void prepareForOptimisation(size_t maxBatchSize) {
+  //   for(auto &v: m_nodes) {
+  //     v.prepareForOptimisation(maxBatchSize);
+  //   }
+  // }
 
 protected:
   size_t m_num_inputs_per_node{ 0 };

@@ -31,19 +31,21 @@ namespace loss {
 template<typename T>
 MLP_LOSS_FN
 inline T MSE(const std::vector<T> &expected, const std::vector<T> &actual,
-             std::vector<T> &loss_deriv) {
+             std::vector<T> &loss_deriv, T sampleSizeReciprocal) {
     
     T accum_loss = 0.;
     T n_elem = actual.size();
     T one_over_n_elem = 1. / n_elem;
     
     for (unsigned int j = 0; j < actual.size(); j++) {
+        //TODO CK separate out diff for efficiency, replace pow with diff*diff
           accum_loss += std::pow((expected[j] - actual[j]), 2)
                 * one_over_n_elem;
           loss_deriv[j] =
               -2 * one_over_n_elem
-              * (expected[j] - actual[j]);
+              * (expected[j] - actual[j]) * sampleSizeReciprocal;
     }
+    accum_loss *= sampleSizeReciprocal;
 
     return accum_loss;
 }
@@ -51,7 +53,7 @@ inline T MSE(const std::vector<T> &expected, const std::vector<T> &actual,
 
 // Definition of loss function pointer
 template<typename T>
-using loss_func_t = T(*)(const std::vector<T> &, const std::vector<T> &, std::vector<T> &);
+using loss_func_t = T(*)(const std::vector<T> &, const std::vector<T> &, std::vector<T> &, T);
 
 
 template<typename T>

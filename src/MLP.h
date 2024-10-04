@@ -51,6 +51,7 @@ public:
   void MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
              float learning_rate,
              int max_iterations = 5000,
+             size_t miniBatchSize=8,
              float min_error_cost = 0.001,
              bool output_log = true);
 
@@ -74,7 +75,7 @@ private:
   void ReportProgress(const bool output_log,
       const unsigned int every_n_iter,
       const unsigned int i,
-      const float current_iteration_cost_function);
+      const T current_iteration_cost_function);
   void ReportFinish(const unsigned int i,
       const float current_iteration_cost_function);
   size_t m_num_inputs{ 0 };

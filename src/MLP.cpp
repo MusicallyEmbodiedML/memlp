@@ -81,12 +81,12 @@ template<typename T>
 void MLP<T>::ReportProgress(const bool output_log,
     const unsigned int every_n_iter,
     const unsigned int i,
-    const float current_iteration_cost_function)
+    const T sampleLoss)
 {
 #if 1
     if (output_log && ((i % every_n_iter) == 0)) {
         printf("Iteration %i cost function f(error): %f\n",
-                i, current_iteration_cost_function);
+                i, sampleLoss);
     }
 #endif
 }
@@ -247,6 +247,8 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
 
   int i = 0;
   float current_iteration_cost_function = 0.f;
+  T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.size();
+
 
   for (i = 0; i < max_iterations; i++) {
     current_iteration_cost_function = 0.f;
@@ -265,11 +267,9 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
       assert(correct_output.size() == predicted_output.size());
       std::vector<T> deriv_error_output(predicted_output.size());
 
-      // FIXME AM Weight update should happen at every BATCH,
-      // not for every example!!!
       // Loss funtion
       current_iteration_cost_function =
-          this->loss_fn_(correct_output, predicted_output, deriv_error_output);
+          this->loss_fn_(correct_output, predicted_output, deriv_error_output,sampleSizeReciprocal);
 
       UpdateWeights(all_layers_activations,
                     deriv_error_output,
@@ -325,6 +325,8 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     int i = 0;
     float current_iteration_cost_function = 0.f;
 
+    T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.first.size();
+
     for (i = 0; i < max_iterations; i++) {
         current_iteration_cost_function = 0.f;
 
@@ -350,7 +352,7 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
             // Loss funtion
             current_iteration_cost_function =
-                this->loss_fn_(correct_output, predicted_output, deriv_error_output);
+                this->loss_fn_(correct_output, predicted_output, deriv_error_output, sampleSizeReciprocal);
 
             UpdateWeights(all_layers_activations,
                 deriv_error_output,
@@ -390,62 +392,82 @@ template<typename T>
 void MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
     int max_iterations,
+    size_t miniBatchSize,
     float min_error_cost,
     bool output_log) {
+
+    assert(miniBatchSize > 0);
 
     int i = 0;
     float current_iteration_cost_function = 0.f;
 
+
+
+    auto training_features = training_sample_set_with_bias.first;
+    auto training_labels = training_sample_set_with_bias.second;
+    auto t_feat = training_features.begin();
+    auto t_label = training_labels.begin();
+
+    //how many batches
+    size_t nBatches = training_features.size() / miniBatchSize;
+    size_t lastBatchSize = training_features.size() % miniBatchSize;
+    //extra batch if not precisely divisible by batch size
+    nBatches += (lastBatchSize > 0);
+
+
     for (i = 0; i < max_iterations; i++) {
         current_iteration_cost_function = 0.f;
 
-        auto training_features = training_sample_set_with_bias.first;
-        auto training_labels = training_sample_set_with_bias.second;
-        auto t_feat = training_features.begin();
-        auto t_label = training_labels.begin();
-
-        for(auto &v: m_layers) {
-          v.prepareForOptimisation(training_features.size());
+        //randomly shuffle training data into mini batches
+        std::vector<size_t> shuffledIndexes(training_features.size());
+        //fill with indexes
+        for(size_t i_shuffle=0; i_shuffle < shuffledIndexes.size(); i_shuffle++) {
+          shuffledIndexes[i_shuffle] = i_shuffle;
         }
+        //shuffle
+        std::random_shuffle(shuffledIndexes.begin(), shuffledIndexes.end());
 
+        //process the mini batches
+        T epochLoss = 0;
+        size_t trainingIndex = 0;
+        T sampleSizeReciprocal = 1.f / miniBatchSize;
 
+        for(size_t i_batch=0; i_batch < nBatches; i_batch++) {
+          size_t currBatchSize = miniBatchSize;
+          if (lastBatchSize > 0 && i_batch + 1 == nBatches) {
+            currBatchSize = lastBatchSize;
+            sampleSizeReciprocal = 1.f / currBatchSize;
+          }
 
-        while (t_feat != training_features.end() || t_label != training_labels.end()) {
-
-            // Payload
+          //process minibatch
+          T sampleLoss = 0;
+          for(size_t i_trainingItem=0; i_trainingItem < currBatchSize; i_trainingItem++) {
             std::vector<T> predicted_output;
             std::vector< std::vector<T> > all_layers_activations;
-
-            GetOutput(*t_feat,
+            size_t shuffledTrainingIndex = shuffledIndexes[trainingIndex];
+            GetOutput(training_features[shuffledTrainingIndex],
                 &predicted_output,
                 &all_layers_activations);
 
-            const std::vector<T>& correct_output{ *t_label };
+            const std::vector<T>& correct_output{ training_labels[shuffledTrainingIndex] };
 
             assert(correct_output.size() == predicted_output.size());
             std::vector<T> deriv_error_output(predicted_output.size());
 
             // Loss funtion
-            current_iteration_cost_function =
-                this->loss_fn_(correct_output, predicted_output, deriv_error_output);
+            sampleLoss +=
+                this->loss_fn_(correct_output, predicted_output, deriv_error_output, sampleSizeReciprocal);
 
             UpdateWeights(all_layers_activations,
                 deriv_error_output,
                 learning_rate);
-
-            // \Payload
-            if (t_feat != training_features.end())
-            {
-                ++t_feat;
-            }
-            if (t_label != training_labels.end())
-            {
-                ++t_label;
-            }
+            epochLoss += sampleLoss;
+            trainingIndex++;
+          }
         }
 
 #if 1
-        ReportProgress(true, 100, i, current_iteration_cost_function);
+        ReportProgress(true, 100, i, epochLoss);
 
 #endif  // EASYLOGGING_ON
 
