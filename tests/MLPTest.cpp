@@ -326,40 +326,13 @@ UNIT(MLPLearnX2_MiniBatch) {
   trainingSet.first = {{0,0,1},{0,1,1},{1,0,1},{1,1,1}};
   trainingSet.second = {{0},{1.0},{0},{1.0}};
 
-  // std::vector<TrainingSample<num_t>> training_set =
-  // {
-  //   { { 0, 0 },{ 0.0 } },
-  //   { { 0, 1 },{ 1.0 } },
-  //   { { 1, 0 },{ 0.0 } },
-  //   { { 1, 1 },{ 1.0 } }
-  // };
-  // bool bias_already_in = false;
-  // std::vector<TrainingSample<num_t>> training_sample_set_with_bias(training_set);
-  // //set up bias
-  // if (!bias_already_in) {
-  //   for (auto & training_sample_with_bias : training_sample_set_with_bias) {
-  //     training_sample_with_bias.AddBiasValue(1);
-  //   }
-  // }
-
-  // size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-  // size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   size_t num_features = trainingSet.first[0].size();
   size_t num_outputs = trainingSet.second[0].size();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
 
   //Train MLP
-  my_mlp.MiniBatchTrain(trainingSet, 0.5, 50, 0.);
+  my_mlp.MiniBatchTrain(trainingSet, 0.5, 50, 2, 0.);
 
-  // for (const auto & training_sample : training_sample_set_with_bias) {
-  //   std::vector<num_t>  output;
-  //   my_mlp.GetOutput(training_sample.input_vector(), &output);
-  //   for (size_t i = 0; i < num_outputs; i++) {
-  //     bool predicted_output = output[i] > 0.5 ? true : false;
-  //     bool correct_output = training_sample.output_vector()[i] > 0.5 ? true : false;
-  //     ASSERT_TRUE(predicted_output == correct_output);
-  //   }
-  // }
   LOG(INFO) << "Trained with success." << std::endl;
 }
 

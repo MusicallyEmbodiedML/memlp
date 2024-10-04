@@ -467,7 +467,7 @@ void MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias
         }
 
 #if 1
-        ReportProgress(true, 100, i, epochLoss);
+        ReportProgress(true, 2, i, epochLoss);
 
 #endif  // EASYLOGGING_ON
 
