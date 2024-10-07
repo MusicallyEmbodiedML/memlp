@@ -1,4 +1,8 @@
 #include "UnitTest.hpp"
+
+# if defined(__XS3A__)  // Only works on XMOS (obviously)
+
+
 #include "utils/Flash.hpp"
 #include "easylogging++.h"
 
@@ -37,3 +41,5 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 #endif
+
+#endif  // __XS3A__
