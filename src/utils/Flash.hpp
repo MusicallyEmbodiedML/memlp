@@ -5,6 +5,8 @@ extern "C" {
 #include <quadflashlib.h>
 #include <xcore/port.h>
 #include <xcore/clock.h>
+#include <platform.h>
+#include <xs1.h>
 }
 #include <string>
 #include <vector>

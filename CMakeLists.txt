@@ -55,7 +55,7 @@ if (${MLP_XMOS})
     add_executable(${XMOS_XE} ${XMOS_SOURCES})
     target_include_directories(${XMOS_XE} PUBLIC ${XMOS_INCLUDES})
     #target_compile_features(${XMOS_XE} PUBLIC cxx_std_14)
-    target_compile_options(${XMOS_XE} PUBLIC -Wall -DMLP_VERBOSE -D__XS3A__)
+    target_compile_options(${XMOS_XE} PUBLIC -O0 -std=c++14 -Wall -DMLP_VERBOSE -D__XS3A__)
     #target_link_libraries(${XMOS_XE} PUBLIC
     #    "/home/virgult/Frameworks/XMOS/XTC/15.2.1/target/lib/xs3a/libxscope.a")
 

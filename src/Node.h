@@ -119,7 +119,7 @@ public:
   void GetBooleanOutput(const std::vector<T> &input,
                         MLP_ACTIVATION_FN activation_func_t<T> activation_function,
                         bool * bool_output,
-                        T threshold = 0.5) const {
+                        T threshold = 0.5) {
     T value;
     GetOutputAfterActivationFunction(input, activation_function, &value);
     *bool_output = (value > threshold) ? true : false;
