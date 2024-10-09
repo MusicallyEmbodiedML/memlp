@@ -20,7 +20,9 @@ class Serialise {
         size_t n_columns = vec.size();
         size_t n_rows = vec[0].size();
         // Reserve space in vector
-        buffer.resize(n_columns * n_rows * sizeof(T) + 2 * sizeof(size_t));
+        buffer.resize(buffer.size() +
+            // New size
+            (n_columns * n_rows * sizeof(T) + 2 * sizeof(size_t)));
         // Save sizes
         std::vector<size_t> shape { n_columns, n_rows };
         w_head = _LowLevelWrite(w_head, shape, buffer);
