@@ -226,3 +226,5 @@ ModelManifest.xml
 /*.xe
 /*.o
 /*.vcd
+lib/*
+
