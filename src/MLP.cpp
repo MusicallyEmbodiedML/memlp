@@ -485,7 +485,6 @@ void MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias
 };
 
 
-
 template<typename T>
 size_t MLP<T>::GetNumLayers()
 {
