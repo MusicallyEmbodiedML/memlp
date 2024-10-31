@@ -38,7 +38,7 @@ class Serialise {
     static size_t ToVector2D(size_t r_head,
             const std::vector<uint8_t> &buffer,
             std::vector< std::vector<T> > &vec) {
-        
+
         // Get sizes
         std::vector<size_t> shape(2);
         r_head = _LowLevelRead(r_head, 2, buffer, shape);
@@ -55,12 +55,12 @@ class Serialise {
     };
 
  protected:
-    
+
     template<typename T>
     static size_t _LowLevelWrite(size_t w_head,
             const std::vector<T> &payload,
             std::vector<uint8_t> &buffer) {
-        
+
         uint8_t *buf_ptr = buffer.data() + w_head;
         size_t size = payload.size() * sizeof(T);
         // Check memory safety

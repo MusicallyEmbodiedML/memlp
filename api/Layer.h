@@ -168,7 +168,7 @@ public:
     assert(ret_val);
     m_activation_function = (*pair).first;
     m_deriv_activation_function = (*pair).second;
-    
+
     m_nodes.resize(m_num_nodes);
     for (size_t i = 0; i < m_nodes.size(); i++) {
       m_nodes[i].LoadNode(file);

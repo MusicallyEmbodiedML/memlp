@@ -74,7 +74,7 @@ UNIT(MLPLearnNAND) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 250, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -152,7 +152,7 @@ UNIT(MLPLearnNOR) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
+  my_mlp.Train(training_sample_set_with_bias, 0.5, 500, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -189,7 +189,7 @@ UNIT(MLPLearnXOR) {
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2 ,num_outputs }, { "sigmoid", "linear" });
   //Train MLP
-  my_mlp.Train(training_sample_set_with_bias, 1, 250, 0.);
+  my_mlp.Train(training_sample_set_with_bias, 1, 500, 0.);
 
   for (const auto & training_sample : training_sample_set_with_bias) {
     std::vector<num_t>  output;
@@ -337,7 +337,7 @@ UNIT(MLPLearnX2_MiniBatch) {
 }
 
 
-
+#if 1
 
 UNIT(MLPGetWeightsSetWeights) {
   LOG(INFO) << "Train X2 function, read internal weights" << std::endl;
@@ -358,9 +358,14 @@ UNIT(MLPGetWeightsSetWeights) {
     }
   }
 
+  LOG(INFO) << "Training set created." << std::endl;
+
   size_t num_features = training_sample_set_with_bias[0].GetInputVectorSize();
   size_t num_outputs = training_sample_set_with_bias[0].GetOutputVectorSize();
   MLP<num_t> my_mlp({ num_features, 2, num_outputs }, { "sigmoid", "linear" });
+
+  LOG(INFO) << "Training now:" << std::endl;
+
   //Train MLP
   my_mlp.Train(training_sample_set_with_bias, 0.5, 50, 0.);
 
@@ -399,6 +404,43 @@ UNIT(MLPGetWeightsSetWeights) {
   }
 
   LOG(INFO) << "Trained with success." << std::endl;
+}
+
+#endif
+
+UNIT(MLPSerialise) {
+
+    MLP<num_t> mlp(
+        {2, 3, 3, 1},
+        {"relu", "relu", "sigmoid"}
+    );
+
+    MLP<num_t>::mlp_weights new_weights{
+        { {1, 2,}, {3, 4,}, {5, 6,}, },
+        { {1, 2, 3,}, {4, 5, 6,}, {7, 8, 9}, },
+        { {1, 2, 3}, },
+    };
+
+    auto weights = mlp.GetWeights();
+
+    ASSERT_TRUE(new_weights.size() == weights.size());
+    for (unsigned int n = 0; n < new_weights.size(); n++) {
+        ASSERT_TRUE(new_weights[n].size() == weights[n].size());
+        for (unsigned int k = 0; k < new_weights[n].size(); k++) {
+            ASSERT_TRUE(new_weights[n][k].size() == weights[n][k].size());
+        }
+    }
+
+    mlp.SetWeights(new_weights);
+    weights = mlp.GetWeights();
+
+    ASSERT_TRUE(new_weights.size() == weights.size());
+    for (unsigned int n = 0; n < new_weights.size(); n++) {
+        ASSERT_TRUE(new_weights[n].size() == weights[n].size());
+        for (unsigned int k = 0; k < new_weights[n].size(); k++) {
+            ASSERT_TRUE(new_weights[n][k] == weights[n][k]);
+        }
+    }
 }
 
 
@@ -462,7 +504,7 @@ UNIT(MLPUpdateWeigthsMSE) {
         auto layer_weights = model->GetLayerWeights(l);
         for (unsigned int n=0; n<layer_weights.size(); n++) {
             for (unsigned int k=0; k<layer_weights[n].size(); k++) {
-                
+
                 ASSERT_TRUE(utils::is_close(
                     layer_weights[n][k],
                     expected_weights[l][n][k]

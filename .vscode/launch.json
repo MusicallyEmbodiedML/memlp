@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch FuncLearnTest",
+            "name": "(gdb) Launch MLPTest",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/MLPTest_d",

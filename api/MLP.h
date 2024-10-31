@@ -19,7 +19,8 @@ public:
       std::vector< std::vector<T> >,
       std::vector< std::vector<T> >
     >;
-  //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"}, 
+    using mlp_weights = std::vector< std::vector <std::vector<T> > >;
+  //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
   MLP(const std::vector<size_t> & layers_nodes,
       const std::vector<std::string> & layers_activfuncs,
       std::string loss_function = "mse",
@@ -30,6 +31,9 @@ public:
 
   void SaveMLPNetwork(const std::string & filename) const;
   void LoadMLPNetwork(const std::string & filename);
+
+  size_t Serialise(size_t w_head, std::vector<uint8_t> &buffer);
+  size_t FromSerialised(size_t w_head, const std::vector<uint8_t> &buffer);
 
   void GetOutput(const std::vector<T> &input,
                  std::vector<T> * output,
@@ -57,8 +61,10 @@ public:
 
   size_t GetNumLayers();
   std::vector<std::vector<T>> GetLayerWeights( size_t layer_i );
+  mlp_weights GetWeights();
   void SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weights );
-  
+  void SetWeights(mlp_weights &weights);
+
   std::vector<Layer<T>> m_layers;
 
 protected:

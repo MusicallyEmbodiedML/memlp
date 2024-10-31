@@ -42,15 +42,16 @@ if (${MLP_XMOS})
         #"${CMAKE_CURRENT_SOURCE_DIR}/tests/FlashTest.cpp"
         #"${CMAKE_CURRENT_SOURCE_DIR}/tests/MLPTest.cpp"
     )
-    
+
     set(XMOS_INCLUDES
+        "${CMAKE_CURRENT_SOURCE_DIR}/api"
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/deps"
         "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 
     set(XMOS_CXX_COMPILE_OPTIONS)
 
-    set(XMOS_C_COMPILE_OPTIONS) 
+    set(XMOS_C_COMPILE_OPTIONS)
 
     add_executable(${XMOS_XE} ${XMOS_SOURCES})
     target_include_directories(${XMOS_XE} PUBLIC ${XMOS_INCLUDES})
@@ -59,7 +60,7 @@ if (${MLP_XMOS})
     #target_link_libraries(${XMOS_XE} PUBLIC
     #    "/home/virgult/Frameworks/XMOS/XTC/15.2.1/target/lib/xs3a/libxscope.a")
 
-elseif (NOT DEFINED $ENV{XMOS_CMAKE_PATH})
+elseif (DEFINED $ENV{XMOS_CMAKE_PATH})
 
     ##
     # XMOS "new style" build
@@ -70,7 +71,7 @@ elseif (NOT DEFINED $ENV{XMOS_CMAKE_PATH})
     cmake_minimum_required(VERSION 3.21)
     include($ENV{XMOS_CMAKE_PATH}/xcommon.cmake)
     project(lib_mlp)
-    
+
     set(XMOS_SANDBOX_DIR ${CMAKE_CURRENT_LIST_DIR}/../../..)
     include(lib_build_info.cmake)
 
@@ -98,7 +99,7 @@ else ()
 
     # FuncLearnTest
     set(FUNCLEARN_EXEC_NAME FuncLearnTest)
-    set(FUNCLEARN_EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/FuncLearnTest.cpp")
+    set(FUNCLEARN_EXEC_MAIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests/FuncLearnTest.cpp")
     set(FUNCLEARN_DEFINES FUNCLEARN_MAIN MLP_VERBOSE)
     # LayerTest
     set(LAYER_EXEC_NAME LayerTest)
