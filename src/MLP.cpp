@@ -36,10 +36,12 @@ MLP<T>::MLP(const std::vector<size_t> & layers_nodes,
 };
 
 
+#if ENABLE_SAVE
 template<typename T>
 MLP<T>::MLP(const std::string & filename) {
   LoadMLPNetwork(filename);
 }
+#endif
 
 
 template<typename T>
@@ -108,6 +110,8 @@ void MLP<T>::ReportFinish(const unsigned int i, const float current_iteration_co
 };
 
 
+#if ENABLE_SAVE
+
 template<typename T>
 void MLP<T>::SaveMLPNetwork(const std::string & filename)const {
     FILE * file;
@@ -142,7 +146,9 @@ void MLP<T>::LoadMLPNetwork(const std::string & filename) {
         m_layers[i].LoadLayer(file);
     }
     fclose(file);
-    }
+}
+
+#endif
 
 
 template <typename T>
@@ -160,8 +166,8 @@ template <typename T>
 size_t MLP<T>::FromSerialised(size_t r_head, const std::vector<uint8_t> &buffer)
 {
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        std::vector<std::vector<T> layer_weights;
-        w_head = Serialise::ToVector2D(w_head, buffer, layer_weights);
+        std::vector< std::vector<T> > layer_weights;
+        r_head = Serialise::ToVector2D(r_head, buffer, layer_weights);
         SetLayerWeights(n, layer_weights);
     }
     return r_head;

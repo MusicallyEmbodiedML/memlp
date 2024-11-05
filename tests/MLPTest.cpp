@@ -408,8 +408,8 @@ UNIT(MLPGetWeightsSetWeights) {
 
 #endif
 
-UNIT(MLPSerialise) {
-
+UNIT(MLPGetSetWeightsNew) {
+#if 1
     MLP<num_t> mlp(
         {2, 3, 3, 1},
         {"relu", "relu", "sigmoid"}
@@ -441,6 +441,37 @@ UNIT(MLPSerialise) {
             ASSERT_TRUE(new_weights[n][k] == weights[n][k]);
         }
     }
+#endif
+}
+
+
+UNIT(MLPSerialise) {
+#if 1
+    MLP<num_t> mlp(
+        {2, 3, 3, 1},
+        {"relu", "relu", "sigmoid"}
+    );
+    auto mlp2 = mlp;
+
+    MLP<num_t>::mlp_weights new_weights{
+        { {1, 2,}, {3, 4,}, {5, 6,}, },
+        { {1, 2, 3,}, {4, 5, 6,}, {7, 8, 9}, },
+        { {1, 2, 3}, },
+    };
+
+    mlp.SetWeights(new_weights);
+    std::vector<uint8_t> serialised;
+    size_t r_head = 0, w_head = 0;
+
+    w_head = mlp.Serialise(w_head, serialised);
+    r_head = mlp2.FromSerialised(r_head, serialised);
+
+    MLP<num_t>::mlp_weights mlp_weights = mlp.GetWeights();
+    MLP<num_t>::mlp_weights mlp_2_weights = mlp2.GetWeights();
+
+    ASSERT_TRUE(mlp_weights == new_weights);
+    ASSERT_TRUE(mlp_weights == mlp_2_weights);
+#endif
 }
 
 
