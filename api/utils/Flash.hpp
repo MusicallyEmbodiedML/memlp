@@ -23,7 +23,7 @@ class XMOSFlash {
             PORT_SQI_SIO,
             XS1_CLKBLK_1
         };
-        
+
     }
 
     int connect() {
@@ -42,6 +42,10 @@ class XMOSFlash {
         data = payload_;
     }
 
+    std::vector<uint8_t>* GetPayloadPtr() {
+        return &payload_;
+    }
+
     void WriteToFlash() {
 
         size_t datalen = payload_.size();
@@ -52,7 +56,7 @@ class XMOSFlash {
         // Write in amount of data in bytes
         w_head = _LowLevelWrite(
             w_head,
-            reinterpret_cast<uint8_t*>(&datalen), 
+            reinterpret_cast<uint8_t*>(&datalen),
             sizeof(size_t));
         // Write actual data
         w_head = _LowLevelWrite(w_head, payload_);
@@ -61,7 +65,7 @@ class XMOSFlash {
     }
 
     void ReadFromFlash() {
-        
+
         size_t datalen;
         size_t r_head = 0;
 
@@ -75,6 +79,11 @@ class XMOSFlash {
 
         // Get actual amount of data
         r_head = _LowLevelReadValue(r_head, datalen);
+        printf("FLASH- Data length: %d bytes\n", datalen);
+        if (datalen > 0x800) {
+            printf("FLASH- Data length absurd, flash probably dirty. Aborting\n");
+            return;
+        }
 
         // Get payload
         r_head = _LowLevelRead(r_head, datalen, payload_);
@@ -125,7 +134,7 @@ class XMOSFlash {
 
     template< typename T >
     size_t _LowLevelReadValue(size_t r_head, T &value) {
-    
+
         union {
             T val;
             uint8_t bytes[sizeof(T)];
@@ -141,4 +150,4 @@ class XMOSFlash {
 
 static XMOSFlash gFlash;
 
-#endif 
+#endif
