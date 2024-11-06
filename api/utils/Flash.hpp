@@ -80,7 +80,7 @@ class XMOSFlash {
         // Get actual amount of data
         r_head = _LowLevelReadValue(r_head, datalen);
         printf("FLASH- Data length: %d bytes\n", datalen);
-        if (datalen > 0x800) {
+        if (datalen > 0xffff) {
             printf("FLASH- Data length absurd, flash probably dirty. Aborting\n");
             return;
         }
