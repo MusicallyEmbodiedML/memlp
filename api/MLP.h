@@ -74,6 +74,7 @@ public:
     mlp_weights GetWeights();
     void SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weights );
     void SetWeights(mlp_weights &weights);
+    void DrawWeights();
 
     std::vector<Layer<T>> m_layers;
 

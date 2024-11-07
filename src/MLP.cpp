@@ -568,6 +568,20 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
     }
 }
 
+template <typename T>
+void MLP<T>::DrawWeights()
+{
+    for (unsigned int n = 0; n < m_layers.size(); n++) {
+        auto layer = m_layers[n];
+        size_t num_inputs = m_layers_nodes[n];
+        for (auto &node : layer.m_nodes) {
+            node.WeightInitialization(num_inputs,
+                                      false,
+                                      0);
+        }
+    }
+}
+
 // Explicit instantiations
 template class MLP<double>;
 template class MLP<float>;
