@@ -572,7 +572,7 @@ template <typename T>
 void MLP<T>::DrawWeights()
 {
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        auto layer = m_layers[n];
+        auto &layer = m_layers[n];
         size_t num_inputs = m_layers_nodes[n];
         for (auto &node : layer.m_nodes) {
             node.WeightInitialization(num_inputs,
