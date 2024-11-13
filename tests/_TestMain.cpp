@@ -9,8 +9,8 @@ INITIALIZE_EASYLOGGINGPP
 //#include "LayerTest.cpp"
 //#include "LossTest.cpp"
 #include "MLPTest.cpp"
-//#include "NodeTest.cpp"
-#include "FlashTest.cpp"
+#include "NodeTest.cpp"
+//#include "FlashTest.cpp"
 //#include "SerialiseTest.cpp"
 
 int main(int argc, char* argv[]) {

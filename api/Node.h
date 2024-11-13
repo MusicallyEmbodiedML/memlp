@@ -61,6 +61,13 @@ public:
     }
   }
 
+  void WeightRandomisation(float variance) {
+    std::transform(m_weights.begin(),
+                   m_weights.end(),
+                   m_weights.begin(),
+                   utils::gen_randn<T>(variance))
+  }
+
   int GetInputSize() const {
     return m_num_inputs;
   }

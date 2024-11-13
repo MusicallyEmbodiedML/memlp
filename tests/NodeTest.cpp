@@ -264,6 +264,24 @@ UNIT(NodeLearnXOR) {
 }
 
 
+UNIT(NodeRandomiseWeights) {
+  std::unique_ptr< Node<num_t> > node_ptr_( new Node<num_t>(
+    5, true, 1.
+  ) );
+
+  for (auto &w: node_ptr_->m_weights) {
+    ASSERT_TRUE(w == 1.);
+  }
+
+  node_ptr_->WeightRandomisation(0.1);
+  std::cout << "Randomised node weights: ";
+  for (auto &w: node_ptr_->m_weights) {
+    std::cout << w;
+    std::cout << ", ";
+  }
+  std::cout << std::endl;
+}
+
 #if defined(NODETEST_MAIN)
 
 int main(int argc, char* argv[]) {

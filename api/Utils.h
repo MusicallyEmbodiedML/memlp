@@ -148,9 +148,31 @@ struct gen_rand {
   T factor;
   T offset;
 public:
-  gen_rand(T r = 2.0) : factor(r / RAND_MAX), offset(r / 2) {}
+  gen_rand(T r = 2.0) : factor(r * 2. / static_cast<float>(RAND_MAX)), offset(r * 0.5) {}
   T operator()() {
     return rand() * factor - offset;
+  }
+};
+
+
+template<typename T>
+struct gen_randn {
+  T mean_;
+  T stddev_;
+  gen_rand<T> gen_;
+public:
+  gen_rand(T variance, T mean = 0) : mean_(mean), stddev_(std::sqrt(variance)) {}
+  inline void SetMean(T mean) { mean_ = mean; }
+  inline T operator()() {
+    return operator()(mean_);
+  }
+  inline T operator()(T mean) {
+    T accum = 0;
+    static const unsigned int kN_times = 3;
+    for (unsigned int n = 0; n < kN_times; n++) {
+      accum += gen_();
+    }
+    return kN_times*(accum) * stddev_ + mean;
   }
 };
 
