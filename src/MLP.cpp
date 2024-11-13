@@ -582,6 +582,18 @@ void MLP<T>::DrawWeights()
     }
 }
 
+template <typename T>
+void MLP<T>::MoveWeights(T speed)
+{
+    for (auto &layer: m_layers) {
+        for (auto &node : layer.m_nodes) {
+            node.WeightRandomisation(speed);
+        }
+    }
+}
+
 // Explicit instantiations
+#if !defined(__XS3A__)
 template class MLP<double>;
+#endif
 template class MLP<float>;
