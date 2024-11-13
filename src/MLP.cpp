@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 #include "utils/Serialise.hpp"
+#include <cassert>
 
 
 #if 1
@@ -571,25 +572,37 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 template <typename T>
 void MLP<T>::DrawWeights()
 {
+    T before = m_layers[0].m_nodes[0].m_weights[0];
+
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        auto &layer = m_layers[n];
         size_t num_inputs = m_layers_nodes[n];
-        for (auto &node : layer.m_nodes) {
-            node.WeightInitialization(num_inputs,
+        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
+            // std::vector<float> w = m_layers[n].m_nodes[k].m_weights;
+            m_layers[n].m_nodes[k].WeightInitialization(num_inputs,
                                       false,
                                       0);
+            // std::vector<float> w2 = m_layers[n].m_nodes[k].m_weights;
+            // for (unsigned int j = 0; j < w.size(); j++) {
+            //     assert(w[j] != w2[j]);
+            // }
         }
     }
+
+    assert(m_layers[0].m_nodes[0].m_weights[0] != before);
+
+    // printf("They're definitely different here!\n");
 }
 
 template <typename T>
 void MLP<T>::MoveWeights(T speed)
 {
-    for (auto &layer: m_layers) {
-        for (auto &node : layer.m_nodes) {
-            node.WeightRandomisation(speed);
+#if 1
+    for (unsigned int n = 0; n < m_layers.size(); n++) {
+        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
+            m_layers[n].m_nodes[k].WeightRandomisation(speed);
         }
     }
+#endif
 }
 
 // Explicit instantiations

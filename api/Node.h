@@ -173,6 +173,8 @@ protected:
   size_t m_num_inputs{ 0 };
   T m_bias{ 0.0 };
 private:
+  //Node(const Node<T>&) = delete;
+  Node<T>& operator=(Node<T> const &) = delete;
 };
 
 #endif //NODE_H

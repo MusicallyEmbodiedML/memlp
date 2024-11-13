@@ -408,6 +408,15 @@ UNIT(MLPGetWeightsSetWeights) {
 
 #endif
 
+#define compare_weights_eq(weights, new_weights)    \
+      ASSERT_TRUE(new_weights.size() == weights.size());    \
+    for (unsigned int n = 0; n < new_weights.size(); n++) {    \
+        ASSERT_TRUE(new_weights[n].size() == weights[n].size());    \
+        for (unsigned int k = 0; k < new_weights[n].size(); k++) {    \
+            ASSERT_TRUE(new_weights[n][k].size() == weights[n][k].size());    \
+        }    \
+    }
+
 UNIT(MLPGetSetWeightsNew) {
 #if 1
     MLP<num_t> mlp(
@@ -423,24 +432,12 @@ UNIT(MLPGetSetWeightsNew) {
 
     auto weights = mlp.GetWeights();
 
-    ASSERT_TRUE(new_weights.size() == weights.size());
-    for (unsigned int n = 0; n < new_weights.size(); n++) {
-        ASSERT_TRUE(new_weights[n].size() == weights[n].size());
-        for (unsigned int k = 0; k < new_weights[n].size(); k++) {
-            ASSERT_TRUE(new_weights[n][k].size() == weights[n][k].size());
-        }
-    }
+    compare_weights_eq(weights, new_weights);
 
     mlp.SetWeights(new_weights);
     weights = mlp.GetWeights();
 
-    ASSERT_TRUE(new_weights.size() == weights.size());
-    for (unsigned int n = 0; n < new_weights.size(); n++) {
-        ASSERT_TRUE(new_weights[n].size() == weights[n].size());
-        for (unsigned int k = 0; k < new_weights[n].size(); k++) {
-            ASSERT_TRUE(new_weights[n][k] == weights[n][k]);
-        }
-    }
+    compare_weights_eq(weights, new_weights);
 #endif
 }
 
@@ -544,6 +541,54 @@ UNIT(MLPUpdateWeigthsMSE) {
             }  // for k
         }  // for n
     }  // for l
+}
+
+
+#define compare_weights_neq(weights, new_weights)    \
+  ASSERT_TRUE(new_weights.size() == weights.size());    \
+  for (unsigned int n = 0; n < new_weights.size(); n++) {    \
+      ASSERT_TRUE(new_weights[n].size() == weights[n].size());    \
+      for (unsigned int k = 0; k < new_weights[n].size(); k++) {    \
+          ASSERT_TRUE(new_weights[n][k].size() == weights[n][k].size());    \
+          for (unsigned int j = 0; j < new_weights[n][k].size(); j++) {    \
+              ASSERT_TRUE(new_weights[n][k][j] != weights[n][k][j]);    \
+          }    \
+      }    \
+  }
+
+
+UNIT(MLPDrawWeights) {
+  std::unique_ptr< MLP<num_t> > mlp_ptr (new MLP<num_t> (
+    {3, 3, 1},
+    {"relu", "sigmoid"}
+  ));
+
+  MLP<num_t>::mlp_weights weights_1 = mlp_ptr->GetWeights();
+
+  LOG(INFO) << "About to draw weights..." << std::endl;
+  mlp_ptr->DrawWeights();
+  LOG(INFO) << "Weights drawn." << std::endl;
+
+  MLP<num_t>::mlp_weights weights_2 = mlp_ptr->GetWeights();
+
+  compare_weights_neq(weights_1, weights_2);
+}
+
+UNIT(MLPMoveWeights) {
+  std::unique_ptr< MLP<num_t> > mlp_ptr (new MLP<num_t> (
+    {3, 3, 1},
+    {"relu", "sigmoid"}
+  ));
+
+  MLP<num_t>::mlp_weights weights_1 = mlp_ptr->GetWeights();
+
+  LOG(INFO) << "About to move weights..." << std::endl;
+  mlp_ptr->MoveWeights(0.1);
+  LOG(INFO) << "Weights moved." << std::endl;
+
+  MLP<num_t>::mlp_weights weights_2 = mlp_ptr->GetWeights();
+
+  compare_weights_neq(weights_1, weights_2);
 }
 
 
