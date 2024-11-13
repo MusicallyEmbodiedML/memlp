@@ -22,6 +22,7 @@ if (${MLP_XMOS})
     string(JOIN " " COMMON_FLAGS
         "-target=XK-EVK-XU316"
         "-Wall"
+        "-Os"
         "-DMLP_VERBOSE"
         "-D__XS3A__"
         "-fxscope ${CMAKE_CURRENT_SOURCE_DIR}/config.xscope"

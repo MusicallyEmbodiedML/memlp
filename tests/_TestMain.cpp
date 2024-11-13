@@ -8,7 +8,7 @@ INITIALIZE_EASYLOGGINGPP
 //#include "IrisDatasetTest.cpp"
 //#include "LayerTest.cpp"
 //#include "LossTest.cpp"
-#include "MLPTest.cpp"
+//#include "MLPTest.cpp"
 #include "NodeTest.cpp"
 //#include "FlashTest.cpp"
 //#include "SerialiseTest.cpp"

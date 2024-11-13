@@ -282,6 +282,39 @@ UNIT(NodeRandomiseWeights) {
   std::cout << std::endl;
 }
 
+UNIT(GenRand) {
+  utils::gen_rand<num_t> gen_rand;
+  utils::gen_randn<num_t> gen_randn(0.01);
+
+  static const unsigned int kN_rand = 10;
+
+  std::vector<num_t> uniform(kN_rand, 0), gaussian(kN_rand, 0), gaussian_sum(kN_rand, 3);
+  std::generate_n(uniform.begin(), kN_rand, gen_rand);
+  std::generate_n(gaussian.begin(), kN_rand, gen_randn);
+  std::transform(gaussian_sum.begin(), gaussian_sum.end(), gaussian_sum.begin(), gen_randn);
+
+  std::cout << "GenRand: ";
+  for (auto &w: uniform) {
+    std::cout << w;
+    std::cout << ", ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "GenRandN: ";
+  for (auto &w: gaussian) {
+    std::cout << w;
+    std::cout << ", ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "GenRandN sum: ";
+  for (auto &w: gaussian_sum) {
+    std::cout << w;
+    std::cout << ", ";
+  }
+  std::cout << std::endl;
+}
+
 #if defined(NODETEST_MAIN)
 
 int main(int argc, char* argv[]) {
