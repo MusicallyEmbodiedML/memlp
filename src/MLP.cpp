@@ -573,18 +573,22 @@ template <typename T>
 void MLP<T>::DrawWeights()
 {
     T before = m_layers[0].m_nodes[0].m_weights[0];
+    utils::gen_rand<T> gen;
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         size_t num_inputs = m_layers_nodes[n];
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             // std::vector<float> w = m_layers[n].m_nodes[k].m_weights;
-            m_layers[n].m_nodes[k].WeightInitialization(num_inputs,
-                                      false,
-                                      0);
+            // m_layers[n].m_nodes[k].WeightInitialization(num_inputs,
+            //                           false,
+            //                           0);
             // std::vector<float> w2 = m_layers[n].m_nodes[k].m_weights;
-            // for (unsigned int j = 0; j < w.size(); j++) {
-            //     assert(w[j] != w2[j]);
-            // }
+            for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
+                T w = m_layers[n].m_nodes[k].m_weights[j];
+                m_layers[n].m_nodes[k].m_weights[j] = gen();
+                T w2 = m_layers[n].m_nodes[k].m_weights[j];
+                assert(w != w2);
+            }
         }
     }
 
