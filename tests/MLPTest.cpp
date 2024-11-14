@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include <cstdio>
 
 #include "UnitTest.hpp"
 #include "MLP.h"
@@ -408,14 +409,41 @@ UNIT(MLPGetWeightsSetWeights) {
 
 #endif
 
+
 #define compare_weights_eq(weights, new_weights)    \
-      ASSERT_TRUE(new_weights.size() == weights.size());    \
-    for (unsigned int n = 0; n < new_weights.size(); n++) {    \
-        ASSERT_TRUE(new_weights[n].size() == weights[n].size());    \
-        for (unsigned int k = 0; k < new_weights[n].size(); k++) {    \
-            ASSERT_TRUE(new_weights[n][k].size() == weights[n][k].size());    \
-        }    \
-    }
+  ASSERT_TRUE(new_weights.size() == weights.size());    \
+  for (unsigned int n = 0; n < new_weights.size(); n++) {    \
+      ASSERT_TRUE(new_weights[n].size() == weights[n].size());    \
+      for (unsigned int k = 0; k < new_weights[n].size(); k++) {    \
+          ASSERT_TRUE(new_weights[n][k].size() == weights[n][k].size());    \
+          for (unsigned int j = 0; j < new_weights[n][k].size(); j++) {    \
+              if (((new_weights[n][k][j] != weights[n][k][j]))) {    \
+                  std::printf("new_weights[%d][%d][%d] = %f, weights[same] = %f\n", n, k, j, new_weights[n][k][j], weights[n][k][j]);    \
+              }    \
+              ASSERT_TRUE(new_weights[n][k][j] == weights[n][k][j]);    \
+          }    \
+      }    \
+  }
+
+
+#define compare_weights_neq(weights, new_weights)    \
+  ASSERT_TRUE(new_weights.size() == weights.size());    \
+  for (unsigned int n = 0; n < new_weights.size(); n++) {    \
+      ASSERT_TRUE(new_weights[n].size() == weights[n].size());    \
+      for (unsigned int k = 0; k < new_weights[n].size(); k++) {    \
+          if (((new_weights[n][k].size() != weights[n][k].size()))) {    \
+              std::printf("new_weights[%d][%d].size() = %d, weights[same].size() = %d\n", n, k, new_weights[n][k].size(), weights[n][k].size());    \
+          }    \
+          ASSERT_TRUE(new_weights[n][k].size() == weights[n][k].size());    \
+          for (unsigned int j = 0; j < new_weights[n][k].size(); j++) {    \
+              if (((new_weights[n][k][j] == weights[n][k][j]))) {    \
+                  std::printf("new_weights[%d][%d][%d] = %f, weights[same] = %f\n", n, k, j, new_weights[n][k][j], weights[n][k][j]);    \
+              }    \
+              ASSERT_TRUE(new_weights[n][k][j] != weights[n][k][j]);    \
+          }    \
+      }    \
+  }
+
 
 UNIT(MLPGetSetWeightsNew) {
 #if 1
@@ -430,14 +458,12 @@ UNIT(MLPGetSetWeightsNew) {
         { {1, 2, 3}, },
     };
 
-    auto weights = mlp.GetWeights();
-
-    compare_weights_eq(weights, new_weights);
-
+    auto weights_before = mlp.GetWeights();
+    compare_weights_neq(weights_before, new_weights);
     mlp.SetWeights(new_weights);
-    weights = mlp.GetWeights();
+    auto weights_after = mlp.GetWeights();
 
-    compare_weights_eq(weights, new_weights);
+    compare_weights_eq(weights_after, new_weights);
 #endif
 }
 
@@ -544,25 +570,12 @@ UNIT(MLPUpdateWeigthsMSE) {
 }
 
 
-#define compare_weights_neq(weights, new_weights)    \
-  ASSERT_TRUE(new_weights.size() == weights.size());    \
-  for (unsigned int n = 0; n < new_weights.size(); n++) {    \
-      ASSERT_TRUE(new_weights[n].size() == weights[n].size());    \
-      for (unsigned int k = 0; k < new_weights[n].size(); k++) {    \
-          ASSERT_TRUE(new_weights[n][k].size() == weights[n][k].size());    \
-          for (unsigned int j = 0; j < new_weights[n][k].size(); j++) {    \
-              ASSERT_TRUE(new_weights[n][k][j] != weights[n][k][j]);    \
-          }    \
-      }    \
-  }
-
-
 UNIT(MLPDrawWeights) {
   std::unique_ptr< MLP<num_t> > mlp_ptr (new MLP<num_t> (
     {3, 3, 1},
     {"relu", "sigmoid"}
   ));
-
+#if 1
   MLP<num_t>::mlp_weights weights_1(mlp_ptr->GetWeights());
 
   LOG(INFO) << "About to draw weights..." << std::endl;
@@ -581,6 +594,7 @@ UNIT(MLPDrawWeights) {
 
   compare_weights_neq(weights_1, weights_3);
   compare_weights_neq(weights_2, weights_3);
+#endif
 }
 
 UNIT(MLPMoveWeights) {

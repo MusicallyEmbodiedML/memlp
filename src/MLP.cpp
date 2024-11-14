@@ -542,8 +542,15 @@ typename MLP<T>::mlp_weights MLP<T>::GetWeights()
 {
     MLP<T>::mlp_weights out;
 
+    out.resize(m_layers.size());
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        out.push_back(GetLayerWeights(n));
+        out[n].resize(m_layers[n].m_nodes.size());
+        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
+            out[n][k].resize(m_layers[n].m_nodes[k].m_weights.size());
+            for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
+                out[n][k][j] = m_layers[n].m_nodes[k].m_weights[j];
+            }
+        }
     }
 
     return out;
@@ -562,7 +569,33 @@ void MLP<T>::SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weig
 template <typename T>
 void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 {
+    if (weights.size() != m_layers.size()) {
+        printf("SetWeights: vector dim not equal. Expected=%d, actual=%d",
+                   weights.size(), m_layers.size());
+    }
     assert(weights.size() == m_layers.size());
+#if 0
+    for (unsigned int n = 0; n < m_layers.size(); n++) {
+        size_t expected = m_layers[n].m_nodes.size();
+        size_t actual = weights[n].size();
+        bool assertion = expected == actual;
+        if (!assertion) {
+            printf("SetWeights: vector dim not equal at n=%d. Expected=%d, actual=%d",
+                   n, expected, actual);
+        }
+        assert(assertion);
+        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
+            size_t expected = m_layers[n].m_nodes[k].m_weights.size();
+            size_t actual = weights[n][k].size();
+            bool assertion = expected == actual;
+            if (!assertion) {
+                printf("SetWeights: vector dim not equal at n=%d,k=%d. Expected=%d, actual=%d",
+                    n, k, expected, actual);
+            }
+            assert(assertion);
+        }
+    }
+#endif
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         SetLayerWeights(n, weights[n]);
@@ -576,13 +609,7 @@ void MLP<T>::DrawWeights()
     utils::gen_rand<T> gen;
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        size_t num_inputs = m_layers_nodes[n];
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
-            // std::vector<float> w = m_layers[n].m_nodes[k].m_weights;
-            // m_layers[n].m_nodes[k].WeightInitialization(num_inputs,
-            //                           false,
-            //                           0);
-            // std::vector<float> w2 = m_layers[n].m_nodes[k].m_weights;
             for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
                 T w = m_layers[n].m_nodes[k].m_weights[j];
                 m_layers[n].m_nodes[k].m_weights[j] = gen();
@@ -593,20 +620,27 @@ void MLP<T>::DrawWeights()
     }
 
     assert(m_layers[0].m_nodes[0].m_weights[0] != before);
-
-    // printf("They're definitely different here!\n");
 }
 
 template <typename T>
 void MLP<T>::MoveWeights(T speed)
 {
-#if 1
+    T before = m_layers[0].m_nodes[0].m_weights[0];
+    utils::gen_randn<T> gen(speed);
+
     for (unsigned int n = 0; n < m_layers.size(); n++) {
+        size_t num_inputs = m_layers_nodes[n];
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
-            m_layers[n].m_nodes[k].WeightRandomisation(speed);
+            for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
+                T w = m_layers[n].m_nodes[k].m_weights[j];
+                m_layers[n].m_nodes[k].m_weights[j] = gen(m_layers[n].m_nodes[k].m_weights[j]);
+                T w2 = m_layers[n].m_nodes[k].m_weights[j];
+                assert(w != w2);
+            }
         }
     }
-#endif
+
+    assert(m_layers[0].m_nodes[0].m_weights[0] != before);
 }
 
 // Explicit instantiations
