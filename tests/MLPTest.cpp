@@ -563,15 +563,24 @@ UNIT(MLPDrawWeights) {
     {"relu", "sigmoid"}
   ));
 
-  MLP<num_t>::mlp_weights weights_1 = mlp_ptr->GetWeights();
+  MLP<num_t>::mlp_weights weights_1(mlp_ptr->GetWeights());
 
   LOG(INFO) << "About to draw weights..." << std::endl;
   mlp_ptr->DrawWeights();
   LOG(INFO) << "Weights drawn." << std::endl;
 
-  MLP<num_t>::mlp_weights weights_2 = mlp_ptr->GetWeights();
+  MLP<num_t>::mlp_weights weights_2(mlp_ptr->GetWeights());
 
   compare_weights_neq(weights_1, weights_2);
+
+  LOG(INFO) << "About to draw weights..." << std::endl;
+  mlp_ptr->DrawWeights();
+  LOG(INFO) << "Weights drawn." << std::endl;
+
+  MLP<num_t>::mlp_weights weights_3(mlp_ptr->GetWeights());
+
+  compare_weights_neq(weights_1, weights_3);
+  compare_weights_neq(weights_2, weights_3);
 }
 
 UNIT(MLPMoveWeights) {
@@ -580,15 +589,24 @@ UNIT(MLPMoveWeights) {
     {"relu", "sigmoid"}
   ));
 
-  MLP<num_t>::mlp_weights weights_1 = mlp_ptr->GetWeights();
+  MLP<num_t>::mlp_weights weights_1(mlp_ptr->GetWeights());
 
   LOG(INFO) << "About to move weights..." << std::endl;
   mlp_ptr->MoveWeights(0.1);
   LOG(INFO) << "Weights moved." << std::endl;
 
-  MLP<num_t>::mlp_weights weights_2 = mlp_ptr->GetWeights();
+  MLP<num_t>::mlp_weights weights_2(mlp_ptr->GetWeights());
 
   compare_weights_neq(weights_1, weights_2);
+
+  LOG(INFO) << "About to move weights..." << std::endl;
+  mlp_ptr->MoveWeights(0.1);
+  LOG(INFO) << "Weights moved." << std::endl;
+
+  MLP<num_t>::mlp_weights weights_3(mlp_ptr->GetWeights());
+
+  compare_weights_neq(weights_1, weights_3);
+  compare_weights_neq(weights_2, weights_3);
 }
 
 
