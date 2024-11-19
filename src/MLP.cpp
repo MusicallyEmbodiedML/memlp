@@ -635,7 +635,9 @@ void MLP<T>::MoveWeights(T speed)
                 T w = m_layers[n].m_nodes[k].m_weights[j];
                 m_layers[n].m_nodes[k].m_weights[j] = gen(m_layers[n].m_nodes[k].m_weights[j]);
                 T w2 = m_layers[n].m_nodes[k].m_weights[j];
-                assert(w != w2);
+                if (speed != 0) {
+                    assert(w != w2);
+                }
             }
         }
     }
