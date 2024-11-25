@@ -245,7 +245,7 @@ void MLP<T>::UpdateWeights(const std::vector<std::vector<T>> & all_layers_activa
 
 
 template<typename T>
-void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,
+T MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,
                           float learning_rate,
                           int max_iterations,
                           float min_error_cost,
@@ -277,7 +277,7 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
     //}
 
     int i = 0;
-    float current_iteration_cost_function = 0.f;
+    T current_iteration_cost_function = 0.f;
     T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.size();
 
 
@@ -339,19 +339,21 @@ void MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_wit
     //    }
     //  }
     //}
+
+    return current_iteration_cost_function;
 };
 
 
 
 template<typename T>
-void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
+T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
     int max_iterations,
     float min_error_cost,
     bool output_log) {
 
     int i = 0;
-    float current_iteration_cost_function = 0.f;
+    T current_iteration_cost_function = 0.f;
 
     T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.first.size();
 
@@ -413,11 +415,13 @@ void MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 #if 1
     ReportFinish(i, current_iteration_cost_function);
 #endif  // EASYLOGGING_ON
+
+    return current_iteration_cost_function;
 };
 
 
 template<typename T>
-void MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
+T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
     int max_iterations,
     size_t miniBatchSize,
@@ -510,6 +514,8 @@ void MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias
 #if 1
     ReportFinish(i, current_iteration_cost_function);
 #endif  // EASYLOGGING_ON
+
+    return current_iteration_cost_function;
 };
 
 

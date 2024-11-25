@@ -50,19 +50,19 @@ public:
                     std::vector<std::vector<T>> * all_layers_activations = nullptr);
     void GetOutputClass(const std::vector<T> &output, size_t * class_id) const;
 
-    void Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,
+    T Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,
                         float learning_rate,
                         int max_iterations = 5000,
                         float min_error_cost = 0.001,
                         bool output_log = true);
 
-    void Train(const training_pair_t& training_sample_set_with_bias,
+    T Train(const training_pair_t& training_sample_set_with_bias,
                 float learning_rate,
                 int max_iterations = 5000,
                 float min_error_cost = 0.001,
                 bool output_log = true);
 
-    void MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
+    T MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
                 float learning_rate,
                 int max_iterations = 5000,
                 size_t miniBatchSize=8,
