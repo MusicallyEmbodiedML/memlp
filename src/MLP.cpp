@@ -617,9 +617,15 @@ void MLP<T>::DrawWeights()
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
-                T w = m_layers[n].m_nodes[k].m_weights[j];
-                m_layers[n].m_nodes[k].m_weights[j] = gen();
-                T w2 = m_layers[n].m_nodes[k].m_weights[j];
+                T w, w2;
+                size_t counter = 0;
+                do {
+                    w = m_layers[n].m_nodes[k].m_weights[j];
+                    m_layers[n].m_nodes[k].m_weights[j] = gen();
+                    w2 = m_layers[n].m_nodes[k].m_weights[j];
+                    counter++;
+                    if (counter >= 10) break;
+                } while (w == w2);
                 assert(w != w2);
             }
         }
