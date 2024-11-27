@@ -12,7 +12,7 @@ set(LIB_VERSION 0.0.1)
 # Impose C++14 for files that need it
 
 set(LIB_INCLUDES api)
-set(LIB_CXX_SRCS "src/MLP.cpp")
+set(LIB_CXX_SRCS "src/MLP.cpp" "src/Dataset.cpp")
 set(LIB_COMPILER_FLAGS -O3 -std=c++14)
 
 #XMOS_REGISTER_STATIC_LIB()
