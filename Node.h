@@ -146,6 +146,7 @@ public:
     m_weights[weight_id] += static_cast<T>(learning_rate*increment);
   }
 
+#if ENABLE_SAVE
   void SaveNode(FILE * file) const {
     fwrite(&m_num_inputs, sizeof(m_num_inputs), 1, file);
     fwrite(&m_bias, sizeof(m_bias), 1, file);
@@ -159,6 +160,7 @@ public:
     m_weights.resize(m_num_inputs);
     fread(&m_weights[0], sizeof(m_weights[0]), m_weights.size(), file);
   };
+  #endif
   
   std::vector<T> m_weights;
   T inner_prod;

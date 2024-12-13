@@ -28,10 +28,12 @@ public:
   void AddBiasValue(T bias_value) {
     m_input_vector.insert(m_input_vector.begin(), bias_value);
   }
+#if defined(MLP_DEBUG_BUILD)
   friend std::ostream & operator<<(std::ostream &stream, Sample const & obj) {
     obj.PrintMyself(stream);
     return stream;
   };
+#endif
 protected:
 #if defined(MLP_DEBUG_BUILD)
   virtual void PrintMyself(std::ostream& stream) const {

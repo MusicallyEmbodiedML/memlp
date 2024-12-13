@@ -18,6 +18,14 @@
 
 
 template<typename T>
+class temptest {
+  public:
+  void test() {
+    // Serial.println("template test");
+  }
+};
+
+template<typename T>
 class MLP {
 public:
     //using training_pair_t = std::pair< std::vector<T>, std::vector<T> >;

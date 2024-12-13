@@ -19,11 +19,12 @@
 #endif
 
 
+
 //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
 template<typename T>
 MLP<T>::MLP(const std::vector<size_t> & layers_nodes,
          const std::vector<ACTIVATION_FUNCTIONS> & layers_activfuncs,
-         std::string loss_function,
+         loss::LOSS_FUNCTIONS loss_function,
          bool use_constant_weight_init,
          T constant_weight_init) {
   assert(layers_nodes.size() >= 2);
@@ -58,7 +59,7 @@ MLP<T>::~MLP() {
 template<typename T>
 void MLP<T>::CreateMLP(const std::vector<size_t> & layers_nodes,
                     const std::vector<ACTIVATION_FUNCTIONS> & layers_activfuncs,
-                    std::string loss_function,
+                    loss::LOSS_FUNCTIONS loss_function,
                     bool use_constant_weight_init,
                     T constant_weight_init) {
     m_layers_nodes = layers_nodes;
