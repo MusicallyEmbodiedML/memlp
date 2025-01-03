@@ -57,6 +57,17 @@ public:
     m_nodes.clear();
   };
 
+  void SetCachedOutputs(bool onOrOff) { 
+    m_cacheOutputs = onOrOff;
+    if (m_cacheOutputs) {
+      //nothing yet
+    }else{
+      cachedOutputs.clear();
+    }
+  }
+
+
+
   int GetInputSize() const {
     return m_num_inputs_per_node;
   };
@@ -87,6 +98,9 @@ public:
       m_nodes[i].GetOutputAfterActivationFunction(input,
                                                   m_activation_function,
                                                   &((*output)[i]));
+    }
+    if (m_cacheOutputs) {
+      cachedOutputs = *output;
     }
   }
 
@@ -188,6 +202,8 @@ public:
   //   }
   // }
 
+  std::vector<T> cachedOutputs;
+
 protected:
   size_t m_num_inputs_per_node{ 0 };
   size_t m_num_nodes{ 0 };
@@ -195,6 +211,8 @@ protected:
   ACTIVATION_FUNCTIONS m_activation_function_str;
   MLP_ACTIVATION_FN activation_func_t<T> m_activation_function;
   MLP_ACTIVATION_FN activation_func_t<T> m_deriv_activation_function;
+
+  bool m_cacheOutputs=false;
 };
 
 #endif //LAYER_H

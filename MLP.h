@@ -87,6 +87,12 @@ public:
 
     std::vector<Layer<T>> m_layers;
 
+    void SetCachedLayerOutputs(bool on) {
+        for(auto &layer : m_layers) {
+            layer.SetCachedOutputs(on);
+        }
+    }
+
 protected:
     void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                      const std::vector<T> &error,
