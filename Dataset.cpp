@@ -29,8 +29,8 @@ void Dataset::Load(std::vector<std::vector<float>> &features,
     labels_ = labels;
 }
 
-void Dataset::Fetch(const std::vector<std::vector<float>> *features,
-                    const std::vector<std::vector<float>> *labels)
+void Dataset::Fetch(std::vector<std::vector<float>> * &features,
+                    std::vector<std::vector<float>> * &labels)
 {
     features = &features_;
     labels = &labels_;

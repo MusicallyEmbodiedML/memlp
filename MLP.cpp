@@ -12,6 +12,7 @@
 #include <algorithm>
 #include "utils/Serialise.hpp"
 #include <cassert>
+#include <random>
 
 
 #if 1
@@ -438,8 +439,10 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 
     auto training_features = training_sample_set_with_bias.first;
     auto training_labels = training_sample_set_with_bias.second;
+#if 0
     auto t_feat = training_features.begin();
     auto t_label = training_labels.begin();
+#endif
 
     //how many batches
     size_t nBatches = training_features.size() / miniBatchSize;
@@ -458,7 +461,9 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
           shuffledIndexes[i_shuffle] = i_shuffle;
         }
         //shuffle
-        std::random_shuffle(shuffledIndexes.begin(), shuffledIndexes.end());
+        static std::random_device rd;
+        static std::mt19937 g(rd());
+        std::shuffle(shuffledIndexes.begin(), shuffledIndexes.end(), g);
 
         //process the mini batches
         T epochLoss = 0;
@@ -532,7 +537,7 @@ std::vector<std::vector<T>> MLP<T>::GetLayerWeights( size_t layer_i )
 {
     std::vector<std::vector<T>> ret_val;
     // check parameters
-    assert(0 <= layer_i && layer_i < m_layers.size() /* Incorrect layer number in GetLayerWeights call */);
+    assert(layer_i < m_layers.size() /* Incorrect layer number in GetLayerWeights call */);
     {
         Layer<T> current_layer = m_layers[layer_i];
         for( Node<T> & node : current_layer.GetNodesChangeable() )
@@ -567,7 +572,7 @@ template<typename T>
 void MLP<T>::SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weights )
 {
     // check parameters
-    assert(0 <= layer_i && layer_i < m_layers.size() /* Incorrect layer number in SetLayerWeights call */);
+    assert(layer_i < m_layers.size() /* Incorrect layer number in SetLayerWeights call */);
     {
         m_layers[layer_i].SetWeights( weights );
     }
@@ -642,7 +647,7 @@ void MLP<T>::MoveWeights(T speed)
     utils::gen_randn<T> gen(speed);
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        size_t num_inputs = m_layers_nodes[n];
+        // size_t num_inputs = m_layers_nodes[n];
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
                 T w = m_layers[n].m_nodes[k].m_weights[j];

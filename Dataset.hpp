@@ -13,8 +13,8 @@ class Dataset {
     void Clear();
     void Load(std::vector< std::vector<float> > &features,
               std::vector< std::vector<float> > &labels);
-    void Fetch(const std::vector< std::vector<float> > *features,
-               const std::vector< std::vector<float> > *labels);
+    void Fetch(std::vector< std::vector<float> > * &features,
+               std::vector< std::vector<float> > * &labels);
     DatasetVector& GetFeatures();
     DatasetVector& GetLabels();
 
