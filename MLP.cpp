@@ -15,8 +15,10 @@
 #include <random>
 
 
-#if 1
+#if !defined(ARDUINO)
 #include <stdio.h>
+#else
+#include <Arduino.h>
 #endif
 
 
@@ -89,7 +91,7 @@ void MLP<T>::ReportProgress(const bool output_log,
     const unsigned int i,
     const T sampleLoss)
 {
-#if 1
+#if !defined(ARDUINO)
     if (output_log && ((i % every_n_iter) == 0)) {
         printf("Iteration %i cost function f(error): %f\n",
                 i, sampleLoss);
@@ -101,7 +103,7 @@ void MLP<T>::ReportProgress(const bool output_log,
 template<typename T>
 void MLP<T>::ReportFinish(const unsigned int i, const float current_iteration_cost_function)
 {
-#if 1
+#if !defined(ARDUINO)
     printf("Iteration %i cost function f(error): %f\n",
         i, current_iteration_cost_function);
 
@@ -401,7 +403,7 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
             }
         }
 
-#if 1
+#if !defined(ARDUINO)
         ReportProgress(true, 100, i, current_iteration_cost_function);
 
 #endif  // EASYLOGGING_ON
@@ -414,9 +416,14 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
     }
 
-#if 1
+#if !defined(ARDUINO)
     ReportFinish(i, current_iteration_cost_function);
-#endif  // EASYLOGGING_ON
+#else
+    Serial.print("### Training ended, iteration ");
+    Serial.print(i);
+    Serial.print(", loss ");
+    Serial.println(current_iteration_cost_function, 10);
+#endif
 
     return current_iteration_cost_function;
 };
@@ -581,29 +588,35 @@ void MLP<T>::SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weig
 template <typename T>
 void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 {
+#if !defined(ARDUINO)
     if (weights.size() != m_layers.size()) {
         printf("SetWeights: vector dim not equal. Expected=%d, actual=%d",
                    weights.size(), m_layers.size());
     }
+#endif
     assert(weights.size() == m_layers.size());
 #if 0
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         size_t expected = m_layers[n].m_nodes.size();
         size_t actual = weights[n].size();
         bool assertion = expected == actual;
+#if !defined(ARDUINO)
         if (!assertion) {
             printf("SetWeights: vector dim not equal at n=%d. Expected=%d, actual=%d",
                    n, expected, actual);
         }
+#endif
         assert(assertion);
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             size_t expected = m_layers[n].m_nodes[k].m_weights.size();
             size_t actual = weights[n][k].size();
             bool assertion = expected == actual;
+#if !defined(ARDUINO)
             if (!assertion) {
                 printf("SetWeights: vector dim not equal at n=%d,k=%d. Expected=%d, actual=%d",
                     n, k, expected, actual);
             }
+#endif
             assert(assertion);
         }
     }
