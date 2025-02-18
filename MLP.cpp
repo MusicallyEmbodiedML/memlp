@@ -257,92 +257,48 @@ T MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_with_b
 
     //TODO AM this signature shouldn't exist - TrainingSample should be removed
 
-    //rlunaro.03/01/2019. the compiler says that these variables are unused
-    //int num_examples = training_sample_set_with_bias.size();
-    //int num_features = training_sample_set_with_bias[0].GetInputVectorSize();
-
-    //{
-    //  int layer_i = -1;
-    //  int node_i = -1;
-    //  std::cout << "Starting weights:" << std::endl;
-    //  for (const auto & layer : m_layers) {
-    //    layer_i++;
-    //    node_i = -1;
-    //    std::cout << "Layer " << layer_i << " :" << std::endl;
-    //    for (const auto & node : layer.GetNodes()) {
-    //      node_i++;
-    //      std::cout << "\tNode " << node_i << " :\t";
-    //      for (auto m_weightselement : node.GetWeights()) {
-    //        std::cout << m_weightselement << "\t";
-    //      }
-    //      std::cout << std::endl;
-    //    }
-    //  }
-    //}
-
     int i = 0;
     T current_iteration_cost_function = 0.f;
     T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.size();
 
 
     for (i = 0; i < max_iterations; i++) {
-    current_iteration_cost_function = 0.f;
-    for (auto & training_sample_with_bias : training_sample_set_with_bias) {
+        current_iteration_cost_function = 0.f;
+        for (auto & training_sample_with_bias : training_sample_set_with_bias) {
 
-        std::vector<T> predicted_output;
-        std::vector< std::vector<T> > all_layers_activations;
+            std::vector<T> predicted_output;
+            std::vector< std::vector<T> > all_layers_activations;
 
-        GetOutput(training_sample_with_bias.input_vector(),
-                &predicted_output,
-                &all_layers_activations);
+            GetOutput(training_sample_with_bias.input_vector(),
+                    &predicted_output,
+                    &all_layers_activations);
 
-        const std::vector<T> &  correct_output =
-        training_sample_with_bias.output_vector();
+            const std::vector<T> &  correct_output =
+            training_sample_with_bias.output_vector();
 
-        assert(correct_output.size() == predicted_output.size());
-        std::vector<T> deriv_error_output(predicted_output.size());
+            assert(correct_output.size() == predicted_output.size());
+            std::vector<T> deriv_error_output(predicted_output.size());
 
-        // Loss funtion
-        current_iteration_cost_function =
-            this->loss_fn_(correct_output, predicted_output, deriv_error_output,sampleSizeReciprocal);
+            // Loss funtion
+            current_iteration_cost_function =
+                this->loss_fn_(correct_output, predicted_output,
+                        deriv_error_output , sampleSizeReciprocal);
 
-        UpdateWeights(all_layers_activations,
-                    deriv_error_output,
-                    learning_rate);
-    }
+            UpdateWeights(all_layers_activations,
+                        deriv_error_output,
+                        learning_rate);
+        }  // (auto & training_sample_with_bias : training_sample_set_with_bias)
 
+        ReportProgress(true, 10, i, current_iteration_cost_function);
 
-    ReportProgress(true, 10, i, current_iteration_cost_function);
-
-    // Early stopping
-    // TODO AM early stopping should be optional and metric-dependent
-    if (current_iteration_cost_function < min_error_cost) {
-        break;
-    }
-
-    }
+        // Early stopping
+        // TODO AM early stopping should be optional and metric-dependent
+        if (current_iteration_cost_function < min_error_cost) {
+            break;
+        }
+    }  // (i = 0; i < max_iterations; i++)
 
     ReportFinish(i, current_iteration_cost_function);
-
-
-    //{
-    //  int layer_i = -1;
-    //  int node_i = -1;
-    //  std::cout << "Final weights:" << std::endl;
-    //  for (const auto & layer : m_layers) {
-    //    layer_i++;
-    //    node_i = -1;
-    //    std::cout << "Layer " << layer_i << " :" << std::endl;
-    //    for (const auto & node : layer.GetNodes()) {
-    //      node_i++;
-    //      std::cout << "\tNode " << node_i << " :\t";
-    //      for (auto m_weightselement : node.GetWeights()) {
-    //        std::cout << m_weightselement << "\t";
-    //      }
-    //      std::cout << std::endl;
-    //    }
-    //  }
-    //}
 
     return current_iteration_cost_function;
 };
@@ -386,7 +342,8 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
             // Loss funtion
             current_iteration_cost_function =
-                this->loss_fn_(correct_output, predicted_output, deriv_error_output, sampleSizeReciprocal);
+                this->loss_fn_(correct_output, predicted_output,
+                deriv_error_output, sampleSizeReciprocal);
 
             UpdateWeights(all_layers_activations,
                 deriv_error_output,
