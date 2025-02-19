@@ -6,7 +6,6 @@
 #define MLP_H
 
 #include "Layer.h"
-#include "Sample.h"
 #include "Utils.h"
 #include "Loss.h"
 
@@ -28,18 +27,20 @@ class temptest {
 template<typename T>
 class MLP {
 public:
-    //using training_pair_t = std::pair< std::vector<T>, std::vector<T> >;
+
     using training_pair_t = std::pair<
       std::vector< std::vector<T> >,
       std::vector< std::vector<T> >
     >;
+
     using mlp_weights = std::vector< std::vector <std::vector<T> > >;
-  //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
+
     MLP(const std::vector<size_t> & layers_nodes,
         const std::vector<ACTIVATION_FUNCTIONS> & layers_activfuncs,
         loss::LOSS_FUNCTIONS loss_function = loss::LOSS_FUNCTIONS::LOSS_MSE,
         bool use_constant_weight_init = false,
         T constant_weight_init = 0.5);
+
 #if ENABLE_SAVE
     MLP(const std::string & filename);
 #endif
@@ -57,12 +58,6 @@ public:
                     std::vector<T> * output,
                     std::vector<std::vector<T>> * all_layers_activations = nullptr);
     void GetOutputClass(const std::vector<T> &output, size_t * class_id) const;
-
-    T Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,
-                        float learning_rate,
-                        int max_iterations = 5000,
-                        float min_error_cost = 0.001,
-                        bool output_log = true);
 
     T Train(const training_pair_t& training_sample_set_with_bias,
                 float learning_rate,

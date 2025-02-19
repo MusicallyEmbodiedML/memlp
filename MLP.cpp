@@ -249,63 +249,6 @@ void MLP<T>::UpdateWeights(const std::vector<std::vector<T>> & all_layers_activa
 
 
 template<typename T>
-T MLP<T>::Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,
-                          float learning_rate,
-                          int max_iterations,
-                          float min_error_cost,
-                          bool output_log) {
-
-    //TODO AM this signature shouldn't exist - TrainingSample should be removed
-
-    int i = 0;
-    T current_iteration_cost_function = 0.f;
-    T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.size();
-
-
-    for (i = 0; i < max_iterations; i++) {
-        current_iteration_cost_function = 0.f;
-        for (auto & training_sample_with_bias : training_sample_set_with_bias) {
-
-            std::vector<T> predicted_output;
-            std::vector< std::vector<T> > all_layers_activations;
-
-            GetOutput(training_sample_with_bias.input_vector(),
-                    &predicted_output,
-                    &all_layers_activations);
-
-            const std::vector<T> &  correct_output =
-            training_sample_with_bias.output_vector();
-
-            assert(correct_output.size() == predicted_output.size());
-            std::vector<T> deriv_error_output(predicted_output.size());
-
-            // Loss funtion
-            current_iteration_cost_function =
-                this->loss_fn_(correct_output, predicted_output,
-                        deriv_error_output , sampleSizeReciprocal);
-
-            UpdateWeights(all_layers_activations,
-                        deriv_error_output,
-                        learning_rate);
-        }  // (auto & training_sample_with_bias : training_sample_set_with_bias)
-
-        ReportProgress(true, 10, i, current_iteration_cost_function);
-
-        // Early stopping
-        // TODO AM early stopping should be optional and metric-dependent
-        if (current_iteration_cost_function < min_error_cost) {
-            break;
-        }
-    }  // (i = 0; i < max_iterations; i++)
-
-    ReportFinish(i, current_iteration_cost_function);
-
-    return current_iteration_cost_function;
-};
-
-
-
-template<typename T>
 T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
     int max_iterations,
