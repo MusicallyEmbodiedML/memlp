@@ -429,8 +429,27 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 #endif  // EASYLOGGING_ON
 
     return current_iteration_cost_function;
-};
+}
 
+template <typename T>
+void MLP<T>::Train(const std::vector<TrainingSample<T>>
+        &training_sample_set_with_bias,
+        float learning_rate,
+        int max_iterations,
+        float min_error_cost,
+        bool output_log)
+{
+    std::vector< std::vector<T> > features, labels;
+
+    for (const auto &sample : training_sample_set_with_bias) {
+        features.push_back(sample.input_vector());
+        labels.push_back(sample.output_vector());
+    }
+
+    training_pair_t t_pair(features, labels);
+    Train(t_pair, learning_rate, max_iterations,
+            min_error_cost, output_log);
+};
 
 template<typename T>
 size_t MLP<T>::GetNumLayers()

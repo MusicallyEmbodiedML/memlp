@@ -8,6 +8,7 @@
 #include "Layer.h"
 #include "Utils.h"
 #include "Loss.h"
+#include "Sample.h"
 
 #include <cstdint>
 
@@ -71,6 +72,12 @@ public:
                 size_t miniBatchSize=8,
                 float min_error_cost = 0.001,
                 bool output_log = true);
+
+    void Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,
+                        float learning_rate,
+                        int max_iterations = 5000,
+                        float min_error_cost = 0.001,
+                        bool output_log = true);
 
     size_t GetNumLayers();
     std::vector<std::vector<T>> GetLayerWeights( size_t layer_i );
