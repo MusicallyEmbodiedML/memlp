@@ -8,6 +8,7 @@
 class Dataset {
  public:
     using DatasetVector = std::vector< std::vector<float> >;
+    static constexpr unsigned int kMax_examples = 100;
 
     Dataset() { _InitSizes(); }
     Dataset(DatasetVector &features, DatasetVector &labels) :
@@ -16,15 +17,17 @@ class Dataset {
     void Clear();
     void Load(DatasetVector &features,
               DatasetVector &labels);
-    void Fetch(DatasetVector *features,
-               DatasetVector *labels);
+    void Fetch(DatasetVector *&features,
+               DatasetVector *&labels);
+    /// @brief Gets features from the dataset
+    /// @param with_bias Adds bias (1.0f) to each feature vector
+    /// @return Feature vector
     DatasetVector GetFeatures(bool with_bias = true);
     DatasetVector& GetLabels();
     inline size_t GetFeatureSize(bool with_bias = true) { return data_size_ + with_bias; }
     inline size_t GetOutputSize() { return output_size_; }
 
  protected:
-    static constexpr unsigned int kMax_examples = 100;
     size_t data_size_;
     size_t output_size_;
 

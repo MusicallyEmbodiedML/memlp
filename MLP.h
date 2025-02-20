@@ -99,8 +99,8 @@ protected:
     void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                      const std::vector<T> &error,
                      float learning_rate);
-
-private:
+    T _TrainOnExample(std::vector<T> feat, std::vector<T> label,
+                      float learning_rate, T sampleSizeReciprocal);
     void CreateMLP(const std::vector<size_t> & layers_nodes,
                     const std::vector<ACTIVATION_FUNCTIONS> & layers_activfuncs,
                     loss::LOSS_FUNCTIONS loss_function = loss::LOSS_FUNCTIONS::LOSS_MSE,

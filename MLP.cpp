@@ -271,26 +271,7 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
         while (t_feat != training_features.end() || t_label != training_labels.end()) {
 
             // Payload
-            std::vector<T> predicted_output;
-            std::vector< std::vector<T> > all_layers_activations;
-
-            GetOutput(*t_feat,
-                &predicted_output,
-                &all_layers_activations);
-
-            const std::vector<T>& correct_output{ *t_label };
-
-            assert(correct_output.size() == predicted_output.size());
-            std::vector<T> deriv_error_output(predicted_output.size());
-
-            // Loss funtion
-            current_iteration_cost_function =
-                this->loss_fn_(correct_output, predicted_output,
-                deriv_error_output, sampleSizeReciprocal);
-
-            UpdateWeights(all_layers_activations,
-                deriv_error_output,
-                learning_rate);
+            _TrainOnExample(*t_feat, *t_label, learning_rate, sampleSizeReciprocal);
 
             // \Payload
             if (t_feat != training_features.end())
@@ -328,6 +309,36 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     return current_iteration_cost_function;
 };
 
+template <typename T>
+T MLP<T>::_TrainOnExample(std::vector<T> feat,
+                          std::vector<T> label,
+                          float learning_rate,
+                          T sampleSizeReciprocal)
+{
+    std::vector<T> predicted_output;
+    std::vector< std::vector<T> > all_layers_activations;
+
+    GetOutput(feat,
+        &predicted_output,
+        &all_layers_activations);
+
+    const std::vector<T>& correct_output{ label };
+
+    assert(correct_output.size() == predicted_output.size());
+    std::vector<T> deriv_error_output(predicted_output.size());
+
+    // Loss funtion
+    T current_iteration_cost_function =
+        this->loss_fn_(correct_output, predicted_output,
+        deriv_error_output, sampleSizeReciprocal);
+
+    UpdateWeights(all_layers_activations,
+        deriv_error_output,
+        learning_rate);
+
+    return current_iteration_cost_function;
+}
+
 
 template<typename T>
 T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
@@ -340,9 +351,7 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
     assert(miniBatchSize > 0);
 
     int i = 0;
-    float current_iteration_cost_function = 0.f;
-
-
+    T epochLoss = 0;
 
     auto training_features = training_sample_set_with_bias.first;
     auto training_labels = training_sample_set_with_bias.second;
@@ -359,7 +368,6 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 
 
     for (i = 0; i < max_iterations; i++) {
-        current_iteration_cost_function = 0.f;
 
         //randomly shuffle training data into mini batches
         std::vector<size_t> shuffledIndexes(training_features.size());
@@ -373,7 +381,7 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
         std::shuffle(shuffledIndexes.begin(), shuffledIndexes.end(), g);
 
         //process the mini batches
-        T epochLoss = 0;
+        epochLoss = 0;
         size_t trainingIndex = 0;
         T sampleSizeReciprocal = 1.f / miniBatchSize;
 
@@ -386,29 +394,17 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 
             //process minibatch
             T sampleLoss = 0;
+
             for(size_t i_trainingItem=0; i_trainingItem < currBatchSize; i_trainingItem++) {
-                std::vector<T> predicted_output;
-                std::vector< std::vector<T> > all_layers_activations;
                 size_t shuffledTrainingIndex = shuffledIndexes[trainingIndex];
-                GetOutput(training_features[shuffledTrainingIndex],
-                    &predicted_output,
-                    &all_layers_activations);
+                auto feat = training_features[shuffledTrainingIndex];
+                auto label = training_labels[shuffledTrainingIndex];
 
-                const std::vector<T>& correct_output{ training_labels[shuffledTrainingIndex] };
-
-                assert(correct_output.size() == predicted_output.size());
-                std::vector<T> deriv_error_output(predicted_output.size());
-
-                // Loss funtion
-                sampleLoss +=
-                    this->loss_fn_(correct_output, predicted_output, deriv_error_output, sampleSizeReciprocal);
-
-                UpdateWeights(all_layers_activations,
-                    deriv_error_output,
-                    learning_rate);
-                epochLoss += sampleLoss;
+                sampleLoss += _TrainOnExample(feat, label,
+                        learning_rate, sampleSizeReciprocal);
                 trainingIndex++;
             }
+            epochLoss += sampleLoss / currBatchSize;
         }
 
 #if 1
@@ -418,17 +414,17 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 
         // Early stopping
         // TODO AM early stopping should be optional and metric-dependent
-        if (current_iteration_cost_function < min_error_cost) {
+        if (epochLoss < min_error_cost) {
             break;
         }
 
     }
 
 #if 1
-    ReportFinish(i, current_iteration_cost_function);
+    ReportFinish(i, epochLoss);
 #endif  // EASYLOGGING_ON
 
-    return current_iteration_cost_function;
+    return epochLoss;
 }
 
 template <typename T>
