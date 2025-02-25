@@ -260,6 +260,8 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
     T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.first.size();
 
+    int64_t timer_start = time_us_64();
+
     for (i = 0; i < max_iterations; i++) {
         current_iteration_cost_function = 0.f;
 
@@ -271,7 +273,8 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
         while (t_feat != training_features.end() || t_label != training_labels.end()) {
 
             // Payload
-            _TrainOnExample(*t_feat, *t_label, learning_rate, sampleSizeReciprocal);
+            current_iteration_cost_function =
+                _TrainOnExample(*t_feat, *t_label, learning_rate, sampleSizeReciprocal);
 
             // \Payload
             if (t_feat != training_features.end())
@@ -288,6 +291,13 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
         ReportProgress(true, 100, i, current_iteration_cost_function);
 
 #endif  // EASYLOGGING_ON
+
+        if (0 == i) {
+            int64_t timer_end = time_us_64();
+            Serial.print("TRAINING Epoch 0 time: ");
+            Serial.print(timer_end-timer_start);
+            Serial.println(" microseconds.");
+        }
 
         // Early stopping
         // TODO AM early stopping should be optional and metric-dependent
