@@ -15,13 +15,13 @@
 
 
 
-template<typename T>
-class temptest {
-  public:
-  void test() {
-    // Serial.println("template test");
-  }
-};
+// template<typename T>
+// class temptest {
+//   public:
+//   void test() {
+//     // Serial.println("template test");
+//   }
+// };
 
 template<typename T>
 class MLP {
