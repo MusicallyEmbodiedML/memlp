@@ -97,6 +97,13 @@ public:
       m_weights = weights;
   }
 
+  void SmoothUpdateWeights(std::vector<T> & incomingWeights, const float alpha, const float alphaInv) {
+    assert(incomingWeights.size() == m_weights.size());
+    for(size_t i = 0; i < m_weights.size(); i++) {
+      m_weights[i] = (alphaInv * m_weights[i]) + (alpha * incomingWeights[i]);
+    }
+  }
+
   size_t GetWeightsVectorSize() const {
     return m_weights.size();
   }

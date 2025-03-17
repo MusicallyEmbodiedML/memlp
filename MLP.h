@@ -93,6 +93,16 @@ public:
         }
     }
 
+    //used for target networks in RL
+    void SmoothUpdateWeights(MLP<T> &anotherMLP, const float alpha) {
+        //assuming the other MLP has the same structure
+        //calc this once here
+        float alphaInv = 1.f-alpha;
+        for(size_t i=0; i < m_layers.size(); i++) {
+            m_layers[i].SmoothUpdateWeights(anotherMLP.m_layers[i], alpha, alphaInv);
+        }
+    }
+
 protected:
     void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                      const std::vector<T> &error,

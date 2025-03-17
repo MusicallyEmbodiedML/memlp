@@ -150,6 +150,13 @@ public:
       }
   };
 
+  void SmoothUpdateWeights(Layer<T> &l, const float alpha, const float alphaInv) {
+    // traverse the list of nodes
+    for(size_t n=0; n < m_nodes.size(); n++) {
+      m_nodes[n].SmoothUpdateWeights(l.m_nodes[n].GetWeights(), alpha, alphaInv);
+    }
+  }
+
 #ifdef ENABLE_SAVE
 
   void SaveLayer(FILE * file) const {
