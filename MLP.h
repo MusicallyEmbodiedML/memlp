@@ -11,10 +11,8 @@
 #include "Sample.h"
 
 #include <cstdint>
+#include <string>
 
-#if defined(_WIN32) || (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#define ENABLE_SAVE    1
-#endif
 
 
 template<typename T>

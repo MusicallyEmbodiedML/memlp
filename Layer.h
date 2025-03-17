@@ -48,7 +48,7 @@ public:
     assert(ret_val);
     m_activation_function = (*pair).first;
     m_deriv_activation_function = (*pair).second;
-    m_activation_function_str = activation_function;
+    m_activation_function_type = activation_function;
   };
 
   ~Layer() {
@@ -156,9 +156,11 @@ public:
     fwrite(&m_num_nodes, sizeof(m_num_nodes), 1, file);
     fwrite(&m_num_inputs_per_node, sizeof(m_num_inputs_per_node), 1, file);
 
-    size_t str_size = m_activation_function_str.size();
-    fwrite(&str_size, sizeof(size_t), 1, file);
-    fwrite(m_activation_function_str.c_str(), sizeof(char), str_size, file);
+    // size_t str_size = m_activation_function_type.size();
+    // fwrite(&str_size, sizeof(size_t), 1, file);
+    fwrite(&m_activation_function_type, sizeof(ACTIVATION_FUNCTIONS), 1, file);
+
+    // fwrite(m_activation_function_type.c_str(), sizeof(char), str_size, file);
 
     for (size_t i = 0; i < m_nodes.size(); i++) {
       m_nodes[i].SaveNode(file);
@@ -171,15 +173,16 @@ public:
     fread(&m_num_nodes, sizeof(m_num_nodes), 1, file);
     fread(&m_num_inputs_per_node, sizeof(m_num_inputs_per_node), 1, file);
 
-    size_t str_size = 0;
-    fread(&str_size, sizeof(size_t), 1, file);
-    m_activation_function_str.resize(str_size);
-    fread(&(m_activation_function_str[0]), sizeof(char), str_size, file);
+    // size_t str_size = 0;
+    // fread(&str_size, sizeof(size_t), 1, file);
+    // m_activation_function_type.resize(str_size);
+    // fread(&(m_activation_function_type[0]), sizeof(char), str_size, file);
+    fread(&(m_activation_function_type), sizeof(ACTIVATION_FUNCTIONS), 1, file);
 
     std::pair<activation_func_t<T>,
         activation_func_t<T> > *pair;
     bool ret_val = utils::ActivationFunctionsManager<T>::Singleton().
-      GetActivationFunctionPair(m_activation_function_str,
+      GetActivationFunctionPair(m_activation_function_type,
                                 &pair);
     assert(ret_val);
     m_activation_function = (*pair).first;
@@ -208,7 +211,7 @@ protected:
   size_t m_num_inputs_per_node{ 0 };
   size_t m_num_nodes{ 0 };
 
-  ACTIVATION_FUNCTIONS m_activation_function_str;
+  ACTIVATION_FUNCTIONS m_activation_function_type;
   MLP_ACTIVATION_FN activation_func_t<T> m_activation_function;
   MLP_ACTIVATION_FN activation_func_t<T> m_deriv_activation_function;
 
