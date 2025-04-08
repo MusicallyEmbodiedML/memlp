@@ -11,6 +11,7 @@ struct trainXYItem {
     std::vector<T> Y;
 };
 
+
 template <class trainingItem>
 class ReplayMemory {
 public:

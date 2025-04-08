@@ -11,6 +11,7 @@
 #include "Sample.h"
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 
@@ -94,12 +95,21 @@ public:
     }
 
     //used for target networks in RL
-    void SmoothUpdateWeights(MLP<T> &anotherMLP, const float alpha) {
+    void SmoothUpdateWeights(std::shared_ptr<MLP<T>> anotherMLP, const float alpha) {
         //assuming the other MLP has the same structure
         //calc this once here
         float alphaInv = 1.f-alpha;
+
         for(size_t i=0; i < m_layers.size(); i++) {
-            m_layers[i].SmoothUpdateWeights(anotherMLP.m_layers[i], alpha, alphaInv);
+            m_layers[i].SmoothUpdateWeights(anotherMLP->m_layers[i], alpha, alphaInv);
+        }
+    }
+
+    void CalcGradients(std::vector<T> &feat, std::vector<T> & deriv_error_output);
+
+    void ClearGradients() {
+        for(auto &v: m_layers) {
+            v.SetGrads({});
         }
     }
 

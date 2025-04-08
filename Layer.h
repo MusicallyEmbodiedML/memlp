@@ -135,6 +135,32 @@ public:
     }
   };
 
+  void CalcGradients(const std::vector<T> &input_layer_activation,
+                     const std::vector<T> &deriv_error,
+                     std::vector<T> * deltas) {
+    assert(input_layer_activation.size() == m_num_inputs_per_node);
+    assert(deriv_error.size() == m_nodes.size());
+    grads = deriv_error; //keep a copy
+    deltas->resize(m_num_inputs_per_node, 0);
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+      //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
+      T dE_doj=0,doj_dnetj =0, dnetj_dwij = 0;
+      dE_doj = deriv_error[i];
+      doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod); //cached from earlier calculation
+      for (size_t j = 0; j < m_num_inputs_per_node; j++) {
+        (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
+      }
+    }
+  };
+
+  void SetGrads(std::vector<T> newGrads) {
+    grads = newGrads;
+  }
+
+  std::vector<T>& GetGrads() {
+    return grads;
+  }
+
 
   void SetWeights( std::vector<std::vector<T>> & weights )
   {
@@ -223,6 +249,8 @@ protected:
   MLP_ACTIVATION_FN activation_func_t<T> m_deriv_activation_function;
 
   bool m_cacheOutputs=false;
+
+  std::vector<T> grads;
 };
 
 #endif //LAYER_H

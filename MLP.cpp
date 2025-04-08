@@ -239,12 +239,12 @@ void MLP<T>::UpdateWeights(const std::vector<std::vector<T>> & all_layers_activa
     std::vector<T> deltas{};
     //m_layers.size() equals (m_num_hidden_layers + 1)
     for (int i = m_num_hidden_layers; i >= 0; --i) {
-    m_layers[i].UpdateWeights(all_layers_activations[i], temp_deriv_error, learning_rate, &deltas);
-    if (i > 0) {
-        temp_deriv_error.clear();
-        temp_deriv_error = std::move(deltas);
-        deltas.clear();
-    }
+        m_layers[i].UpdateWeights(all_layers_activations[i], temp_deriv_error, learning_rate, &deltas);
+        if (i > 0) {
+            temp_deriv_error.clear();
+            temp_deriv_error = std::move(deltas);
+            deltas.clear();
+        }
     }
 };
 
@@ -322,6 +322,39 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
     return current_iteration_cost_function;
 };
+
+template <typename T>
+void MLP<T>::CalcGradients(std::vector<T> & feat, std::vector<T> & deriv_error_output)
+{
+    std::vector<T> predicted_output;
+    std::vector< std::vector<T> > all_layers_activations;
+
+    GetOutput(feat,
+        &predicted_output,
+        &all_layers_activations);
+
+
+    // std::vector<T> deriv_error_output(predicted_output.size(), 1.0);
+
+    // UpdateWeights(all_layers_activations,
+    //     deriv_error_output,
+    //     learning_rate);
+
+    std::vector<T> temp_deriv_error = deriv_error_output;
+    std::vector<T> deltas{};
+    //m_layers.size() equals (m_num_hidden_layers + 1)
+    for (int i = m_num_hidden_layers; i >= 0; --i) {
+        m_layers[i].CalcGradients(all_layers_activations[i], temp_deriv_error, &deltas);
+        if (i > 0) {
+            temp_deriv_error.clear();
+            temp_deriv_error = std::move(deltas);
+            deltas.clear();
+        }else {
+            m_layers[0].SetGrads(deltas);
+        }
+    }
+
+}
 
 template <typename T>
 T MLP<T>::_TrainOnExample(std::vector<T> feat,
