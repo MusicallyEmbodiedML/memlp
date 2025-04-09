@@ -105,6 +105,12 @@ public:
         }
     }
 
+    /**
+     * @brief Equivalent of Tensorflow's tf.gradients() function (autograd)
+     * 
+     * @param feat 
+     * @param deriv_error_output 
+     */
     void CalcGradients(std::vector<T> &feat, std::vector<T> & deriv_error_output);
 
     void ClearGradients() {

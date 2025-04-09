@@ -228,3 +228,4 @@ ModelManifest.xml
 /*.vcd
 lib/*
 
+.ai/
