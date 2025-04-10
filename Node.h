@@ -282,7 +282,6 @@ public:
     };
 #endif
 
-protected:
     size_t m_num_inputs{ 0 }; /**< Number of inputs to this node */
     T m_bias{ 0.0 };         /**< Bias value for this node */
     std::vector<T> m_weights; /**< Vector of input weights */
