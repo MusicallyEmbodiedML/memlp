@@ -61,9 +61,86 @@ my_mlp.GetOutput(input, &output);
 ```
 
 ### Implementing Reinforcement Learning
+
+The MEMLP library provides built-in support for reinforcement learning through its `ReplayMemory` class and special network update methods. Here's a complete example of implementing a Q-learning agent:
+
 ```cpp
-my_mlp.SmoothUpdateWeights(target_mlp, 0.1f);
+#include "src/memlp/MLP.h"
+#include "src/memlp/ReplayMemory.hpp"
+
+// Create Q-network and target network with identical architecture
+MLP<float> q_network({4, 16, 16, 2}, // State size: 4, Action size: 2
+                     {ACTIVATION_FUNCTIONS::RELU,
+                      ACTIVATION_FUNCTIONS::RELU,
+                      ACTIVATION_FUNCTIONS::LINEAR});
+
+auto target_network = std::make_shared<MLP<float>>(q_network);
+
+// Initialize replay memory
+ReplayMemory<trainXYItem<float>> memory;
+memory.setMemoryLimit(10000);  // Store up to 10000 experiences
+memory.forgettingMode = ReplayMemory<trainXYItem<float>>::FORGETMODES::RANDOM_OLDER;
+
+// Training loop
+float epsilon = 1.0f;  // Exploration rate
+float gamma = 0.99f;   // Discount factor
+float alpha = 0.001f;  // Soft update rate
+
+for(int episode = 0; episode < 1000; episode++) {
+    // Get current state from environment
+    std::vector<float> state = get_state();
+    
+    // Epsilon-greedy action selection
+    std::vector<float> q_values;
+    q_network.GetOutput(state, &q_values);
+    int action = (rand() < epsilon * RAND_MAX) ? 
+                 rand() % 2 : 
+                 std::max_element(q_values.begin(), q_values.end()) - q_values.begin();
+    
+    // Execute action and get reward
+    float reward = execute_action(action);
+    std::vector<float> next_state = get_state();
+    
+    // Store experience in replay memory
+    trainXYItem<float> experience;
+    experience.X = state;
+    experience.Y = {reward};  // Store reward as target
+    memory.add(experience, episode);
+    
+    // Sample batch from replay memory and train
+    if(memory.size() >= 32) {
+        auto batch = memory.sample(32);
+        for(auto &sample : batch) {
+            // Get next state Q-values from target network
+            std::vector<float> next_q_values;
+            target_network->GetOutput(sample.X, &next_q_values);
+            float max_next_q = *std::max_element(next_q_values.begin(), next_q_values.end());
+            
+            // Calculate target Q-value with temporal difference
+            std::vector<float> target = q_values;
+            target[action] = reward + gamma * max_next_q;
+            
+            // Train Q-network on this sample
+            q_network.Train({{sample.X}, {target}}, 0.001f, 1, 0.0001f, false);
+        }
+        
+        // Soft update target network
+        target_network->SmoothUpdateWeights(q_network, alpha);
+    }
+    
+    // Decay exploration rate
+    epsilon *= 0.995f;
+}
 ```
+
+Key Features for Reinforcement Learning:
+- **Experience Replay**: The `ReplayMemory` class supports various forgetting modes:
+  - `FIFO`: First-in-first-out memory
+  - `RANDOM_EQUAL`: Random removal with equal probability
+  - `RANDOM_OLDER`: Biased removal of older memories
+- **Target Networks**: Use `SmoothUpdateWeights()` for stable Q-learning
+- **Gradient Calculation**: `CalcGradients()` supports policy gradient methods
+- **Flexible Architecture**: Easily create actor-critic networks
 
 ## API Documentation
 

@@ -1,7 +1,16 @@
-//============================================================================
-// Name : Layer.h
-// Author : David Nogueira
-//============================================================================
+/**
+ * @file Layer.h
+ * @brief Neural network layer implementation managing multiple nodes and their connections
+ * @copyright Copyright (c) 2024. Licensed under Mozilla Public License Version 2.0
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * This code is derived from David Alberto Nogueira's MLP project:
+ * https://github.com/davidalbertonogueira/MLP
+ */
+
 #ifndef LAYER_H
 #define LAYER_H
 
@@ -11,20 +20,37 @@
 #include "Node.h"
 #include "Utils.h"
 
-
-// Definition of activation function pointer
+/**
+ * @brief Definition of activation function pointer
+ * @tparam T The numeric type used for calculations
+ */
 template<typename T>
 using activation_func_t = T(*)(T);
 
-
+/**
+ * @class Layer
+ * @brief Represents a layer of neural network nodes with shared inputs and activation function
+ * @tparam T The numeric type used for calculations (typically float or double)
+ */
 template<typename T>
 class Layer {
 public:
+  /**
+   * @brief Default constructor
+   */
   Layer() {
     m_num_nodes = 0;
     m_nodes.clear();
   };
 
+  /**
+   * @brief Constructor with initialization parameters
+   * @param num_inputs_per_node Number of inputs for each node in the layer
+   * @param num_nodes Number of nodes in this layer
+   * @param activation_function Activation function type for all nodes
+   * @param use_constant_weight_init Flag to use constant weight initialization
+   * @param constant_weight_init Value for constant weight initialization
+   */
   Layer(int num_inputs_per_node,
         int num_nodes,
         const ACTIVATION_FUNCTIONS & activation_function,
@@ -51,12 +77,19 @@ public:
     m_activation_function_type = activation_function;
   };
 
+  /**
+   * @brief Destructor
+   */
   ~Layer() {
     m_num_inputs_per_node = 0;
     m_num_nodes = 0;
     m_nodes.clear();
   };
 
+  /**
+   * @brief Controls output caching behavior
+   * @param onOrOff True to enable output caching, false to disable
+   */
   void SetCachedOutputs(bool onOrOff) { 
     m_cacheOutputs = onOrOff;
     if (m_cacheOutputs) {
@@ -66,28 +99,43 @@ public:
     }
   }
 
-
-
+  /**
+   * @brief Gets the number of inputs per node
+   * @return Number of inputs per node
+   */
   int GetInputSize() const {
     return m_num_inputs_per_node;
   };
 
+  /**
+   * @brief Gets the number of nodes in the layer
+   * @return Number of nodes in the layer
+   */
   int GetOutputSize() const {
     return m_num_nodes;
   };
 
+  /**
+   * @brief Gets the list of nodes in the layer
+   * @return Constant reference to the list of nodes
+   */
   const std::vector<Node<T>> & GetNodes() const {
     return m_nodes;
   }
 
   /**
-   * Return the internal list of nodes, but modifiable.
+   * @brief Return the internal list of nodes, but modifiable
+   * @return Reference to the list of nodes
    */
   std::vector<Node<T>> & GetNodesChangeable() {
     return m_nodes;
   }
 
-
+  /**
+   * @brief Computes layer outputs using the activation function
+   * @param input Input vector
+   * @param output Pointer to store output vector
+   */
   void GetOutputAfterActivationFunction(const std::vector<T> &input,
                                         std::vector<T> * output) {
     assert(input.size() == m_num_inputs_per_node);
@@ -104,6 +152,13 @@ public:
     }
   }
 
+  /**
+   * @brief Updates weights of the layer nodes
+   * @param input_layer_activation Activation values of the input layer
+   * @param deriv_error Derivative of the error with respect to outputs
+   * @param m_learning_rate Learning rate for weight updates
+   * @param deltas Pointer to store computed deltas
+   */
   void UpdateWeights(const std::vector<T> &input_layer_activation,
                      const std::vector<T> &deriv_error,
                      float m_learning_rate,
@@ -135,6 +190,12 @@ public:
     }
   };
 
+  /**
+   * @brief Calculates gradients for optimization
+   * @param input_layer_activation Activation values of the input layer
+   * @param deriv_error Derivative of the error with respect to outputs
+   * @param deltas Pointer to store computed deltas
+   */
   void CalcGradients(const std::vector<T> &input_layer_activation,
                      const std::vector<T> &deriv_error,
                      std::vector<T> * deltas) {
@@ -153,15 +214,26 @@ public:
     }
   };
 
+  /**
+   * @brief Sets gradients for optimization
+   * @param newGrads New gradients to set
+   */
   void SetGrads(std::vector<T> newGrads) {
     grads = newGrads;
   }
 
+  /**
+   * @brief Gets the stored gradients
+   * @return Reference to the stored gradients
+   */
   std::vector<T>& GetGrads() {
     return grads;
   }
 
-
+  /**
+   * @brief Sets weights for the layer nodes
+   * @param weights 2D vector of weights for each node
+   */
   void SetWeights( std::vector<std::vector<T>> & weights )
   {
       assert(0 <= weights.size() && weights.size() <= m_num_nodes /* Incorrect layer number in SetWeights call */);
@@ -176,6 +248,12 @@ public:
       }
   };
 
+  /**
+   * @brief Smoothly updates weights using another layer's weights
+   * @param l Reference to another layer
+   * @param alpha Smoothing factor
+   * @param alphaInv Inverse of smoothing factor
+   */
   void SmoothUpdateWeights(Layer<T> &l, const float alpha, const float alphaInv) {
     // traverse the list of nodes
     for(size_t n=0; n < m_nodes.size(); n++) {
@@ -185,31 +263,31 @@ public:
 
 #ifdef ENABLE_SAVE
 
+  /**
+   * @brief Saves the layer to a file
+   * @param file File pointer to save the layer
+   */
   void SaveLayer(FILE * file) const {
     fwrite(&m_num_nodes, sizeof(m_num_nodes), 1, file);
     fwrite(&m_num_inputs_per_node, sizeof(m_num_inputs_per_node), 1, file);
 
-    // size_t str_size = m_activation_function_type.size();
-    // fwrite(&str_size, sizeof(size_t), 1, file);
     fwrite(&m_activation_function_type, sizeof(ACTIVATION_FUNCTIONS), 1, file);
-
-    // fwrite(m_activation_function_type.c_str(), sizeof(char), str_size, file);
 
     for (size_t i = 0; i < m_nodes.size(); i++) {
       m_nodes[i].SaveNode(file);
     }
   };
 
+  /**
+   * @brief Loads the layer from a file
+   * @param file File pointer to load the layer
+   */
   void LoadLayer(FILE * file) {
     m_nodes.clear();
 
     fread(&m_num_nodes, sizeof(m_num_nodes), 1, file);
     fread(&m_num_inputs_per_node, sizeof(m_num_inputs_per_node), 1, file);
 
-    // size_t str_size = 0;
-    // fread(&str_size, sizeof(size_t), 1, file);
-    // m_activation_function_type.resize(str_size);
-    // fread(&(m_activation_function_type[0]), sizeof(char), str_size, file);
     fread(&(m_activation_function_type), sizeof(ACTIVATION_FUNCTIONS), 1, file);
 
     std::pair<activation_func_t<T>,
@@ -232,25 +310,18 @@ public:
 
   std::vector<Node<T>> m_nodes;
 
-  // void prepareForOptimisation(size_t maxBatchSize) {
-  //   for(auto &v: m_nodes) {
-  //     v.prepareForOptimisation(maxBatchSize);
-  //   }
-  // }
-
   std::vector<T> cachedOutputs;
 
 protected:
-  size_t m_num_inputs_per_node{ 0 };
-  size_t m_num_nodes{ 0 };
+  size_t m_num_inputs_per_node{ 0 }; /**< Number of inputs per node in this layer */
+  size_t m_num_nodes{ 0 };           /**< Number of nodes in this layer */
 
-  ACTIVATION_FUNCTIONS m_activation_function_type;
-  MLP_ACTIVATION_FN activation_func_t<T> m_activation_function;
-  MLP_ACTIVATION_FN activation_func_t<T> m_deriv_activation_function;
+  ACTIVATION_FUNCTIONS m_activation_function_type;              /**< Type of activation function used */
+  activation_func_t<T> m_activation_function;                   /**< Pointer to activation function */
+  activation_func_t<T> m_deriv_activation_function;             /**< Pointer to derivative of activation function */
 
-  bool m_cacheOutputs=false;
-
-  std::vector<T> grads;
+  bool m_cacheOutputs{false};                                   /**< Flag controlling output caching */
+  std::vector<T> grads;                                         /**< Stored gradients for optimization */
 };
 
 #endif //LAYER_H
