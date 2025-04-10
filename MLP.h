@@ -233,6 +233,20 @@ public:
         }
     }
 
+
+
+    /**
+     * @brief Backpropagation of loss through the network
+     * 
+     * @param feat Input feature vector
+     * @param loss Loss values
+     * @param learning_rate Learning rate for weight updates
+     */
+    void ApplyLoss(std::vector<T> feat,
+          std::vector<T> loss,
+          float learning_rate);
+
+
     /**
      * @brief Vector of network layers
      * 
@@ -242,12 +256,6 @@ public:
      * @warning Modifying layers directly may break network functionality unless you know what you're doing
      */
     std::vector<Layer<T>> m_layers;
-
-    //back propagate a predetermined loss
-    void ApplyLoss(std::vector<T> feat,
-          std::vector<T> loss,
-          float learning_rate);
-
 
 
 protected:
