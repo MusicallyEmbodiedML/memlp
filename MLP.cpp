@@ -374,7 +374,7 @@ T MLP<T>::_TrainOnExample(std::vector<T> feat,
     assert(correct_output.size() == predicted_output.size());
     std::vector<T> deriv_error_output(predicted_output.size());
 
-    // Loss funtion
+    // Loss function
     T current_iteration_cost_function =
         this->loss_fn_(correct_output, predicted_output,
         deriv_error_output, sampleSizeReciprocal);
@@ -384,6 +384,25 @@ T MLP<T>::_TrainOnExample(std::vector<T> feat,
         learning_rate);
 
     return current_iteration_cost_function;
+}
+
+template <typename T>
+void MLP<T>::ApplyLoss(std::vector<T> feat,
+                          std::vector<T> loss,
+                          float learning_rate)
+{
+    std::vector<T> predicted_output;
+    std::vector< std::vector<T> > all_layers_activations;
+
+    GetOutput(feat,
+        &predicted_output,
+        &all_layers_activations);
+
+    assert(loss.size() == predicted_output.size());
+
+    UpdateWeights(all_layers_activations,
+        loss,
+        learning_rate);
 }
 
 

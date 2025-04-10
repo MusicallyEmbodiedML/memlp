@@ -113,6 +113,13 @@ public:
         }
     }
 
+    //back propagate a predetermined loss
+    void ApplyLoss(std::vector<T> feat,
+          std::vector<T> loss,
+          float learning_rate);
+
+
+
 protected:
     void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                      const std::vector<T> &error,
