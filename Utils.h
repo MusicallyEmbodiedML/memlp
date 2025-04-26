@@ -355,4 +355,6 @@ inline bool is_close(T a, T b) {
 
 }  // namespace utils
 
+extern "C" int getentropy (void * buffer, size_t how_many);
+
 #endif // UTILS_H
