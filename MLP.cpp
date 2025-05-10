@@ -19,7 +19,7 @@
 #include <stdio.h>
 #else
 #include <Arduino.h>
-#define PICO_BENCHMARK
+// #define PICO_BENCHMARK
 #endif
 
 
@@ -314,10 +314,10 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 #if !defined(ARDUINO)
     ReportFinish(i, current_iteration_cost_function);
 #else
-    Serial.print("### Training ended, iteration ");
-    Serial.print(i);
-    Serial.print(", loss ");
-    Serial.println(current_iteration_cost_function, 10);
+    // Serial.print("### Training ended, iteration ");
+    // Serial.print(i);
+    // Serial.print(", loss ");
+    // Serial.println(current_iteration_cost_function, 10);
 #endif
 
     return current_iteration_cost_function;
@@ -621,7 +621,7 @@ void MLP<T>::DrawWeights()
                 size_t counter = 0;
                 do {
                     w = m_layers[n].m_nodes[k].m_weights[j];
-                    m_layers[n].m_nodes[k].m_weights[j] = gen();
+                    m_layers[n].m_nodes[k].m_weights[j] = gen() * 10.f;
                     w2 = m_layers[n].m_nodes[k].m_weights[j];
                     counter++;
                     if (counter >= 10) break;

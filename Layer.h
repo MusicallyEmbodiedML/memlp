@@ -20,6 +20,8 @@
 #include "Node.h"
 #include "Utils.h"
 
+
+
 /**
  * @brief Definition of activation function pointer
  * @tparam T The numeric type used for calculations
@@ -136,7 +138,7 @@ public:
    * @param input Input vector
    * @param output Pointer to store output vector
    */
-  void GetOutputAfterActivationFunction(const std::vector<T> &input,
+  void __force_inline GetOutputAfterActivationFunction(const std::vector<T> &input,
                                         std::vector<T> * output) {
     assert(input.size() == m_num_inputs_per_node);
 
@@ -146,6 +148,8 @@ public:
       m_nodes[i].GetOutputAfterActivationFunction(input,
                                                   m_activation_function,
                                                   &((*output)[i]));
+
+      sleep_us(70);
     }
     if (m_cacheOutputs) {
       cachedOutputs = *output;
@@ -254,7 +258,7 @@ public:
    * @param alpha Smoothing factor
    * @param alphaInv Inverse of smoothing factor
    */
-  void SmoothUpdateWeights(Layer<T> &l, const float alpha, const float alphaInv) {
+  void __force_inline SmoothUpdateWeights(Layer<T> &l, const float alpha, const float alphaInv) {
     // traverse the list of nodes
     for(size_t n=0; n < m_nodes.size(); n++) {
       m_nodes[n].SmoothUpdateWeights(l.m_nodes[n].GetWeights(), alpha, alphaInv);
