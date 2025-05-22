@@ -23,6 +23,11 @@
 #include <memory>
 #include <string>
 
+#include "pico.h"
+#include "Arduino.h"
+
+#include "pico/platform.h"
+
 /**
  * @class MLP
  * @brief Multi-layer perceptron neural network with flexible architecture
@@ -203,7 +208,7 @@ public:
      * @param anotherMLP Source network for weight update
      * @param alpha Learning rate (0-1) for the update
      */
-    void SmoothUpdateWeights(std::shared_ptr<MLP<T>> anotherMLP, const float alpha) {
+    void __force_inline SmoothUpdateWeights(std::shared_ptr<MLP<T>> anotherMLP, const float alpha) {
         //assuming the other MLP has the same structure
         //calc this once here
         float alphaInv = 1.f-alpha;
