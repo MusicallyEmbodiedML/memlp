@@ -20,6 +20,9 @@
 #include "Node.h"
 #include "Utils.h"
 
+#include "pico/time.h"
+#include "pico.h"
+
 /**
  * @brief Definition of activation function pointer
  * @tparam T The numeric type used for calculations
@@ -146,6 +149,7 @@ public:
       m_nodes[i].GetOutputAfterActivationFunction(input,
                                                   m_activation_function,
                                                   &((*output)[i]));
+      // sleep_us(70);
     }
     if (m_cacheOutputs) {
       cachedOutputs = *output;
@@ -258,6 +262,7 @@ public:
     // traverse the list of nodes
     for(size_t n=0; n < m_nodes.size(); n++) {
       m_nodes[n].SmoothUpdateWeights(l.m_nodes[n].GetWeights(), alpha, alphaInv);
+      // sleep_us(70);
     }
   }
 

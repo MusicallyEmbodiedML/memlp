@@ -174,6 +174,7 @@ public:
         for(size_t i = 0; i < m_weights.size(); i++) {
             m_weights[i] = (alphaInv * m_weights[i]) + (alpha * incomingWeights[i]);
         }
+        
     }
 
     /**
