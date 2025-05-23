@@ -224,7 +224,7 @@ public:
      * @param bool_output Pointer to store the binary output
      * @param threshold Threshold value for binary decision
      */
-    void __force_inline GetBooleanOutput(const std::vector<T> &input,
+    void  GetBooleanOutput(const std::vector<T> &input,
                           MLP_ACTIVATION_FN activation_func_t<T> activation_function,
                           bool * bool_output,
                           T threshold = 0.5) {

@@ -19,7 +19,6 @@
 #include <stdio.h>
 #else
 #include <Arduino.h>
-#define PICO_BENCHMARK
 #endif
 
 
@@ -314,10 +313,10 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 #if !defined(ARDUINO)
     ReportFinish(i, current_iteration_cost_function);
 #else
-    Serial.print("### Training ended, iteration ");
-    Serial.print(i);
-    Serial.print(", loss ");
-    Serial.println(current_iteration_cost_function, 10);
+    //Serial.print("### Training ended, iteration ");
+    //Serial.print(i);
+    //Serial.print(", loss ");
+    //Serial.println(current_iteration_cost_function, 10);
 #endif
 
     return current_iteration_cost_function;

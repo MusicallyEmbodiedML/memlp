@@ -17,7 +17,7 @@
 
 /**
  * @brief Represents a training sample consisting of input (X) and output (Y) vectors.
- * 
+ *
  * @tparam T The data type of the elements in the vectors.
  */
 template<typename T>
@@ -28,11 +28,11 @@ struct trainXYItem {
 
 /**
  * @brief Implements a replay memory system for storing and sampling training data.
- * 
+ *
  * This class is designed to manage a fixed-size memory buffer for training items.
  * It supports multiple forgetting modes to handle memory overflow and provides
  * functionality to sample random subsets of stored items.
- * 
+ *
  * @tparam trainingItem The type of the training items stored in the replay memory.
  */
 template <class trainingItem>
@@ -56,7 +56,7 @@ public:
 
     /**
      * @brief Sets the maximum number of items that can be stored in the replay memory.
-     * 
+     *
      * @param limit The maximum number of items to store.
      */
     void setMemoryLimit(const size_t limit) {
@@ -69,9 +69,9 @@ public:
 
     /**
      * @brief Adds a new training item to the replay memory.
-     * 
+     *
      * If the memory is full, an existing item is removed based on the current forgetting mode.
-     * 
+     *
      * @param tp The training item to add.
      * @param timestamp The timestamp associated with the training item.
      */
@@ -115,7 +115,7 @@ public:
 
     /**
      * @brief Samples a random subset of training items from the replay memory.
-     * 
+     *
      * @param nMemories The number of items to sample.
      * @return A vector containing the sampled training items.
      */
@@ -131,6 +131,10 @@ public:
             samp[i] = mem.at(index).item;
         }
         return samp;
+    }
+
+    void clear() {
+        mem.clear();
     }
 
 private:
