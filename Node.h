@@ -14,6 +14,15 @@
 #ifndef NODE_H
 #define NODE_H
 
+#ifdef ARDUINO
+
+#include <Arduino.h>
+#include <VFS.h>
+#include <LittleFS.h>
+#define ENABLE_SAVE    1
+
+#endif
+
 #include "Utils.h"
 
 #include <vector>
@@ -174,7 +183,7 @@ public:
         for(size_t i = 0; i < m_weights.size(); i++) {
             m_weights[i] = (alphaInv * m_weights[i]) + (alpha * incomingWeights[i]);
         }
-        
+
     }
 
     /**
