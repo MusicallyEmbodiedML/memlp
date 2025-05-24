@@ -5,6 +5,20 @@
 #include "MLP.h"
 
 
+#if !defined(ARDUINO)
+
+#include <stdio.h>
+
+#else  // ARDUINO includes
+
+#include <Arduino.h>
+//#define PICO_BENCHMARK
+#include <VFS.h>
+#include <LittleFS.h>
+#define ENABLE_SAVE    1
+
+#endif
+
 #include <stdlib.h>
 #include <sstream>
 #include <fstream>
@@ -13,13 +27,6 @@
 #include "utils/Serialise.hpp"
 #include <cassert>
 #include <random>
-
-
-#if !defined(ARDUINO)
-#include <stdio.h>
-#else
-#include <Arduino.h>
-#endif
 
 
 

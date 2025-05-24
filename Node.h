@@ -14,14 +14,21 @@
 #ifndef NODE_H
 #define NODE_H
 
+#ifdef ARDUINO
+
+#include <Arduino.h>
+#include <VFS.h>
+#include <LittleFS.h>
+#define ENABLE_SAVE    1
+
+#endif
+
 #include "Utils.h"
 
 #include <vector>
 #include <cassert> // for assert()
 #include <numeric>
 #include <algorithm>
-
-#include "pico.h"
 
 #define CONSTANT_WEIGHT_INITIALIZATION 0
 

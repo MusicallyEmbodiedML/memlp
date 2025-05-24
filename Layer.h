@@ -14,6 +14,15 @@
 #ifndef LAYER_H
 #define LAYER_H
 
+#ifdef ARDUINO
+
+#include <Arduino.h>
+#include <VFS.h>
+#include <LittleFS.h>
+#define ENABLE_SAVE    1
+
+#endif
+
 #include <vector>
 #include <algorithm>
 #include <cassert> // for assert()
@@ -90,7 +99,7 @@ public:
    * @brief Controls output caching behavior
    * @param onOrOff True to enable output caching, false to disable
    */
-  void SetCachedOutputs(bool onOrOff) { 
+  void SetCachedOutputs(bool onOrOff) {
     m_cacheOutputs = onOrOff;
     if (m_cacheOutputs) {
       //nothing yet

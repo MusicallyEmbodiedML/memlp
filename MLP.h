@@ -14,6 +14,12 @@
 #ifndef MLP_H
 #define MLP_H
 
+#ifdef ARDUINO
+
+#define ENABLE_SAVE    1
+
+#endif
+
 #include "Layer.h"
 #include "Utils.h"
 #include "Loss.h"
@@ -31,11 +37,11 @@
 /**
  * @class MLP
  * @brief Multi-layer perceptron neural network with flexible architecture
- * 
+ *
  * This class implements a fully-connected multi-layer perceptron with configurable layers,
  * nodes per layer, and activation functions. It supports both training and inference modes,
  * and includes special features for reinforcement learning applications.
- * 
+ *
  * @tparam T The numeric type used for weights and calculations (typically float)
  */
 template<typename T>
@@ -56,7 +62,7 @@ public:
 
     /**
      * @brief Constructs an MLP with specified architecture
-     * 
+     *
      * @param layers_nodes Vector specifying number of nodes in each layer (including input and output)
      * @param layers_activfuncs Vector of activation functions for each layer (except input)
      * @param loss_function Loss function for training (default: MSE)
@@ -84,7 +90,7 @@ public:
 
     /**
      * @brief Get predicted outputs for given input
-     * 
+     *
      * @param input Input feature vector
      * @param output Pointer to store output predictions
      * @param all_layers_activations Optional pointer to store activations of all layers
@@ -95,7 +101,7 @@ public:
 
     /**
      * @brief Determines the output class from network outputs
-     * 
+     *
      * @param output Network output vector
      * @param class_id Pointer to store the predicted class ID
      */
@@ -103,7 +109,7 @@ public:
 
     /**
      * @brief Train the network using batch gradient descent
-     * 
+     *
      * @param training_sample_set_with_bias Training data pairs
      * @param learning_rate Learning rate for gradient descent
      * @param max_iterations Maximum training iterations
@@ -119,7 +125,7 @@ public:
 
     /**
      * @brief Train the network using mini-batch gradient descent
-     * 
+     *
      * @param training_sample_set_with_bias Training data pairs
      * @param learning_rate Learning rate for gradient descent
      * @param max_iterations Maximum training iterations
@@ -188,9 +194,9 @@ public:
 
     /**
      * @brief Enable/disable caching of layer outputs
-     * 
+     *
      * Required for backpropagation and some RL algorithms
-     * 
+     *
      * @param on True to enable caching, false to disable
      */
     void SetCachedLayerOutputs(bool on) {
@@ -201,10 +207,10 @@ public:
 
     /**
      * @brief Perform soft update of network weights (for RL)
-     * 
+     *
      * Updates this network's weights using exponential moving average with another network's weights.
      * Commonly used in RL for target networks.
-     * 
+     *
      * @param anotherMLP Source network for weight update
      * @param alpha Learning rate (0-1) for the update
      */
@@ -220,10 +226,10 @@ public:
 
     /**
      * @brief Calculate gradients through the network (autograd)
-     * 
+     *
      * Similar to TensorFlow's tf.gradients(), computes gradients of the network
      * with respect to the inputs. Useful for policy gradients in RL.
-     * 
+     *
      * @param feat Input feature vector
      * @param deriv_error_output Initial gradient at the output layer
      */
@@ -242,7 +248,7 @@ public:
 
     /**
      * @brief Backpropagation of loss through the network
-     * 
+     *
      * @param feat Input feature vector
      * @param loss Loss values
      * @param learning_rate Learning rate for weight updates
@@ -254,7 +260,7 @@ public:
 
     /**
      * @brief Vector of network layers
-     * 
+     *
      * Public access is provided for advanced usage scenarios like reinforcement learning.
      * Generally, prefer using the provided interface methods instead of direct access.
      * Each Layer contains nodes and their weights, biases, and activation functions.
