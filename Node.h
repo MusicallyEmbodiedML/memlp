@@ -182,6 +182,7 @@ public:
         assert(incomingWeights.size() == m_weights.size());
         for(size_t i = 0; i < m_weights.size(); i++) {
             m_weights[i] = (alphaInv * m_weights[i]) + (alpha * incomingWeights[i]);
+            // #sleep_us(50);
         }
 
     }
@@ -203,13 +204,23 @@ public:
 
         static const T kInit(0);
 
-        assert(input.size() == m_weights.size());
-        T res = std::inner_product(begin(input),
-                                   end(input),
-                                   begin(m_weights),
-                                   kInit);
+        // assert(input.size() == m_weights.size());
+
+        // T res = std::inner_product(begin(input),
+        //                            end(input),
+        //                            begin(m_weights),
+        //                            kInit);
+        // // *output = res;
+        // inner_prod = res;
+
+        T res=0;
+        for(size_t j=0; j < input.size(); j++) {
+          res += input[j] * m_weights[j];
+        }
+
         // *output = res;
         inner_prod = res;
+
         return inner_prod;
     }
 

@@ -29,10 +29,7 @@
 #include <memory>
 #include <string>
 
-#include "pico.h"
 #include "Arduino.h"
-
-#include "pico/platform.h"
 
 /**
  * @class MLP
@@ -217,7 +214,7 @@ public:
     void __force_inline SmoothUpdateWeights(std::shared_ptr<MLP<T>> anotherMLP, const float alpha) {
         //assuming the other MLP has the same structure
         //calc this once here
-        float alphaInv = 1.f-alpha;
+        const float alphaInv = 1.f-alpha;
 
         for(size_t i=0; i < m_layers.size(); i++) {
             m_layers[i].SmoothUpdateWeights(anotherMLP->m_layers[i], alpha, alphaInv);
