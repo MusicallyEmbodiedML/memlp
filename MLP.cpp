@@ -33,7 +33,6 @@
 #include <stdio.h>
 #else
 #include <Arduino.h>
-#define PICO_BENCHMARK
 #endif
 
 
@@ -275,10 +274,6 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
     T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.first.size();
 
-#ifdef PICO_BENCHMARK
-    int64_t timer_start = time_us_64();
-#endif
-
     for (i = 0; i < max_iterations; i++) {
         current_iteration_cost_function = 0.f;
 
@@ -308,15 +303,7 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
         ReportProgress(true, 100, i, current_iteration_cost_function);
 
 #endif  // EASYLOGGING_ON
-#ifdef PICO_BENCHMARK
-        if (0 == i) {
-            int64_t timer_end = time_us_64();
-            Serial.print("TRAINING Epoch 0 time: ");
-            Serial.print(timer_end-timer_start);
-            Serial.println(" microseconds.");
-        }
 
-#endif
         // Early stopping
         // TODO AM early stopping should be optional and metric-dependent
         if (current_iteration_cost_function < min_error_cost) {
