@@ -325,10 +325,10 @@ public:
 
   std::vector<T> cachedOutputs;
 
-protected:
   size_t m_num_inputs_per_node{ 0 }; /**< Number of inputs per node in this layer */
   size_t m_num_nodes{ 0 };           /**< Number of nodes in this layer */
 
+protected:
   ACTIVATION_FUNCTIONS m_activation_function_type;              /**< Type of activation function used */
   activation_func_t<T> m_activation_function;                   /**< Pointer to activation function */
   activation_func_t<T> m_deriv_activation_function;             /**< Pointer to derivative of activation function */

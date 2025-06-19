@@ -635,7 +635,7 @@ void MLP<T>::DrawWeights()
                 size_t counter = 0;
                 do {
                     w = m_layers[n].m_nodes[k].m_weights[j];
-                    m_layers[n].m_nodes[k].m_weights[j] = gen() * 10.f;
+                    m_layers[n].m_nodes[k].m_weights[j] = gen();
                     w2 = m_layers[n].m_nodes[k].m_weights[j];
                     counter++;
                     if (counter >= 10) break;
