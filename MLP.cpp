@@ -614,6 +614,7 @@ void MLP<T>::DrawWeights()
 {
     T before = m_layers[0].m_nodes[0].m_weights[0];
     utils::gen_rand<T> gen;
+    // utils::gen_randn<T> gen(1.f,0.f); //mean, stddev
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
