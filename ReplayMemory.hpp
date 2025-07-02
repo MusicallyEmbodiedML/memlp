@@ -51,7 +51,7 @@ public:
      * @brief Constructs a ReplayMemory object with a default memory limit of 64 items.
      */
     ReplayMemory() : g(rd()) {
-        setMemoryLimit(64);
+        setMemoryLimit(32);
     }
 
     /**
@@ -82,6 +82,7 @@ public:
                 {
                     //remove from front
                     mem.erase(mem.begin());
+                    // Serial.println("FIFO: removing oldest item from memory");
                     break;
                 }
                 case FORGETMODES::RANDOM_EQUAL:
@@ -111,6 +112,7 @@ public:
         }
         memory newMemory {timestamp, tp};
         mem.push_back(newMemory);
+        // Serial.printf("Adding item to memory, size: %d\n", mem.size());
     }
 
     /**

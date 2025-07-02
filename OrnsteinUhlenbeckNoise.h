@@ -12,6 +12,13 @@ public:
         return x;
     }
 
+    void setSigma(float new_sigma) {
+        sigma = new_sigma;
+        if (sigma == 0.0f) {
+            x = 0.0f;  // Reset state when turning off noise
+        }        
+    }
+
 private:
     float theta;   // Mean reversion speed
     float mu;      // Long-term mean
