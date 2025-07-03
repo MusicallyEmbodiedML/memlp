@@ -15,8 +15,12 @@ public:
     void setSigma(float new_sigma) {
         sigma = new_sigma;
         if (sigma == 0.0f) {
-            x = 0.0f;  // Reset state when turning off noise
+            reset();
         }        
+    }
+
+    void reset() {
+        x = 0.f;
     }
 
 private:
