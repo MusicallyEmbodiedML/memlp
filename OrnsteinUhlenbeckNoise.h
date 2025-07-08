@@ -12,6 +12,17 @@ public:
         return x;
     }
 
+    void setSigma(float new_sigma) {
+        sigma = new_sigma;
+        if (sigma == 0.0f) {
+            reset();
+        }        
+    }
+
+    void reset() {
+        x = 0.f;
+    }
+
 private:
     float theta;   // Mean reversion speed
     float mu;      // Long-term mean

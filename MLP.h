@@ -268,6 +268,18 @@ public:
           float learning_rate);
 
 
+    void PurturbWeights(const size_t nWeights) {
+        utils::gen_rand<float> randf(0.01f);
+        for(size_t i=0; i < nWeights; i++) {
+            size_t layer_i = rand() % (m_layers.size()-1);
+            size_t node_i = rand() %  (m_layers[layer_i].GetOutputSize()-1);
+            size_t weight_i = rand() % (m_layers[layer_i].GetInputSize()-1);
+
+            T perturbation = randf();
+            m_layers[layer_i].GetNodesChangeable()[node_i].GetWeights()[weight_i] += perturbation;
+        }
+    }
+
     /**
      * @brief Vector of network layers
      *
