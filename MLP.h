@@ -14,9 +14,22 @@
 #ifndef MLP_H
 #define MLP_H
 
+
 #ifdef ARDUINO
 
 #define ENABLE_SAVE    1
+
+
+
+#ifdef MLP_ALLOW_DEBUG
+#define MLP_MLP_DEBUG_PRINTF(...) Serial.printf(__VA_ARGS__)
+#define MLP_DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
+#define MLP_DEBUG_PRINTLN(...) Serial.println(__VA_ARGS__)
+#else
+#define MLP_DEBUG_PRINT(...)  
+#define MLP_DEBUG_PRINTLN(...)  
+#define MLP_DEBUG_PRINTF(...)  
+#endif
 
 #endif
 
