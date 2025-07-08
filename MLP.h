@@ -42,7 +42,9 @@
 #include <memory>
 #include <string>
 
+#ifdef ARDUINO
 #include "Arduino.h"
+#endif
 
 /**
  * @class MLP
@@ -104,10 +106,12 @@ public:
      * @param input Input feature vector
      * @param output Pointer to store output predictions
      * @param all_layers_activations Optional pointer to store activations of all layers
+     * @param for_inference If true and using categorical cross-entropy, applies softmax to output
      */
     void GetOutput(const std::vector<T> &input,
                     std::vector<T> * output,
-                    std::vector<std::vector<T>> * all_layers_activations = nullptr);
+                    std::vector<std::vector<T>> * all_layers_activations = nullptr,
+                    bool for_inference = true);
 
     /**
      * @brief Determines the output class from network outputs
@@ -313,6 +317,7 @@ protected:
     int m_num_hidden_layers{ 0 };
     std::vector<size_t> m_layers_nodes;
     MLP_LOSS_FN loss::loss_func_t<T> loss_fn_;
+    loss::LOSS_FUNCTIONS m_loss_function_type; /**< Store loss function type for runtime checks */
 };
 
 #endif //MLP_H

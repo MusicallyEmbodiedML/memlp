@@ -1,5 +1,7 @@
 #include "Utils.h"
 
+#ifdef ARDUINO
+
 #include <Arduino.h>
 
 extern "C" int getentropy (void * buffer, size_t how_many) {
@@ -10,3 +12,5 @@ extern "C" int getentropy (void * buffer, size_t how_many) {
     }
     return 0; // return "no error". Can also do EFAULT, EIO, ENOSYS
 }
+
+#endif
