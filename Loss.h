@@ -39,7 +39,8 @@ namespace loss {
  * @brief Enumeration of supported loss functions.
  */
 enum LOSS_FUNCTIONS {
-    LOSS_MSE /**< Mean Squared Error loss function */
+    LOSS_MSE, /**< Mean Squared Error loss function */
+    LOSS_CATEGORICAL_CROSSENTROPY /**< Categorical Cross-Entropy loss function */
 };
 
 /**
@@ -55,11 +56,11 @@ template<typename T>
 MLP_LOSS_FN
 inline T MSE(const std::vector<T> &expected, const std::vector<T> &actual,
              std::vector<T> &loss_deriv, T sampleSizeReciprocal) {
-    
+
     T accum_loss = 0.;
     T n_elem = actual.size();
     T one_over_n_elem = 1. / n_elem;
-    
+
     for (unsigned int j = 0; j < actual.size(); j++) {
         //TODO CK separate out diff for efficiency, replace pow with diff*diff
           accum_loss += std::pow((expected[j] - actual[j]), 2)
@@ -71,6 +72,57 @@ inline T MSE(const std::vector<T> &expected, const std::vector<T> &actual,
     accum_loss *= sampleSizeReciprocal;
 
     return accum_loss;
+}
+
+/**
+ * @brief Computes the Categorical Cross-Entropy loss between expected and actual values
+ * @tparam T The type of the values
+ * @param expected Vector of one-hot encoded expected values
+ * @param actual Vector of raw logits (pre-softmax)
+ * @param loss_deriv Vector to store the loss derivatives
+ * @param sampleSizeReciprocal Reciprocal of the sample size for normalization
+ * @return The computed categorical cross-entropy loss value
+ */
+template<typename T>
+MLP_LOSS_FN
+inline T CategoricalCrossEntropy(const std::vector<T> &expected, const std::vector<T> &actual,
+                                std::vector<T> &loss_deriv, T sampleSizeReciprocal) {
+
+    T n_elem = actual.size();
+
+    // Find maximum logit for numerical stability (log-sum-exp trick)
+    T max_logit = actual[0];
+    for (unsigned int i = 1; i < actual.size(); i++) {
+        if (actual[i] > max_logit) {
+            max_logit = actual[i];
+        }
+    }
+
+    // Compute log-sum-exp with numerical stability
+    T sum_exp = 0.;
+    for (unsigned int i = 0; i < actual.size(); i++) {
+        sum_exp += std::exp(actual[i] - max_logit);
+    }
+    T log_sum_exp = max_logit + std::log(sum_exp);
+
+    // Find target class index and compute loss
+    T loss = 0.;
+    int target_class = -1;
+    for (unsigned int i = 0; i < expected.size(); i++) {
+        if (expected[i] > 0.5) { // One-hot encoded, so target class has value 1
+            target_class = i;
+            loss = -actual[i] + log_sum_exp;
+            break;
+        }
+    }
+
+    // Compute softmax probabilities and gradients
+    for (unsigned int i = 0; i < actual.size(); i++) {
+        T softmax_prob = std::exp(actual[i] - max_logit) / sum_exp;
+        loss_deriv[i] = (softmax_prob - expected[i]) * sampleSizeReciprocal;
+    }
+
+    return loss * sampleSizeReciprocal;
 }
 
 /**
@@ -97,7 +149,7 @@ class LossFunctionsManager {
      */
     bool GetLossFunction(const LOSS_FUNCTIONS loss_name,
                          loss_func_t<T> *loss_fun) {
-        
+
         auto iter = loss_functions_map.find(loss_name);
         if (iter != loss_functions_map.end()) {
             *loss_fun = iter->second;
@@ -134,6 +186,7 @@ class LossFunctionsManager {
      */
     LossFunctionsManager() {
         AddNew(LOSS_FUNCTIONS::LOSS_MSE, &MSE<T>);
+        AddNew(LOSS_FUNCTIONS::LOSS_CATEGORICAL_CROSSENTROPY, &CategoricalCrossEntropy<T>);
     };
 
     std::unordered_map<

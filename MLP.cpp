@@ -84,6 +84,9 @@ void MLP<T>::CreateMLP(const std::vector<size_t> & layers_nodes,
     m_num_outputs = m_layers_nodes[m_layers_nodes.size() - 1];
     m_num_hidden_layers = m_layers_nodes.size() - 2;
 
+    // Store loss function type for inference decisions
+    m_loss_function_type = loss_function;
+
     // Loss function selection
     loss::LossFunctionsManager<T> loss_mgr =
         loss::LossFunctionsManager<T>::Singleton();
@@ -196,7 +199,8 @@ size_t MLP<T>::FromSerialised(size_t r_head, const std::vector<uint8_t> &buffer)
 template<typename T>
 void MLP<T>::GetOutput(const std::vector<T> &input,
                     std::vector<T> * output,
-                    std::vector<std::vector<T>> * all_layers_activations) {
+                    std::vector<std::vector<T>> * all_layers_activations,
+                    bool for_inference) {
     assert(input.size() == m_num_inputs);
     int temp_size;
     if (m_num_hidden_layers == 0)
@@ -222,13 +226,13 @@ void MLP<T>::GetOutput(const std::vector<T> &input,
         m_layers[i].GetOutputAfterActivationFunction(temp_in, &temp_out);
     }
 
-    /*FIXME AM Why is it forcing a softmax even when doing regression???
-                Also, softmax is not backprop'ed */
-    #if 0
-    if (temp_out.size() > 1) {
+    // Apply softmax for inference with categorical cross-entropy
+    if (for_inference &&
+        m_loss_function_type == loss::LOSS_FUNCTIONS::LOSS_CATEGORICAL_CROSSENTROPY &&
+        temp_out.size() > 1) {
         utils::Softmax(&temp_out);
     }
-    #endif
+
     *output = temp_out;
 
     //Add last layer activation
@@ -332,7 +336,8 @@ void MLP<T>::CalcGradients(std::vector<T> & feat, std::vector<T> & deriv_error_o
 
     GetOutput(feat,
         &predicted_output,
-        &all_layers_activations);
+        &all_layers_activations,
+        false); // Training mode - no softmax
 
 
     // std::vector<T> deriv_error_output(predicted_output.size(), 1.0);
@@ -368,7 +373,8 @@ T MLP<T>::_TrainOnExample(std::vector<T> feat,
 
     GetOutput(feat,
         &predicted_output,
-        &all_layers_activations);
+        &all_layers_activations,
+        false); // Training mode - no softmax
 
     const std::vector<T>& correct_output{ label };
 
@@ -397,7 +403,8 @@ void MLP<T>::ApplyLoss(std::vector<T> feat,
 
     GetOutput(feat,
         &predicted_output,
-        &all_layers_activations);
+        &all_layers_activations,
+        false); // Training mode - no softmax
 
     assert(loss.size() == predicted_output.size());
 
