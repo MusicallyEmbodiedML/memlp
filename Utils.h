@@ -315,6 +315,12 @@ inline void Softmax(std::vector<T> *output) {
   std::vector<T> exp_output(num_elements);
   T exp_total = 0;
   for (size_t i = 0; i < num_elements; i++) {
+    float output_i = (*output)[i];
+    if (output_i > 15.f) {
+      output_i = 15.f;
+    } else if (output_i < -15.f) {
+      output_i = -15.f;
+    }
     exp_output[i] = std::exp((*output)[i]);
     exp_total += exp_output[i];
   }
