@@ -364,6 +364,10 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
 #endif  // EASYLOGGING_ON
 
+        if (m_progress_callback && !(i & 0x1F)) { // Call progress callback every 32 iterations
+            m_progress_callback(i, current_iteration_cost_function);
+        }
+
         // Early stopping
         // TODO AM early stopping should be optional and metric-dependent
         if (current_iteration_cost_function < min_error_cost) {
@@ -380,6 +384,7 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
      MLP_DEBUG_PRINT(", loss ");
      MLP_DEBUG_PRINTLN(current_iteration_cost_function, 10);
 #endif
+    m_progress_callback(i, current_iteration_cost_function);
 
     return current_iteration_cost_function;
 };
@@ -542,6 +547,13 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 
 #endif  // EASYLOGGING_ON
 
+        if (m_progress_callback && !(i & 0x1F)) { // Call progress callback every 32 iterations
+            m_progress_callback(i, epochLoss);
+        }
+#if ARDUINO
+        delay(1);  // Allow time for other tasks to run
+#endif  // ARDUINO
+
         // Early stopping
         // TODO AM early stopping should be optional and metric-dependent
         if (epochLoss < min_error_cost) {
@@ -553,6 +565,8 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 #if 1
     ReportFinish(i, epochLoss);
 #endif  // EASYLOGGING_ON
+
+    m_progress_callback(i, epochLoss);
 
     return epochLoss;
 }

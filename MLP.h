@@ -41,6 +41,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <functional>
 
 #ifdef ARDUINO
 #include "Arduino.h"
@@ -295,6 +296,10 @@ public:
         }
     }
 
+    void SetProgressCallback(std::function<void(size_t,float)> callback) {
+        m_progress_callback = std::move(callback);
+    }
+
     /**
      * @brief Vector of network layers
      *
@@ -329,6 +334,7 @@ protected:
     std::vector<size_t> m_layers_nodes;
     MLP_LOSS_FN loss::loss_func_t<T> loss_fn_;
     loss::LOSS_FUNCTIONS m_loss_function_type; /**< Store loss function type for runtime checks */
+    std::function<void(size_t,float)> m_progress_callback{};
 };
 
 #endif //MLP_H
