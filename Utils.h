@@ -32,14 +32,17 @@ enum ACTIVATION_FUNCTIONS {
 };
 
 #if defined(_WIN32) || (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#define ENABLE_SAVE    1
 #include <cstdio>
+#define ENABLE_SAVE    1
+#endif
+
+#ifdef ARDUINO
+#define ENABLE_SAVE    1
 #endif
 
 #if defined(__XS3A__)
 #define MLP_ACTIVATION_FN __attribute__(( fptrgroup("mlp_activation") ))
 #else
-
 //#pragma message ( "PC compiler definitions enabled - check this is OK" )
 #define MLP_ACTIVATION_FN
 #endif

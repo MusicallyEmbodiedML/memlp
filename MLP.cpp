@@ -29,13 +29,6 @@
 #include <random>
 
 
-#if !defined(ARDUINO)
-#include <stdio.h>
-#else
-#include <Arduino.h>
-#endif
-
-
 
 //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
 template<typename T>
@@ -58,7 +51,17 @@ MLP<T>::MLP(const std::vector<size_t> & layers_nodes,
 #if ENABLE_SAVE
 template<typename T>
 MLP<T>::MLP(const std::string & filename) {
-  LoadMLPNetwork(filename);
+  if (!LoadMLPNetwork(filename)) {
+    // If loading fails, we need to have a valid but empty network
+    // Initialize with minimal valid configuration
+    m_num_inputs = 0;
+    m_num_outputs = 0;
+    m_num_hidden_layers = 0;
+    m_layers_nodes.clear();
+    m_layers.clear();
+    // Consider throwing an exception or setting an error flag here
+    // For now, we'll have an invalid network that should be checked
+  }
 }
 #endif
 
@@ -135,39 +138,92 @@ void MLP<T>::ReportFinish(const unsigned int i, const float current_iteration_co
 #if ENABLE_SAVE
 
 template<typename T>
-void MLP<T>::SaveMLPNetwork(const std::string & filename)const {
-    FILE * file;
-    file = fopen(filename.c_str(), "wb");
-    fwrite(&m_num_inputs, sizeof(m_num_inputs), 1, file);
-    fwrite(&m_num_outputs, sizeof(m_num_outputs), 1, file);
-    fwrite(&m_num_hidden_layers, sizeof(m_num_hidden_layers), 1, file);
-    if (!m_layers_nodes.empty())
-        fwrite(&m_layers_nodes[0], sizeof(m_layers_nodes[0]), m_layers_nodes.size(), file);
-    for (size_t i = 0; i < m_layers.size(); i++) {
-        m_layers[i].SaveLayer(file);
+bool MLP<T>::SaveMLPNetwork(const std::string & filename) const {
+    FILE * file = fopen(filename.c_str(), "wb");
+    if (!file) {
+        return false;
     }
-    fclose(file);
-};
 
+    // Write network structure
+    if (fwrite(&m_num_inputs, sizeof(m_num_inputs), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+    if (fwrite(&m_num_outputs, sizeof(m_num_outputs), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+    if (fwrite(&m_num_hidden_layers, sizeof(m_num_hidden_layers), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+
+    // Write layer nodes
+    if (!m_layers_nodes.empty()) {
+        if (fwrite(&m_layers_nodes[0], sizeof(m_layers_nodes[0]), m_layers_nodes.size(), file) != m_layers_nodes.size()) {
+            fclose(file);
+            return false;
+        }
+    }
+
+    // Write layer weights
+    for (size_t i = 0; i < m_layers.size(); i++) {
+        if (!m_layers[i].SaveLayer(file)) {
+            fclose(file);
+            return false;
+        }
+    }
+
+    fclose(file);
+    return true;
+}
 
 template<typename T>
-void MLP<T>::LoadMLPNetwork(const std::string & filename) {
+bool MLP<T>::LoadMLPNetwork(const std::string & filename) {
+    // Check if file exists
+    FILE * file = fopen(filename.c_str(), "rb");
+    if (!file) {
+        return false;
+    }
+
+    // Clear existing network
     m_layers_nodes.clear();
     m_layers.clear();
 
-    FILE * file;
-    file = fopen(filename.c_str(), "rb");
-    fread(&m_num_inputs, sizeof(m_num_inputs), 1, file);
-    fread(&m_num_outputs, sizeof(m_num_outputs), 1, file);
-    fread(&m_num_hidden_layers, sizeof(m_num_hidden_layers), 1, file);
+    // Read network structure
+    if (fread(&m_num_inputs, sizeof(m_num_inputs), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+    if (fread(&m_num_outputs, sizeof(m_num_outputs), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+    if (fread(&m_num_hidden_layers, sizeof(m_num_hidden_layers), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+
+    // Read layer nodes
     m_layers_nodes.resize(m_num_hidden_layers + 2);
-    if (!m_layers_nodes.empty())
-        fread(&m_layers_nodes[0], sizeof(m_layers_nodes[0]), m_layers_nodes.size(), file);
+    if (!m_layers_nodes.empty()) {
+        if (fread(&m_layers_nodes[0], sizeof(m_layers_nodes[0]), m_layers_nodes.size(), file) != m_layers_nodes.size()) {
+            fclose(file);
+            return false;
+        }
+    }
+
+    // Read layer weights
     m_layers.resize(m_layers_nodes.size() - 1);
     for (size_t i = 0; i < m_layers.size(); i++) {
-        m_layers[i].LoadLayer(file);
+        if (!m_layers[i].LoadLayer(file)) {
+            fclose(file);
+            return false;
+        }
     }
+
     fclose(file);
+    return true;
 }
 
 #endif

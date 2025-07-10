@@ -26,9 +26,9 @@
 #define MLP_DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
 #define MLP_DEBUG_PRINTLN(...) Serial.println(__VA_ARGS__)
 #else
-#define MLP_DEBUG_PRINT(...)  
-#define MLP_DEBUG_PRINTLN(...)  
-#define MLP_DEBUG_PRINTF(...)  
+#define MLP_DEBUG_PRINT(...)
+#define MLP_DEBUG_PRINTLN(...)
+#define MLP_DEBUG_PRINTF(...)
 #endif
 
 #endif
@@ -93,8 +93,19 @@ public:
     ~MLP();
 
 #if ENABLE_SAVE
-    void SaveMLPNetwork(const std::string & filename) const;
-    void LoadMLPNetwork(const std::string & filename);
+    /**
+     * @brief Save the MLP network to a file
+     * @param filename Path to the file where the network will be saved
+     * @return true if save was successful, false if there was an error
+     */
+    bool SaveMLPNetwork(const std::string & filename) const;
+
+    /**
+     * @brief Load the MLP network from a file
+     * @param filename Path to the file containing the network
+     * @return true if load was successful, false if file doesn't exist or there was an error
+     */
+    bool LoadMLPNetwork(const std::string & filename);
 #endif
 
     size_t Serialise(size_t w_head, std::vector<uint8_t> &buffer);

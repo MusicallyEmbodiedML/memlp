@@ -54,6 +54,81 @@ class Serialise {
         return r_head;
     };
 
+    template <typename T>
+    static size_t FromVector3D(size_t w_head,
+            const std::vector< std::vector< std::vector<T> > > &vec,
+            std::vector<uint8_t> &buffer) {
+
+        // Get sizes and validate dimensions
+        size_t n_depth = vec.size();
+        if (n_depth == 0) return w_head;
+
+        size_t n_columns = vec[0].size();
+        if (n_columns == 0) return w_head;
+
+        size_t n_rows = vec[0][0].size();
+
+        // Validate that all dimensions are consistent
+        for (size_t d = 0; d < n_depth; d++) {
+            if (vec[d].size() != n_columns) {
+                // Dimension mismatch - could throw exception or handle error
+                return w_head;
+            }
+            for (size_t c = 0; c < n_columns; c++) {
+                if (vec[d][c].size() != n_rows) {
+                    // Dimension mismatch - could throw exception or handle error
+                    return w_head;
+                }
+            }
+        }
+
+        // Reserve space in vector
+        buffer.resize(buffer.size() +
+            // New size
+            (n_depth * n_columns * n_rows * sizeof(T) + 3 * sizeof(size_t)));
+
+        // Save sizes
+        std::vector<size_t> shape { n_depth, n_columns, n_rows };
+        w_head = _LowLevelWrite(w_head, shape, buffer);
+
+        // Save payload
+        for (auto &plane : vec) {
+            for (auto &row : plane) {
+                w_head = _LowLevelWrite(w_head, row, buffer);
+            }
+        }
+
+        return w_head;
+    };
+
+    template <typename T>
+    static size_t ToVector3D(size_t r_head,
+            const std::vector<uint8_t> &buffer,
+            std::vector< std::vector< std::vector<T> > > &vec) {
+
+        // Get sizes
+        std::vector<size_t> shape(3);
+        r_head = _LowLevelRead(r_head, 3, buffer, shape);
+
+        // Load into vector
+        size_t n_depth = shape[0];
+        size_t n_columns = shape[1];
+        size_t n_rows = shape[2];
+
+        std::vector<T> temp_row(n_rows);
+        vec.resize(n_depth);
+
+        for (size_t d = 0; d < n_depth; d++) {
+            vec[d].resize(n_columns);
+            for (size_t c = 0; c < n_columns; c++) {
+                r_head = _LowLevelRead(r_head, n_rows, buffer, temp_row);
+                vec[d][c] = temp_row;
+            }
+        }
+
+        return r_head;
+    };
+
  protected:
 
     template<typename T>
