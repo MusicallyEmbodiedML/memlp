@@ -384,7 +384,7 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
      MLP_DEBUG_PRINT(", loss ");
      MLP_DEBUG_PRINTLN(current_iteration_cost_function, 10);
 #endif
-    m_progress_callback(i, current_iteration_cost_function);
+    if (m_progress_callback) m_progress_callback(i, current_iteration_cost_function);
 
     return current_iteration_cost_function;
 };
@@ -566,7 +566,7 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
     ReportFinish(i, epochLoss);
 #endif  // EASYLOGGING_ON
 
-    m_progress_callback(i, epochLoss);
+    if (m_progress_callback) m_progress_callback(i, epochLoss);
 
     return epochLoss;
 }
