@@ -228,6 +228,101 @@ bool MLP<T>::LoadMLPNetwork(const std::string & filename) {
 
 #endif
 
+#if ENABLE_SAVE_SD || 1
+template<typename T>
+bool MLP<T>::SaveMLPNetworkSD(const std::string & filename) {
+        auto file = SD.open(filename.c_str(), FILE_WRITE); 
+        if (!file) {
+            Serial.println("Failed to open file for writing");
+            return false;
+        }
+        file.seek(0);  // Start from beginning
+        // Write network structure
+        if (file.write((const char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+            file.close();
+            return false;
+        }
+        if (file.write((const char*)&m_num_outputs, sizeof(m_num_outputs)) != sizeof(m_num_outputs)) {
+            file.close();
+            return false;
+        }
+        if (file.write((const char*)&m_num_hidden_layers, sizeof(m_num_hidden_layers)) != sizeof(m_num_hidden_layers)) {
+            file.close();
+            return false;
+        }
+        // Write layer nodes
+        if (!m_layers_nodes.empty()) {
+            int dataSize = m_layers_nodes.size() * sizeof(m_layers_nodes[0]);
+            if (file.write((char*)&m_layers_nodes[0], dataSize) != dataSize) {
+                file.close();
+                return false;
+            }
+        }
+
+        // Write layer weights
+        for (size_t i = 0; i < m_layers.size(); i++) {
+            if (!m_layers[i].SaveLayerSD(file)) {
+                file.close();
+                return false;
+            }
+        }
+
+        file.close();
+        return true;
+    }
+
+ template<typename T>
+bool MLP<T>::LoadMLPNetworkSD(const std::string & filename) {
+    // Check if file exists
+    auto file = SD.open(filename.c_str(), FILE_READ);
+    if (!file) {
+        return false;
+    }
+
+    // Clear existing network
+    m_layers_nodes.clear();
+    m_layers.clear();
+
+    // Read network structure
+    if (file.read((uint8_t*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+        file.close();
+        return false;
+    }
+    if (file.read((uint8_t*)&m_num_outputs, sizeof(m_num_inputs)) != sizeof(m_num_outputs)) {
+        file.close();
+        return false;
+    }
+    if (file.read((uint8_t*)&m_num_hidden_layers, sizeof(m_num_inputs)) != sizeof(m_num_hidden_layers)) {
+        file.close();
+        return false;
+    }
+
+    // Read layer nodes
+    m_layers_nodes.resize(m_num_hidden_layers + 2);
+
+    if (!m_layers_nodes.empty()) {
+        int dataSize = m_layers_nodes.size() * sizeof(T);
+        if (file.read((uint8_t*)&m_layers_nodes[0], dataSize) != dataSize) {
+            return false;
+        }
+    }
+
+    // Read layer weights
+    m_layers.resize(m_layers_nodes.size() - 1);
+    for (size_t i = 0; i < m_layers.size(); i++) {
+        if (!m_layers[i].LoadLayerSD(file)) {
+            file.close();
+            return false;
+        }
+    }
+
+    file.close();
+    return true;
+}
+
+#endif
+
+
 
 template <typename T>
 size_t MLP<T>::Serialise(size_t w_head, std::vector<uint8_t> &buffer)
@@ -384,7 +479,10 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
      MLP_DEBUG_PRINT(", loss ");
      MLP_DEBUG_PRINTLN(current_iteration_cost_function, 10);
 #endif
-    m_progress_callback(i, current_iteration_cost_function);
+    if (m_progress_callback) {
+        // Final callback to report completion
+        m_progress_callback(i, current_iteration_cost_function);
+    }
 
     return current_iteration_cost_function;
 };
@@ -565,8 +663,10 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 #if 1
     ReportFinish(i, epochLoss);
 #endif  // EASYLOGGING_ON
-
-    m_progress_callback(i, epochLoss);
+    if(m_progress_callback) {
+        // Final callback to report completion
+        m_progress_callback(i, epochLoss);
+    }   
 
     return epochLoss;
 }
