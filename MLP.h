@@ -218,7 +218,7 @@ public:
     /**
      * @brief Randomize network weights
      */
-    void DrawWeights();
+    void DrawWeights(float scale=1.f);
 
     /**
      * @brief Add Gaussian noise to network weights

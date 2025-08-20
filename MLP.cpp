@@ -787,7 +787,7 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 }
 
 template <typename T>
-void MLP<T>::DrawWeights()
+void MLP<T>::DrawWeights(float scale)
 {
     T before = m_layers[0].m_nodes[0].m_weights[0];
     utils::gen_rand<T> gen;
@@ -796,16 +796,27 @@ void MLP<T>::DrawWeights()
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
-                T w, w2;
-                size_t counter = 0;
-                do {
-                    w = m_layers[n].m_nodes[k].m_weights[j];
-                    m_layers[n].m_nodes[k].m_weights[j] = gen();
-                    w2 = m_layers[n].m_nodes[k].m_weights[j];
-                    counter++;
-                    if (counter >= 10) break;
-                } while (w == w2);
-                assert(w != w2);
+                // T w, w2;
+                // size_t counter = 0;
+                float mod = gen() * scale;
+                m_layers[n].m_nodes[k].m_weights[j] += mod;
+                //wrap
+                if (m_layers[n].m_nodes[k].m_weights[j] > 1.f) {
+                    m_layers[n].m_nodes[k].m_weights[j] -=2.f;
+                }
+                if (m_layers[n].m_nodes[k].m_weights[j] < -1.f) {
+                    m_layers[n].m_nodes[k].m_weights[j] +=2.f;
+                }
+                
+                //comment out for now - unlikely to draw same values
+                // do {
+                //     w = m_layers[n].m_nodes[k].m_weights[j];
+                //     m_layers[n].m_nodes[k].m_weights[j] = gen();
+                //     w2 = m_layers[n].m_nodes[k].m_weights[j];
+                //     counter++;
+                //     if (counter >= 10) break;
+                // } while (w == w2);
+                // assert(w != w2);
             }
         }
     }
