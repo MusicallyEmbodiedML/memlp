@@ -178,7 +178,7 @@ public:
      * @param alpha Learning rate for new weights
      * @param alphaInv Learning rate for current weights (typically 1-alpha)
      */
-    void __force_inline SmoothUpdateWeights(std::vector<T> & incomingWeights, const float alpha, const float alphaInv) {
+    inline void SmoothUpdateWeights(std::vector<T> & incomingWeights, const float alpha, const float alphaInv) {
         assert(incomingWeights.size() == m_weights.size());
         for(size_t i = 0; i < m_weights.size(); i++) {
             m_weights[i] = (alphaInv * m_weights[i]) + (alpha * incomingWeights[i]);
@@ -191,7 +191,7 @@ public:
      * @brief Gets the size of the weights vector
      * @return Number of weights
      */
-    size_t __force_inline GetWeightsVectorSize() const {
+    inline size_t GetWeightsVectorSize() const {
         return m_weights.size();
     }
 
@@ -200,7 +200,7 @@ public:
      * @param input Vector of input values
      * @return Inner product result
      */
-    T __force_inline GetInputInnerProdWithWeights(const std::vector<T> &input) {
+    inline T GetInputInnerProdWithWeights(const std::vector<T> &input) {
 
         static const T kInit(0);
 
@@ -230,7 +230,7 @@ public:
      * @param activation_function Activation function to use
      * @param output Pointer to store the output value
      */
-    void __force_inline GetOutputAfterActivationFunction(const std::vector<T> &input,
+    inline void GetOutputAfterActivationFunction(const std::vector<T> &input,
                                           MLP_ACTIVATION_FN activation_func_t<T> activation_function,
                                           T * output) {
         // T inner_prod = 0.0;
@@ -260,7 +260,7 @@ public:
      * @param error Error value
      * @param learning_rate Learning rate for weight update
      */
-    void __force_inline UpdateWeights(const std::vector<T> &x,
+    inline void UpdateWeights(const std::vector<T> &x,
                        T error,
                        T learning_rate) {
         assert(x.size() == m_weights.size());
@@ -274,7 +274,7 @@ public:
      * @param increment Amount to increment the weight
      * @param learning_rate Learning rate for weight update
      */
-    void __force_inline UpdateWeight(int weight_id,
+    inline void UpdateWeight(int weight_id,
                       float increment,
                       float learning_rate) {
         m_weights[weight_id] += static_cast<T>(learning_rate*increment);

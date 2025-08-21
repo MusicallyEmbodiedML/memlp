@@ -422,7 +422,7 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
     int max_iterations,
     float min_error_cost,
-    bool output_log) {
+    bool [[maybe_unused]] output_log) {
 
     int i = 0;
     T current_iteration_cost_function = 0.f;
@@ -579,7 +579,7 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
     int max_iterations,
     size_t miniBatchSize,
     float min_error_cost,
-    bool output_log) {
+    bool [[maybe_unused]] output_log) {
 
     assert(miniBatchSize > 0);
 

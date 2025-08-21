@@ -147,7 +147,7 @@ public:
    * @param input Input vector
    * @param output Pointer to store output vector
    */
-  void __force_inline GetOutputAfterActivationFunction(const std::vector<T> &input,
+  inline void GetOutputAfterActivationFunction(const std::vector<T> &input,
                                         std::vector<T> * output) {
     assert(input.size() == m_num_inputs_per_node);
 
@@ -266,7 +266,7 @@ public:
    * @param alpha Smoothing factor
    * @param alphaInv Inverse of smoothing factor
    */
-  void __force_inline SmoothUpdateWeights(Layer<T> &l, const float alpha, const float alphaInv) {
+  inline void SmoothUpdateWeights(Layer<T> &l, const float alpha, const float alphaInv) {
     // traverse the list of nodes
     for(size_t n=0; n < m_nodes.size(); n++) {
       m_nodes[n].SmoothUpdateWeights(l.m_nodes[n].GetWeights(), alpha, alphaInv);
