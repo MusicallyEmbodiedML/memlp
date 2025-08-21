@@ -616,13 +616,15 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
         //process the mini batches
         epochLoss = 0;
         size_t trainingIndex = 0;
-        T sampleSizeReciprocal = 1.f / miniBatchSize;
-
+        
         for(size_t i_batch=0; i_batch < nBatches; i_batch++) {
+            T sampleSizeReciprocal;
             size_t currBatchSize = miniBatchSize;
             if (lastBatchSize > 0 && i_batch + 1 == nBatches) {
                 currBatchSize = lastBatchSize;
-                sampleSizeReciprocal = 1.f / currBatchSize;
+                sampleSizeReciprocal = (T)1 / currBatchSize;
+            }else{
+                sampleSizeReciprocal = (T)1 / miniBatchSize;
             }
 
             //process minibatch
@@ -637,7 +639,7 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
                         learning_rate, sampleSizeReciprocal);
                 trainingIndex++;
             }
-            epochLoss += sampleLoss / currBatchSize;
+            epochLoss += sampleLoss; 
         }
 
 #if 1

@@ -59,15 +59,16 @@ inline T MSE(const std::vector<T> &expected, const std::vector<T> &actual,
 
     T accum_loss = 0.;
     T n_elem = actual.size();
-    T one_over_n_elem = 1. / n_elem;
+    T one_over_n_elem = (T)1. / n_elem;
 
     for (unsigned int j = 0; j < actual.size(); j++) {
         //TODO CK separate out diff for efficiency, replace pow with diff*diff
-          accum_loss += std::pow((expected[j] - actual[j]), 2)
+        const T diff = expected[j] - actual[j];
+          accum_loss += (diff * diff) //std::pow((expected[j] - actual[j]), 2)
                 * one_over_n_elem;
           loss_deriv[j] =
-              -2 * one_over_n_elem
-              * (expected[j] - actual[j]) * sampleSizeReciprocal;
+              (T)-2 * one_over_n_elem
+              * diff * sampleSizeReciprocal;
     }
     accum_loss *= sampleSizeReciprocal;
 
@@ -101,15 +102,15 @@ inline T CategoricalCrossEntropy(const std::vector<T> &expected, const std::vect
     // Compute log-sum-exp with numerical stability
     T sum_exp = 0.;
     for (unsigned int i = 0; i < actual.size(); i++) {
-        sum_exp += std::exp(actual[i] - max_logit);
+        sum_exp += expf(actual[i] - max_logit);
     }
-    T log_sum_exp = max_logit + std::log(sum_exp);
+    T log_sum_exp = max_logit + logf(sum_exp);
 
     // Find target class index and compute loss
     T loss = 0.;
     // int target_class = -1;
     for (unsigned int i = 0; i < expected.size(); i++) {
-        if (expected[i] > 0.5) { // One-hot encoded, so target class has value 1
+        if (expected[i] > (T)0.5) { // One-hot encoded, so target class has value 1
             // target_class = i;
             loss = -actual[i] + log_sum_exp;
             break;
@@ -118,7 +119,7 @@ inline T CategoricalCrossEntropy(const std::vector<T> &expected, const std::vect
 
     // Compute softmax probabilities and gradients
     for (unsigned int i = 0; i < actual.size(); i++) {
-        T softmax_prob = std::exp(actual[i] - max_logit) / sum_exp;
+        T softmax_prob = expf(actual[i] - max_logit) / sum_exp;
         loss_deriv[i] = (softmax_prob - expected[i]) * sampleSizeReciprocal;
     }
 
