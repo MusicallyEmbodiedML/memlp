@@ -231,7 +231,7 @@ bool MLP<T>::LoadMLPNetwork(const std::string & filename) {
 #if ENABLE_SAVE_SD
 template<typename T>
 bool MLP<T>::SaveMLPNetworkSD(const std::string & filename) {
-        auto file = SD.open(filename.c_str(), FILE_WRITE); 
+        auto file = SD.open(filename.c_str(), FILE_WRITE);
         if (!file) {
             Serial.println("Failed to open file for writing");
             return false;
@@ -616,13 +616,15 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
         //process the mini batches
         epochLoss = 0;
         size_t trainingIndex = 0;
-        T sampleSizeReciprocal = 1.f / miniBatchSize;
-
+        
         for(size_t i_batch=0; i_batch < nBatches; i_batch++) {
+            T sampleSizeReciprocal;
             size_t currBatchSize = miniBatchSize;
             if (lastBatchSize > 0 && i_batch + 1 == nBatches) {
                 currBatchSize = lastBatchSize;
-                sampleSizeReciprocal = 1.f / currBatchSize;
+                sampleSizeReciprocal = (T)1 / currBatchSize;
+            }else{
+                sampleSizeReciprocal = (T)1 / miniBatchSize;
             }
 
             //process minibatch
@@ -637,7 +639,7 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
                         learning_rate, sampleSizeReciprocal);
                 trainingIndex++;
             }
-            epochLoss += sampleLoss / currBatchSize;
+            epochLoss += sampleLoss; 
         }
 
 #if 1
@@ -666,7 +668,7 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
     if(m_progress_callback) {
         // Final callback to report completion
         m_progress_callback(i, epochLoss);
-    }   
+    }
 
     return epochLoss;
 }
@@ -807,7 +809,7 @@ void MLP<T>::DrawWeights(float scale)
                 if (m_layers[n].m_nodes[k].m_weights[j] < -1.f) {
                     m_layers[n].m_nodes[k].m_weights[j] +=2.f;
                 }
-                
+
                 //comment out for now - unlikely to draw same values
                 // do {
                 //     w = m_layers[n].m_nodes[k].m_weights[j];

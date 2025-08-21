@@ -20,6 +20,7 @@
 #include <VFS.h>
 #include <LittleFS.h>
 #define ENABLE_SAVE    1
+#include "pico.h"
 
 #endif
 
@@ -30,7 +31,6 @@
 #include <numeric>
 #include <algorithm>
 
-#include "pico.h"
 
 #define CONSTANT_WEIGHT_INITIALIZATION 0
 
@@ -279,7 +279,7 @@ public:
                       float learning_rate) {
         m_weights[weight_id] += static_cast<T>(learning_rate*increment);
     }
-#if ENABLE_SAVE_SD || 1
+#if ENABLE_SAVE_SD
 
 bool SaveNodeSD(File &file) const {
     if (file.write((char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
