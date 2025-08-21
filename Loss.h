@@ -88,7 +88,7 @@ MLP_LOSS_FN
 inline T CategoricalCrossEntropy(const std::vector<T> &expected, const std::vector<T> &actual,
                                 std::vector<T> &loss_deriv, T sampleSizeReciprocal) {
 
-    T n_elem = actual.size();
+    // T n_elem = actual.size();
 
     // Find maximum logit for numerical stability (log-sum-exp trick)
     T max_logit = actual[0];
@@ -107,10 +107,10 @@ inline T CategoricalCrossEntropy(const std::vector<T> &expected, const std::vect
 
     // Find target class index and compute loss
     T loss = 0.;
-    int target_class = -1;
+    // int target_class = -1;
     for (unsigned int i = 0; i < expected.size(); i++) {
         if (expected[i] > 0.5) { // One-hot encoded, so target class has value 1
-            target_class = i;
+            // target_class = i;
             loss = -actual[i] + log_sum_exp;
             break;
         }

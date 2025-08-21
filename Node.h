@@ -202,7 +202,7 @@ public:
      */
     inline T GetInputInnerProdWithWeights(const std::vector<T> &input) {
 
-        static const T kInit(0);
+        // static const T kInit(0);
 
         // assert(input.size() == m_weights.size());
 

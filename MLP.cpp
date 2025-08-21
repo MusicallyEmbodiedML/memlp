@@ -422,7 +422,7 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
     int max_iterations,
     float min_error_cost,
-    bool [[maybe_unused]] output_log) {
+    bool) {
 
     int i = 0;
     T current_iteration_cost_function = 0.f;
@@ -579,7 +579,7 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
     int max_iterations,
     size_t miniBatchSize,
     float min_error_cost,
-    bool [[maybe_unused]] output_log) {
+    bool) {
 
     assert(miniBatchSize > 0);
 
@@ -749,7 +749,7 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 {
 #if !defined(ARDUINO)
     if (weights.size() != m_layers.size()) {
-        printf("SetWeights: vector dim not equal. Expected=%d, actual=%d",
+        printf("SetWeights: vector dim not equal. Expected=%zu, actual=%zu",
                    weights.size(), m_layers.size());
     }
 #endif
@@ -761,7 +761,7 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
         bool assertion = expected == actual;
 #if !defined(ARDUINO)
         if (!assertion) {
-            printf("SetWeights: vector dim not equal at n=%d. Expected=%d, actual=%d",
+            printf("SetWeights: vector dim not equal at n=%zu. Expected=%zu, actual=%zu",
                    n, expected, actual);
         }
 #endif

@@ -217,7 +217,7 @@ public:
     deltas->resize(m_num_inputs_per_node, 0);
     for (size_t i = 0; i < m_nodes.size(); i++) {
       //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
-      T dE_doj=0,doj_dnetj =0, dnetj_dwij = 0;
+      T dE_doj=0,doj_dnetj =0;
       dE_doj = deriv_error[i];
       doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod); //cached from earlier calculation
       for (size_t j = 0; j < m_num_inputs_per_node; j++) {

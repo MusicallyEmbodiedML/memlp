@@ -121,7 +121,7 @@ inline T linear(T x) {
  */
 template<typename T>
 MLP_ACTIVATION_FN
-inline T deriv_linear(T x) {
+inline T deriv_linear(T) {
     return static_cast<T>(1);
 }
 
