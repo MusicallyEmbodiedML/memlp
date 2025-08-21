@@ -274,6 +274,62 @@ public:
     }
   }
 
+#if ENABLE_SAVE_SD
+  bool SaveLayerSD(File &file) const {
+    if (file.write((char*)&m_num_nodes, sizeof(m_num_nodes)) != sizeof(m_num_nodes)) {
+      return false;
+    }
+    if (file.write((char*)&m_num_inputs_per_node, sizeof(m_num_inputs_per_node)) != sizeof(m_num_inputs_per_node)) {
+      return false;
+    }
+    if (file.write((char*)&m_activation_function_type, sizeof(m_activation_function_type)) != sizeof(m_activation_function_type)) {
+      return false;
+    }
+
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+      if (!m_nodes[i].SaveNodeSD(file)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  bool LoadLayerSD(File &file) {
+    m_nodes.clear();
+
+    if (file.read((uint8_t*)&m_num_nodes, sizeof(m_num_nodes)) != sizeof(m_num_nodes)) {
+        return false;
+    }
+    if (file.read((uint8_t*)&m_num_inputs_per_node, sizeof(m_num_inputs_per_node)) != sizeof(m_num_inputs_per_node)) {
+        return false;
+    }
+    if (file.read((uint8_t*)&m_activation_function_type, sizeof(m_activation_function_type)) != sizeof(m_activation_function_type)) {
+        return false;
+    }
+
+    std::pair<activation_func_t<T>,
+        activation_func_t<T> > *pair;
+    bool ret_val = utils::ActivationFunctionsManager<T>::Singleton().
+      GetActivationFunctionPair(m_activation_function_type,
+                                &pair);
+    if (!ret_val) {
+      return false;
+    }
+    m_activation_function = (*pair).first;
+    m_deriv_activation_function = (*pair).second;
+
+    m_nodes.resize(m_num_nodes);
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+      if (!m_nodes[i].LoadNodeSD(file)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+
+#endif
+
 #ifdef ENABLE_SAVE
 
   /**

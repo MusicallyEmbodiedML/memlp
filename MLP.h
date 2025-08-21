@@ -18,6 +18,7 @@
 #ifdef ARDUINO
 
 #define ENABLE_SAVE    1
+#define ENABLE_SAVE_SD   1
 
 
 
@@ -45,6 +46,7 @@
 
 #ifdef ARDUINO
 #include "Arduino.h"
+#include <SD.h>
 #endif
 
 /**
@@ -107,6 +109,12 @@ public:
      * @return true if load was successful, false if file doesn't exist or there was an error
      */
     bool LoadMLPNetwork(const std::string & filename);
+#endif
+
+#if ENABLE_SAVE_SD
+    bool SaveMLPNetworkSD(const std::string & filename);
+    bool LoadMLPNetworkSD(const std::string & filename);
+
 #endif
 
     size_t Serialise(size_t w_head, std::vector<uint8_t> &buffer);
@@ -210,7 +218,7 @@ public:
     /**
      * @brief Randomize network weights
      */
-    void DrawWeights();
+    void DrawWeights(float scale=1.f);
 
     /**
      * @brief Add Gaussian noise to network weights
@@ -309,8 +317,15 @@ public:
      * @warning Modifying layers directly may break network functionality unless you know what you're doing
      */
     std::vector<Layer<T>> m_layers;
-
-
+    int get_num_inputs() const {
+        return m_num_inputs;
+    }
+    int get_num_outputs() const {
+        return m_num_outputs;
+    }
+    int get_num_hidden_layers() const {
+        return m_num_hidden_layers;
+    }
 protected:
     void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                      const std::vector<T> &error,

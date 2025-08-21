@@ -20,6 +20,7 @@
 #include <VFS.h>
 #include <LittleFS.h>
 #define ENABLE_SAVE    1
+#include "pico.h"
 
 #endif
 
@@ -30,7 +31,6 @@
 #include <numeric>
 #include <algorithm>
 
-#include "pico.h"
 
 #define CONSTANT_WEIGHT_INITIALIZATION 0
 
@@ -279,6 +279,47 @@ public:
                       float learning_rate) {
         m_weights[weight_id] += static_cast<T>(learning_rate*increment);
     }
+#if ENABLE_SAVE_SD
+
+bool SaveNodeSD(File &file) const {
+    if (file.write((char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+      return false;
+    }
+    if (file.write((char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+      return false;
+    }
+
+    if (!m_weights.empty()) {
+        int dataSize = m_weights.size() * sizeof(m_weights[0]);
+        if (file.write((char*)&m_weights[0], dataSize) != dataSize) {
+            return false;
+        }
+    }
+    return true;
+};
+
+bool LoadNodeSD(File &file) {
+    m_weights.clear();
+
+    if (file.read((uint8_t*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+        return false;
+    }
+    if (file.read((uint8_t*)&m_bias, sizeof(m_bias)) != sizeof(m_bias)) {
+        return false;
+    }
+
+    m_weights.resize(m_num_inputs);
+    if (!m_weights.empty()) {
+        int dataSize = m_weights.size() * sizeof(T);
+        if (file.read((uint8_t*)&m_weights[0], dataSize) != dataSize) {
+            return false;
+        }
+    }
+    return true;
+};
+
+
+#endif
 
 #if ENABLE_SAVE
     /**
