@@ -274,7 +274,7 @@ public:
     }
   }
 
-#if ENABLE_SAVE_SD || 1
+#if ENABLE_SAVE_SD
   bool SaveLayerSD(File &file) const {
     if (file.write((char*)&m_num_nodes, sizeof(m_num_nodes)) != sizeof(m_num_nodes)) {
       return false;
