@@ -12,19 +12,19 @@ class Serialise {
  public:
 
     template <typename T>
-    static size_t FromVector2D(size_t w_head,
+    static uint32_t FromVector2D(uint32_t w_head,
             const std::vector< std::vector<T> > &vec,
             std::vector<uint8_t> &buffer) {
 
         // Get sizes
-        size_t n_columns = vec.size();
-        size_t n_rows = vec[0].size();
+        uint32_t n_columns = vec.size();
+        uint32_t n_rows = vec[0].size();
         // Reserve space in vector
         buffer.resize(buffer.size() +
             // New size
-            (n_columns * n_rows * sizeof(T) + 2 * sizeof(size_t)));
+            (n_columns * n_rows * sizeof(T) + 2 * sizeof(uint32_t)));
         // Save sizes
-        std::vector<size_t> shape { n_columns, n_rows };
+        std::vector<uint32_t> shape { n_columns, n_rows };
         w_head = _LowLevelWrite(w_head, shape, buffer);
         // Save payload
         for (auto &row : vec) {
@@ -35,18 +35,18 @@ class Serialise {
     };
 
     template <typename T>
-    static size_t ToVector2D(size_t r_head,
+    static uint32_t ToVector2D(uint32_t r_head,
             const std::vector<uint8_t> &buffer,
             std::vector< std::vector<T> > &vec) {
 
         // Get sizes
-        std::vector<size_t> shape(2);
+        std::vector<uint32_t> shape(2);
         r_head = _LowLevelRead(r_head, 2, buffer, shape);
         // Load into vector
-        size_t n_rows = shape[1];
+        uint32_t n_rows = shape[1];
         std::vector<T> temp_row(n_rows);
         vec.resize(shape[0]);
-        for (size_t col = 0; col < shape[0]; col++) {
+        for (uint32_t col = 0; col < shape[0]; col++) {
             r_head = _LowLevelRead(r_head, n_rows, buffer, temp_row);
             vec[col] = temp_row;
         }
@@ -55,26 +55,26 @@ class Serialise {
     };
 
     template <typename T>
-    static size_t FromVector3D(size_t w_head,
+    static uint32_t FromVector3D(uint32_t w_head,
             const std::vector< std::vector< std::vector<T> > > &vec,
             std::vector<uint8_t> &buffer) {
 
         // Get sizes and validate dimensions
-        size_t n_depth = vec.size();
+        uint32_t n_depth = vec.size();
         if (n_depth == 0) return w_head;
 
-        size_t n_columns = vec[0].size();
+        uint32_t n_columns = vec[0].size();
         if (n_columns == 0) return w_head;
 
-        size_t n_rows = vec[0][0].size();
+        uint32_t n_rows = vec[0][0].size();
 
         // Validate that all dimensions are consistent
-        for (size_t d = 0; d < n_depth; d++) {
+        for (uint32_t d = 0; d < n_depth; d++) {
             if (vec[d].size() != n_columns) {
                 // Dimension mismatch - could throw exception or handle error
                 return w_head;
             }
-            for (size_t c = 0; c < n_columns; c++) {
+            for (uint32_t c = 0; c < n_columns; c++) {
                 if (vec[d][c].size() != n_rows) {
                     // Dimension mismatch - could throw exception or handle error
                     return w_head;
@@ -85,10 +85,10 @@ class Serialise {
         // Reserve space in vector
         buffer.resize(buffer.size() +
             // New size
-            (n_depth * n_columns * n_rows * sizeof(T) + 3 * sizeof(size_t)));
+            (n_depth * n_columns * n_rows * sizeof(T) + 3 * sizeof(uint32_t)));
 
         // Save sizes
-        std::vector<size_t> shape { n_depth, n_columns, n_rows };
+        std::vector<uint32_t> shape { n_depth, n_columns, n_rows };
         w_head = _LowLevelWrite(w_head, shape, buffer);
 
         // Save payload
@@ -102,25 +102,25 @@ class Serialise {
     };
 
     template <typename T>
-    static size_t ToVector3D(size_t r_head,
+    static uint32_t ToVector3D(uint32_t r_head,
             const std::vector<uint8_t> &buffer,
             std::vector< std::vector< std::vector<T> > > &vec) {
 
         // Get sizes
-        std::vector<size_t> shape(3);
+        std::vector<uint32_t> shape(3);
         r_head = _LowLevelRead(r_head, 3, buffer, shape);
 
         // Load into vector
-        size_t n_depth = shape[0];
-        size_t n_columns = shape[1];
-        size_t n_rows = shape[2];
+        uint32_t n_depth = shape[0];
+        uint32_t n_columns = shape[1];
+        uint32_t n_rows = shape[2];
 
         std::vector<T> temp_row(n_rows);
         vec.resize(n_depth);
 
-        for (size_t d = 0; d < n_depth; d++) {
+        for (uint32_t d = 0; d < n_depth; d++) {
             vec[d].resize(n_columns);
-            for (size_t c = 0; c < n_columns; c++) {
+            for (uint32_t c = 0; c < n_columns; c++) {
                 r_head = _LowLevelRead(r_head, n_rows, buffer, temp_row);
                 vec[d][c] = temp_row;
             }
@@ -132,15 +132,15 @@ class Serialise {
  protected:
 
     template<typename T>
-    static size_t _LowLevelWrite(size_t w_head,
+    static uint32_t _LowLevelWrite(uint32_t w_head,
             const std::vector<T> &payload,
             std::vector<uint8_t> &buffer) {
 
         uint8_t *buf_ptr = buffer.data() + w_head;
-        size_t size = payload.size() * sizeof(T);
+        uint32_t size = payload.size() * sizeof(T);
         // Check memory safety
-        size_t total_size_bytes = (w_head + size);
-        size_t current_size_bytes = buffer.size();
+        uint32_t total_size_bytes = (w_head + size);
+        uint32_t current_size_bytes = buffer.size();
         if (total_size_bytes > current_size_bytes) {
             buffer.resize(total_size_bytes);
         }
@@ -153,15 +153,15 @@ class Serialise {
     }
 
     template<typename T>
-    static size_t _LowLevelRead(size_t r_head,
-            size_t size,
+    static uint32_t _LowLevelRead(uint32_t r_head,
+            uint32_t size,
             const std::vector<uint8_t> &buffer,
             std::vector<T> &payload) {
 
         const uint8_t *buf_ptr = buffer.data() + r_head;
         // Check memory safety
         payload.resize(size);
-        size_t size_bytes = size * sizeof(T);
+        uint32_t size_bytes = size * sizeof(T);
         // Perform the copy
         std::memcpy(
             reinterpret_cast<uint8_t*>(payload.data()),
