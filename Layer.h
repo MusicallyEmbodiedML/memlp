@@ -274,49 +274,124 @@ public:
     }
   }
 
-#ifdef ENABLE_SAVE
-
-  /**
-   * @brief Saves the layer to a file
-   * @param file File pointer to save the layer
-   */
-  void SaveLayer(FILE * file) const {
-    fwrite(&m_num_nodes, sizeof(m_num_nodes), 1, file);
-    fwrite(&m_num_inputs_per_node, sizeof(m_num_inputs_per_node), 1, file);
-
-    fwrite(&m_activation_function_type, sizeof(ACTIVATION_FUNCTIONS), 1, file);
+#if ENABLE_SAVE_SD || 1
+  bool SaveLayerSD(File &file) const {
+    if (file.write((char*)&m_num_nodes, sizeof(m_num_nodes)) != sizeof(m_num_nodes)) {
+      return false;
+    }
+    if (file.write((char*)&m_num_inputs_per_node, sizeof(m_num_inputs_per_node)) != sizeof(m_num_inputs_per_node)) {
+      return false;
+    }
+    if (file.write((char*)&m_activation_function_type, sizeof(m_activation_function_type)) != sizeof(m_activation_function_type)) {
+      return false;
+    }
 
     for (size_t i = 0; i < m_nodes.size(); i++) {
-      m_nodes[i].SaveNode(file);
+      if (!m_nodes[i].SaveNodeSD(file)) {
+        return false;
+      }
     }
+    return true;
   };
 
-  /**
-   * @brief Loads the layer from a file
-   * @param file File pointer to load the layer
-   */
-  void LoadLayer(FILE * file) {
+  bool LoadLayerSD(File &file) {
     m_nodes.clear();
 
-    fread(&m_num_nodes, sizeof(m_num_nodes), 1, file);
-    fread(&m_num_inputs_per_node, sizeof(m_num_inputs_per_node), 1, file);
-
-    fread(&(m_activation_function_type), sizeof(ACTIVATION_FUNCTIONS), 1, file);
+    if (file.read((uint8_t*)&m_num_nodes, sizeof(m_num_nodes)) != sizeof(m_num_nodes)) {
+        return false;
+    }
+    if (file.read((uint8_t*)&m_num_inputs_per_node, sizeof(m_num_inputs_per_node)) != sizeof(m_num_inputs_per_node)) {
+        return false;
+    }
+    if (file.read((uint8_t*)&m_activation_function_type, sizeof(m_activation_function_type)) != sizeof(m_activation_function_type)) {
+        return false;
+    }
 
     std::pair<activation_func_t<T>,
         activation_func_t<T> > *pair;
     bool ret_val = utils::ActivationFunctionsManager<T>::Singleton().
       GetActivationFunctionPair(m_activation_function_type,
                                 &pair);
-    assert(ret_val);
+    if (!ret_val) {
+      return false;
+    }
     m_activation_function = (*pair).first;
     m_deriv_activation_function = (*pair).second;
 
     m_nodes.resize(m_num_nodes);
     for (size_t i = 0; i < m_nodes.size(); i++) {
-      m_nodes[i].LoadNode(file);
+      if (!m_nodes[i].LoadNodeSD(file)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+
+#endif
+
+#ifdef ENABLE_SAVE
+
+  /**
+   * @brief Saves the layer to a file
+   * @param file File pointer to save the layer
+   * @return true if save was successful, false if there was an error
+   */
+  bool SaveLayer(FILE * file) const {
+    if (fwrite(&m_num_nodes, sizeof(m_num_nodes), 1, file) != 1) {
+      return false;
+    }
+    if (fwrite(&m_num_inputs_per_node, sizeof(m_num_inputs_per_node), 1, file) != 1) {
+      return false;
+    }
+    if (fwrite(&m_activation_function_type, sizeof(ACTIVATION_FUNCTIONS), 1, file) != 1) {
+      return false;
     }
 
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+      if (!m_nodes[i].SaveNode(file)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  /**
+   * @brief Loads the layer from a file
+   * @param file File pointer to load the layer
+   * @return true if load was successful, false if there was an error
+   */
+  bool LoadLayer(FILE * file) {
+    m_nodes.clear();
+
+    if (fread(&m_num_nodes, sizeof(m_num_nodes), 1, file) != 1) {
+      return false;
+    }
+    if (fread(&m_num_inputs_per_node, sizeof(m_num_inputs_per_node), 1, file) != 1) {
+      return false;
+    }
+    if (fread(&(m_activation_function_type), sizeof(ACTIVATION_FUNCTIONS), 1, file) != 1) {
+      return false;
+    }
+
+    std::pair<activation_func_t<T>,
+        activation_func_t<T> > *pair;
+    bool ret_val = utils::ActivationFunctionsManager<T>::Singleton().
+      GetActivationFunctionPair(m_activation_function_type,
+                                &pair);
+    if (!ret_val) {
+      return false;
+    }
+    m_activation_function = (*pair).first;
+    m_deriv_activation_function = (*pair).second;
+
+    m_nodes.resize(m_num_nodes);
+    for (size_t i = 0; i < m_nodes.size(); i++) {
+      if (!m_nodes[i].LoadNode(file)) {
+        return false;
+      }
+    }
+    return true;
   };
 
 #endif

@@ -32,14 +32,17 @@ enum ACTIVATION_FUNCTIONS {
 };
 
 #if defined(_WIN32) || (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#define ENABLE_SAVE    1
 #include <cstdio>
+#define ENABLE_SAVE    1
+#endif
+
+#ifdef ARDUINO
+#define ENABLE_SAVE    1
 #endif
 
 #if defined(__XS3A__)
 #define MLP_ACTIVATION_FN __attribute__(( fptrgroup("mlp_activation") ))
 #else
-
 //#pragma message ( "PC compiler definitions enabled - check this is OK" )
 #define MLP_ACTIVATION_FN
 #endif
@@ -315,6 +318,12 @@ inline void Softmax(std::vector<T> *output) {
   std::vector<T> exp_output(num_elements);
   T exp_total = 0;
   for (size_t i = 0; i < num_elements; i++) {
+    float output_i = (*output)[i];
+    if (output_i > 15.f) {
+      output_i = 15.f;
+    } else if (output_i < -15.f) {
+      output_i = -15.f;
+    }
     exp_output[i] = std::exp((*output)[i]);
     exp_total += exp_output[i];
   }

@@ -14,9 +14,23 @@
 #ifndef MLP_H
 #define MLP_H
 
+
 #ifdef ARDUINO
 
 #define ENABLE_SAVE    1
+#define ENABLE_SAVE_SD   1
+
+
+
+#ifdef MLP_ALLOW_DEBUG
+#define MLP_MLP_DEBUG_PRINTF(...) Serial.printf(__VA_ARGS__)
+#define MLP_DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
+#define MLP_DEBUG_PRINTLN(...) Serial.println(__VA_ARGS__)
+#else
+#define MLP_DEBUG_PRINT(...)
+#define MLP_DEBUG_PRINTLN(...)
+#define MLP_DEBUG_PRINTF(...)
+#endif
 
 #endif
 
@@ -28,9 +42,11 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <functional>
 
 #ifdef ARDUINO
 #include "Arduino.h"
+#include <SD.h>
 #endif
 
 /**
@@ -80,8 +96,25 @@ public:
     ~MLP();
 
 #if ENABLE_SAVE
-    void SaveMLPNetwork(const std::string & filename) const;
-    void LoadMLPNetwork(const std::string & filename);
+    /**
+     * @brief Save the MLP network to a file
+     * @param filename Path to the file where the network will be saved
+     * @return true if save was successful, false if there was an error
+     */
+    bool SaveMLPNetwork(const std::string & filename) const;
+
+    /**
+     * @brief Load the MLP network from a file
+     * @param filename Path to the file containing the network
+     * @return true if load was successful, false if file doesn't exist or there was an error
+     */
+    bool LoadMLPNetwork(const std::string & filename);
+#endif
+
+#if ENABLE_SAVE_SD
+    bool SaveMLPNetworkSD(const std::string & filename);
+    bool LoadMLPNetworkSD(const std::string & filename);
+
 #endif
 
     size_t Serialise(size_t w_head, std::vector<uint8_t> &buffer);
@@ -185,7 +218,7 @@ public:
     /**
      * @brief Randomize network weights
      */
-    void DrawWeights();
+    void DrawWeights(float scale=1.f);
 
     /**
      * @brief Add Gaussian noise to network weights
@@ -271,6 +304,10 @@ public:
         }
     }
 
+    void SetProgressCallback(std::function<void(size_t,float)> callback) {
+        m_progress_callback = std::move(callback);
+    }
+
     /**
      * @brief Vector of network layers
      *
@@ -280,8 +317,15 @@ public:
      * @warning Modifying layers directly may break network functionality unless you know what you're doing
      */
     std::vector<Layer<T>> m_layers;
-
-
+    int get_num_inputs() const {
+        return m_num_inputs;
+    }
+    int get_num_outputs() const {
+        return m_num_outputs;
+    }
+    int get_num_hidden_layers() const {
+        return m_num_hidden_layers;
+    }
 protected:
     void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                      const std::vector<T> &error,
@@ -305,6 +349,7 @@ protected:
     std::vector<size_t> m_layers_nodes;
     MLP_LOSS_FN loss::loss_func_t<T> loss_fn_;
     loss::LOSS_FUNCTIONS m_loss_function_type; /**< Store loss function type for runtime checks */
+    std::function<void(size_t,float)> m_progress_callback{};
 };
 
 #endif //MLP_H

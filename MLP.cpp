@@ -29,13 +29,6 @@
 #include <random>
 
 
-#if !defined(ARDUINO)
-#include <stdio.h>
-#else
-#include <Arduino.h>
-#endif
-
-
 
 //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
 template<typename T>
@@ -58,7 +51,17 @@ MLP<T>::MLP(const std::vector<size_t> & layers_nodes,
 #if ENABLE_SAVE
 template<typename T>
 MLP<T>::MLP(const std::string & filename) {
-  LoadMLPNetwork(filename);
+  if (!LoadMLPNetwork(filename)) {
+    // If loading fails, we need to have a valid but empty network
+    // Initialize with minimal valid configuration
+    m_num_inputs = 0;
+    m_num_outputs = 0;
+    m_num_hidden_layers = 0;
+    m_layers_nodes.clear();
+    m_layers.clear();
+    // Consider throwing an exception or setting an error flag here
+    // For now, we'll have an invalid network that should be checked
+  }
 }
 #endif
 
@@ -135,42 +138,190 @@ void MLP<T>::ReportFinish(const unsigned int i, const float current_iteration_co
 #if ENABLE_SAVE
 
 template<typename T>
-void MLP<T>::SaveMLPNetwork(const std::string & filename)const {
-    FILE * file;
-    file = fopen(filename.c_str(), "wb");
-    fwrite(&m_num_inputs, sizeof(m_num_inputs), 1, file);
-    fwrite(&m_num_outputs, sizeof(m_num_outputs), 1, file);
-    fwrite(&m_num_hidden_layers, sizeof(m_num_hidden_layers), 1, file);
-    if (!m_layers_nodes.empty())
-        fwrite(&m_layers_nodes[0], sizeof(m_layers_nodes[0]), m_layers_nodes.size(), file);
-    for (size_t i = 0; i < m_layers.size(); i++) {
-        m_layers[i].SaveLayer(file);
+bool MLP<T>::SaveMLPNetwork(const std::string & filename) const {
+    FILE * file = fopen(filename.c_str(), "wb");
+    if (!file) {
+        return false;
     }
-    fclose(file);
-};
 
+    // Write network structure
+    if (fwrite(&m_num_inputs, sizeof(m_num_inputs), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+    if (fwrite(&m_num_outputs, sizeof(m_num_outputs), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+    if (fwrite(&m_num_hidden_layers, sizeof(m_num_hidden_layers), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+
+    // Write layer nodes
+    if (!m_layers_nodes.empty()) {
+        if (fwrite(&m_layers_nodes[0], sizeof(m_layers_nodes[0]), m_layers_nodes.size(), file) != m_layers_nodes.size()) {
+            fclose(file);
+            return false;
+        }
+    }
+
+    // Write layer weights
+    for (size_t i = 0; i < m_layers.size(); i++) {
+        if (!m_layers[i].SaveLayer(file)) {
+            fclose(file);
+            return false;
+        }
+    }
+
+    fclose(file);
+    return true;
+}
 
 template<typename T>
-void MLP<T>::LoadMLPNetwork(const std::string & filename) {
+bool MLP<T>::LoadMLPNetwork(const std::string & filename) {
+    // Check if file exists
+    FILE * file = fopen(filename.c_str(), "rb");
+    if (!file) {
+        return false;
+    }
+
+    // Clear existing network
     m_layers_nodes.clear();
     m_layers.clear();
 
-    FILE * file;
-    file = fopen(filename.c_str(), "rb");
-    fread(&m_num_inputs, sizeof(m_num_inputs), 1, file);
-    fread(&m_num_outputs, sizeof(m_num_outputs), 1, file);
-    fread(&m_num_hidden_layers, sizeof(m_num_hidden_layers), 1, file);
+    // Read network structure
+    if (fread(&m_num_inputs, sizeof(m_num_inputs), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+    if (fread(&m_num_outputs, sizeof(m_num_outputs), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+    if (fread(&m_num_hidden_layers, sizeof(m_num_hidden_layers), 1, file) != 1) {
+        fclose(file);
+        return false;
+    }
+
+    // Read layer nodes
     m_layers_nodes.resize(m_num_hidden_layers + 2);
-    if (!m_layers_nodes.empty())
-        fread(&m_layers_nodes[0], sizeof(m_layers_nodes[0]), m_layers_nodes.size(), file);
+    if (!m_layers_nodes.empty()) {
+        if (fread(&m_layers_nodes[0], sizeof(m_layers_nodes[0]), m_layers_nodes.size(), file) != m_layers_nodes.size()) {
+            fclose(file);
+            return false;
+        }
+    }
+
+    // Read layer weights
     m_layers.resize(m_layers_nodes.size() - 1);
     for (size_t i = 0; i < m_layers.size(); i++) {
-        m_layers[i].LoadLayer(file);
+        if (!m_layers[i].LoadLayer(file)) {
+            fclose(file);
+            return false;
+        }
     }
+
     fclose(file);
+    return true;
 }
 
 #endif
+
+#if ENABLE_SAVE_SD || 1
+template<typename T>
+bool MLP<T>::SaveMLPNetworkSD(const std::string & filename) {
+        auto file = SD.open(filename.c_str(), FILE_WRITE); 
+        if (!file) {
+            Serial.println("Failed to open file for writing");
+            return false;
+        }
+        file.seek(0);  // Start from beginning
+        // Write network structure
+        if (file.write((const char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+            file.close();
+            return false;
+        }
+        if (file.write((const char*)&m_num_outputs, sizeof(m_num_outputs)) != sizeof(m_num_outputs)) {
+            file.close();
+            return false;
+        }
+        if (file.write((const char*)&m_num_hidden_layers, sizeof(m_num_hidden_layers)) != sizeof(m_num_hidden_layers)) {
+            file.close();
+            return false;
+        }
+        // Write layer nodes
+        if (!m_layers_nodes.empty()) {
+            int dataSize = m_layers_nodes.size() * sizeof(m_layers_nodes[0]);
+            if (file.write((char*)&m_layers_nodes[0], dataSize) != dataSize) {
+                file.close();
+                return false;
+            }
+        }
+
+        // Write layer weights
+        for (size_t i = 0; i < m_layers.size(); i++) {
+            if (!m_layers[i].SaveLayerSD(file)) {
+                file.close();
+                return false;
+            }
+        }
+
+        file.close();
+        return true;
+    }
+
+ template<typename T>
+bool MLP<T>::LoadMLPNetworkSD(const std::string & filename) {
+    // Check if file exists
+    auto file = SD.open(filename.c_str(), FILE_READ);
+    if (!file) {
+        return false;
+    }
+
+    // Clear existing network
+    m_layers_nodes.clear();
+    m_layers.clear();
+
+    // Read network structure
+    if (file.read((uint8_t*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+        file.close();
+        return false;
+    }
+    if (file.read((uint8_t*)&m_num_outputs, sizeof(m_num_inputs)) != sizeof(m_num_outputs)) {
+        file.close();
+        return false;
+    }
+    if (file.read((uint8_t*)&m_num_hidden_layers, sizeof(m_num_inputs)) != sizeof(m_num_hidden_layers)) {
+        file.close();
+        return false;
+    }
+
+    // Read layer nodes
+    m_layers_nodes.resize(m_num_hidden_layers + 2);
+
+    if (!m_layers_nodes.empty()) {
+        int dataSize = m_layers_nodes.size() * sizeof(T);
+        if (file.read((uint8_t*)&m_layers_nodes[0], dataSize) != dataSize) {
+            return false;
+        }
+    }
+
+    // Read layer weights
+    m_layers.resize(m_layers_nodes.size() - 1);
+    for (size_t i = 0; i < m_layers.size(); i++) {
+        if (!m_layers[i].LoadLayerSD(file)) {
+            file.close();
+            return false;
+        }
+    }
+
+    file.close();
+    return true;
+}
+
+#endif
+
 
 
 template <typename T>
@@ -308,6 +459,10 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
 #endif  // EASYLOGGING_ON
 
+        if (m_progress_callback && !(i & 0x1F)) { // Call progress callback every 32 iterations
+            m_progress_callback(i, current_iteration_cost_function);
+        }
+
         // Early stopping
         // TODO AM early stopping should be optional and metric-dependent
         if (current_iteration_cost_function < min_error_cost) {
@@ -319,11 +474,15 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 #if !defined(ARDUINO)
     ReportFinish(i, current_iteration_cost_function);
 #else
-    // Serial.print("### Training ended, iteration ");
-    // Serial.print(i);
-    // Serial.print(", loss ");
-    // Serial.println(current_iteration_cost_function, 10);
+     MLP_DEBUG_PRINT("### Training ended, iteration ");
+     MLP_DEBUG_PRINT(i);
+     MLP_DEBUG_PRINT(", loss ");
+     MLP_DEBUG_PRINTLN(current_iteration_cost_function, 10);
 #endif
+    if (m_progress_callback) {
+        // Final callback to report completion
+        m_progress_callback(i, current_iteration_cost_function);
+    }
 
     return current_iteration_cost_function;
 };
@@ -486,6 +645,13 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 
 #endif  // EASYLOGGING_ON
 
+        if (m_progress_callback && !(i & 0x1F)) { // Call progress callback every 32 iterations
+            m_progress_callback(i, epochLoss);
+        }
+#if ARDUINO
+        delay(1);  // Allow time for other tasks to run
+#endif  // ARDUINO
+
         // Early stopping
         // TODO AM early stopping should be optional and metric-dependent
         if (epochLoss < min_error_cost) {
@@ -497,6 +663,10 @@ T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
 #if 1
     ReportFinish(i, epochLoss);
 #endif  // EASYLOGGING_ON
+    if(m_progress_callback) {
+        // Final callback to report completion
+        m_progress_callback(i, epochLoss);
+    }   
 
     return epochLoss;
 }
@@ -617,7 +787,7 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 }
 
 template <typename T>
-void MLP<T>::DrawWeights()
+void MLP<T>::DrawWeights(float scale)
 {
     T before = m_layers[0].m_nodes[0].m_weights[0];
     utils::gen_rand<T> gen;
@@ -626,16 +796,27 @@ void MLP<T>::DrawWeights()
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
-                T w, w2;
-                size_t counter = 0;
-                do {
-                    w = m_layers[n].m_nodes[k].m_weights[j];
-                    m_layers[n].m_nodes[k].m_weights[j] = gen();
-                    w2 = m_layers[n].m_nodes[k].m_weights[j];
-                    counter++;
-                    if (counter >= 10) break;
-                } while (w == w2);
-                assert(w != w2);
+                // T w, w2;
+                // size_t counter = 0;
+                float mod = gen() * scale;
+                m_layers[n].m_nodes[k].m_weights[j] += mod;
+                //wrap
+                if (m_layers[n].m_nodes[k].m_weights[j] > 1.f) {
+                    m_layers[n].m_nodes[k].m_weights[j] -=2.f;
+                }
+                if (m_layers[n].m_nodes[k].m_weights[j] < -1.f) {
+                    m_layers[n].m_nodes[k].m_weights[j] +=2.f;
+                }
+                
+                //comment out for now - unlikely to draw same values
+                // do {
+                //     w = m_layers[n].m_nodes[k].m_weights[j];
+                //     m_layers[n].m_nodes[k].m_weights[j] = gen();
+                //     w2 = m_layers[n].m_nodes[k].m_weights[j];
+                //     counter++;
+                //     if (counter >= 10) break;
+                // } while (w == w2);
+                // assert(w != w2);
             }
         }
     }

@@ -279,29 +279,91 @@ public:
                       float learning_rate) {
         m_weights[weight_id] += static_cast<T>(learning_rate*increment);
     }
+#if ENABLE_SAVE_SD || 1
+
+bool SaveNodeSD(File &file) const {
+    if (file.write((char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+      return false;
+    }
+    if (file.write((char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+      return false;
+    }
+
+    if (!m_weights.empty()) {
+        int dataSize = m_weights.size() * sizeof(m_weights[0]);
+        if (file.write((char*)&m_weights[0], dataSize) != dataSize) {
+            return false;
+        }
+    }
+    return true;
+};
+
+bool LoadNodeSD(File &file) {
+    m_weights.clear();
+
+    if (file.read((uint8_t*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+        return false;
+    }
+    if (file.read((uint8_t*)&m_bias, sizeof(m_bias)) != sizeof(m_bias)) {
+        return false;
+    }
+
+    m_weights.resize(m_num_inputs);
+    if (!m_weights.empty()) {
+        int dataSize = m_weights.size() * sizeof(T);
+        if (file.read((uint8_t*)&m_weights[0], dataSize) != dataSize) {
+            return false;
+        }
+    }
+    return true;
+};
+
+
+#endif
 
 #if ENABLE_SAVE
     /**
      * @brief Saves node state to file
      * @param file File pointer for saving
+     * @return true if save was successful, false if there was an error
      */
-    void SaveNode(FILE * file) const {
-        fwrite(&m_num_inputs, sizeof(m_num_inputs), 1, file);
-        fwrite(&m_bias, sizeof(m_bias), 1, file);
-        fwrite(&m_weights[0], sizeof(m_weights[0]), m_weights.size(), file);
+    bool SaveNode(FILE * file) const {
+        if (fwrite(&m_num_inputs, sizeof(m_num_inputs), 1, file) != 1) {
+            return false;
+        }
+        if (fwrite(&m_bias, sizeof(m_bias), 1, file) != 1) {
+            return false;
+        }
+        if (!m_weights.empty()) {
+            if (fwrite(&m_weights[0], sizeof(m_weights[0]), m_weights.size(), file) != m_weights.size()) {
+                return false;
+            }
+        }
+        return true;
     };
 
     /**
      * @brief Loads node state from file
      * @param file File pointer for loading
+     * @return true if load was successful, false if there was an error
      */
-    void LoadNode(FILE * file) {
+    bool LoadNode(FILE * file) {
         m_weights.clear();
 
-        fread(&m_num_inputs, sizeof(m_num_inputs), 1, file);
-        fread(&m_bias, sizeof(m_bias), 1, file);
+        if (fread(&m_num_inputs, sizeof(m_num_inputs), 1, file) != 1) {
+            return false;
+        }
+        if (fread(&m_bias, sizeof(m_bias), 1, file) != 1) {
+            return false;
+        }
+
         m_weights.resize(m_num_inputs);
-        fread(&m_weights[0], sizeof(m_weights[0]), m_weights.size(), file);
+        if (!m_weights.empty()) {
+            if (fread(&m_weights[0], sizeof(m_weights[0]), m_weights.size(), file) != m_weights.size()) {
+                return false;
+            }
+        }
+        return true;
     };
 #endif
 
