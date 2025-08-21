@@ -228,7 +228,7 @@ bool MLP<T>::LoadMLPNetwork(const std::string & filename) {
 
 #endif
 
-#if ENABLE_SAVE_SD || 1
+#if ENABLE_SAVE_SD
 template<typename T>
 bool MLP<T>::SaveMLPNetworkSD(const std::string & filename) {
         auto file = SD.open(filename.c_str(), FILE_WRITE); 
