@@ -440,7 +440,7 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
         while (t_feat != training_features.end() || t_label != training_labels.end()) {
 
             // Payload
-            current_iteration_cost_function =
+            current_iteration_cost_function +=
                 _TrainOnExample(*t_feat, *t_label, learning_rate, sampleSizeReciprocal);
 
             // \Payload
@@ -453,6 +453,8 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
                 ++t_label;
             }
         }
+
+        current_iteration_cost_function *= sampleSizeReciprocal;
 
 #if !defined(ARDUINO)
         ReportProgress(true, 100, i, current_iteration_cost_function);
