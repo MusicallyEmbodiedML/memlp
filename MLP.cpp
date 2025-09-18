@@ -574,6 +574,25 @@ void MLP<T>::ApplyLoss(std::vector<T> feat,
         learning_rate);
 }
 
+template<typename T>
+void MLP<T>::ApplyPolicyGradient(const std::vector<T>& state,
+                                  const std::vector<T>& action_gradient,
+                                  float learning_rate) {
+    std::vector<T> predicted_output;
+    std::vector<std::vector<T>> all_layers_activations;
+    
+    // Forward pass
+    GetOutput(state, &predicted_output, &all_layers_activations, false);
+    
+    // Negate gradients for maximization
+    std::vector<T> neg_gradient(action_gradient.size());
+    for(size_t i = 0; i < action_gradient.size(); i++) {
+        neg_gradient[i] = -action_gradient[i];
+    }
+    
+    // Backprop
+    UpdateWeights(all_layers_activations, neg_gradient, learning_rate);
+}
 
 template<typename T>
 T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,

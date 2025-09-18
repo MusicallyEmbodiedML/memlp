@@ -28,7 +28,8 @@ enum ACTIVATION_FUNCTIONS {
     SIGMOID, /**< Sigmoid activation function */
     TANH,    /**< Hyperbolic tangent activation function */
     LINEAR,  /**< Linear activation function */
-    RELU     /**< Rectified Linear Unit (ReLU) activation function */
+    RELU,     /**< Rectified Linear Unit (ReLU) activation function */
+    LEAKY_RELU /**< Leaky ReLU activation function */
 };
 
 #if defined(_WIN32) || (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
@@ -74,7 +75,7 @@ inline T sigmoid(T x) {
 template<typename T>
 MLP_ACTIVATION_FN
 inline T deriv_sigmoid(T x) {
-  return sigmoid(x)*(1 - sigmoid(x));
+  return sigmoid(x)*((T)1 - sigmoid(x));
 }
 
 /**
@@ -98,7 +99,7 @@ inline T hyperbolic_tan(T x) {
 template<typename T>
 MLP_ACTIVATION_FN
 inline T deriv_hyperbolic_tan(T x) {
-  return 1 - (std::pow)(hyperbolic_tan(x), 2);
+  return (T)1 - (std::pow)(hyperbolic_tan(x), (T)2);
 }
 
 /**
@@ -136,7 +137,7 @@ static const float kReLUSlope = 0.01f;
 template<typename T>
 MLP_ACTIVATION_FN
 inline T relu(T x) {
-    return (x > 0) ? x : kReLUSlope * x;
+    return (x > (T)0) ? (T)x : kReLUSlope * x;
 }
 
 /**
@@ -148,8 +149,9 @@ inline T relu(T x) {
 template<typename T>
 MLP_ACTIVATION_FN
 inline T deriv_relu(T x) {
-    return (x > 0) ? 1 : kReLUSlope;
+    return (x > (T)0) ? (T)1 : kReLUSlope;
 }
+
 
 /**
  * @brief Computes the sign of a value.

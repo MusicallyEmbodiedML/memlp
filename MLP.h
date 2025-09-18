@@ -291,6 +291,10 @@ public:
           std::vector<T> loss,
           float learning_rate);
 
+    
+    void ApplyPolicyGradient(const std::vector<T>& state,
+                                    const std::vector<T>& action_gradient,
+                                    float learning_rate);
 
     void PurturbWeights(const size_t nWeights) {
         utils::gen_rand<float> randf(0.01f);
