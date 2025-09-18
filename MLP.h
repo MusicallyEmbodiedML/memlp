@@ -158,6 +158,17 @@ public:
                 bool output_log = true);
 
     /**
+     * @brief Training with batch support
+     * @param use_batch_update If true, accumulate gradients for batch update
+     */
+    T TrainBatch(const training_pair_t& training_sample_set_with_bias,
+                 float learning_rate,
+                 int max_iterations = 5000,
+                 size_t batch_size = 8,
+                 float min_error_cost = 0.001,
+                 bool output_log = true);                
+
+    /**
      * @brief Train the network using mini-batch gradient descent
      *
      * @param training_sample_set_with_bias Training data pairs
@@ -331,9 +342,53 @@ public:
         return m_num_hidden_layers;
     }
 protected:
+
+    /**
+     * @brief Process single sample with optional gradient accumulation
+     */
+    T ProcessSample(const std::vector<T>& features,
+                   const std::vector<T>& labels,
+                   bool accumulate_only = false);
+    
+    /**
+     * @brief Initialize gradient accumulators for all layers
+     */
+    void InitializeAllGradientAccumulators() {
+        for (auto& layer : m_layers) {
+            layer.InitializeGradientAccumulators();
+        }
+    }
+    
+    /**
+     * @brief Apply all accumulated gradients
+     */
+    void ApplyAllAccumulatedGradients(float learning_rate, size_t batch_size) {
+        for (auto& layer : m_layers) {
+            layer.ApplyAccumulatedGradients(learning_rate, batch_size);
+        }
+    }
+    
+    /**
+     * @brief Clear all gradient accumulators
+     */
+    void ClearAllGradientAccumulators() {
+        for (auto& layer : m_layers) {
+            layer.ClearGradientAccumulators();
+        }
+    }
+    
+    /**
+     * @brief Backpropagate with optional gradient accumulation
+     */
+    void BackpropagateWithAccumulation(const std::vector<std::vector<T>>& all_layers_activations,
+                                       const std::vector<T>& deriv_error,
+                                       bool accumulate = true);
+
+
     void UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                      const std::vector<T> &error,
                      float learning_rate);
+                     
     T _TrainOnExample(std::vector<T> feat, std::vector<T> label,
                       float learning_rate, T sampleSizeReciprocal);
     void CreateMLP(const std::vector<size_t> & layers_nodes,

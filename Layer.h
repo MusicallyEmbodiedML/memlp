@@ -164,43 +164,143 @@ public:
     }
   }
 
-  /**
-   * @brief Updates weights of the layer nodes
-   * @param input_layer_activation Activation values of the input layer
-   * @param deriv_error Derivative of the error with respect to outputs
-   * @param m_learning_rate Learning rate for weight updates
-   * @param deltas Pointer to store computed deltas
-   */
-  void UpdateWeights(const std::vector<T> &input_layer_activation,
-                     const std::vector<T> &deriv_error,
-                     float m_learning_rate,
-                     std::vector<T> * deltas) {
-    assert(input_layer_activation.size() == m_num_inputs_per_node);
-    assert(deriv_error.size() == m_nodes.size());
-
-    deltas->resize(m_num_inputs_per_node, 0);
-
-    for (size_t i = 0; i < m_nodes.size(); i++) {
-
-      //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
-      T dE_doj = 0;
-      T doj_dnetj = 0;
-      T dnetj_dwij = 0;
-
-      dE_doj = deriv_error[i];
-      doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod); //cached from earlier calculation
-
-      for (size_t j = 0; j < m_num_inputs_per_node; j++) {
-        (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
-
-        dnetj_dwij = input_layer_activation[j];
-
-        m_nodes[i].UpdateWeight(j,
-                                static_cast<float>( -(dE_doj * doj_dnetj * dnetj_dwij) ),
-                                m_learning_rate);
-      }
+    /**
+     * @brief Initialize gradient accumulators for all nodes
+     */
+    void InitializeGradientAccumulators() {
+        for (auto& node : m_nodes) {
+            node.InitializeGradientAccumulator();
+        }
     }
-  };
+    
+    /**
+     * @brief Clear gradient accumulators for all nodes
+     */
+    void ClearGradientAccumulators() {
+        for (auto& node : m_nodes) {
+            node.ClearGradientAccumulator();
+        }
+    }
+    
+    /**
+     * @brief Accumulate gradients without updating weights (for batch training)
+     * @param input_layer_activation Activation values of the input layer
+     * @param deriv_error Derivative of the error with respect to outputs
+     * @param deltas Pointer to store computed deltas for previous layer
+     */
+    void AccumulateGradients(const std::vector<T>& input_layer_activation,
+                           const std::vector<T>& deriv_error,
+                           std::vector<T>* deltas) {
+        assert(input_layer_activation.size() == m_num_inputs_per_node);
+        assert(deriv_error.size() == m_nodes.size());
+        
+        deltas->resize(m_num_inputs_per_node, 0);
+        
+        for (size_t i = 0; i < m_nodes.size(); i++) {
+            T dE_doj = deriv_error[i];
+            T doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod);
+            T error_signal = dE_doj * doj_dnetj;
+            
+            // Accumulate gradients in the node
+            m_nodes[i].AccumulateGradients(input_layer_activation, error_signal);
+            
+            // Calculate deltas for previous layer
+            for (size_t j = 0; j < m_num_inputs_per_node; j++) {
+                (*deltas)[j] += error_signal * m_nodes[i].GetWeights()[j];
+            }
+        }
+    }
+    
+    /**
+     * @brief Apply accumulated gradients to all nodes
+     * @param learning_rate Learning rate
+     * @param batch_size Batch size for averaging
+     */
+    void ApplyAccumulatedGradients(float learning_rate, size_t batch_size) {
+        for (auto& node : m_nodes) {
+            node.ApplyAccumulatedGradients(learning_rate, batch_size);
+        }
+    }
+        
+
+
+  // /**
+  //  * @brief Updates weights of the layer nodes
+  //  * @param input_layer_activation Activation values of the input layer
+  //  * @param deriv_error Derivative of the error with respect to outputs
+  //  * @param m_learning_rate Learning rate for weight updates
+  //  * @param deltas Pointer to store computed deltas
+  //  */
+  // void UpdateWeights(const std::vector<T> &input_layer_activation,
+  //                    const std::vector<T> &deriv_error,
+  //                    float m_learning_rate,
+  //                    std::vector<T> * deltas) {
+  //   assert(input_layer_activation.size() == m_num_inputs_per_node);
+  //   assert(deriv_error.size() == m_nodes.size());
+
+  //   deltas->resize(m_num_inputs_per_node, 0);
+
+  //   for (size_t i = 0; i < m_nodes.size(); i++) {
+
+  //     //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
+  //     T dE_doj = 0;
+  //     T doj_dnetj = 0;
+  //     T dnetj_dwij = 0;
+
+  //     dE_doj = deriv_error[i];
+  //     doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod); //cached from earlier calculation
+
+  //     for (size_t j = 0; j < m_num_inputs_per_node; j++) {
+  //       (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
+
+  //       dnetj_dwij = input_layer_activation[j];
+
+  //       m_nodes[i].UpdateWeight(j,
+  //                               static_cast<float>( -(dE_doj * doj_dnetj * dnetj_dwij) ),
+  //                               m_learning_rate);
+  //     }
+  //   }
+  // };
+
+    /**
+     * @brief Update weights with optional gradient accumulation
+     * @param input_layer_activation Activation values
+     * @param deriv_error Error derivatives
+     * @param learning_rate Learning rate
+     * @param deltas Computed deltas
+     * @param accumulate If true, accumulate gradients instead of immediate update
+     */
+    void UpdateWeights(const std::vector<T>& input_layer_activation,
+                      const std::vector<T>& deriv_error,
+                      float learning_rate,
+                      std::vector<T>* deltas,
+                      bool accumulate = false) {
+        
+        if (accumulate) {
+            AccumulateGradients(input_layer_activation, deriv_error, deltas);
+        } else {
+            // Original immediate update implementation
+            assert(input_layer_activation.size() == m_num_inputs_per_node);
+            assert(deriv_error.size() == m_nodes.size());
+            
+            deltas->resize(m_num_inputs_per_node, 0);
+            
+            for (size_t i = 0; i < m_nodes.size(); i++) {
+                T dE_doj = deriv_error[i];
+                T doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod);
+                
+                for (size_t j = 0; j < m_num_inputs_per_node; j++) {
+                    (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
+                    T dnetj_dwij = input_layer_activation[j];
+                    m_nodes[i].UpdateWeight(j,
+                                          static_cast<float>(-(dE_doj * doj_dnetj * dnetj_dwij)),
+                                          learning_rate);
+                }
+            }
+        }
+    }
+    
+  
 
   /**
    * @brief Calculates gradients for optimization

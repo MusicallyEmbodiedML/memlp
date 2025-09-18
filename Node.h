@@ -115,6 +115,49 @@ public:
     }
 
     /**
+     * @brief Initialize gradient accumulator
+     */
+    void InitializeGradientAccumulator() {
+        m_gradient_accumulator.clear();
+        m_gradient_accumulator.resize(m_weights.size(), 0);
+    }
+    
+    /**
+     * @brief Accumulate gradients without updating weights
+     * @param x Input vector
+     * @param error Error signal from backpropagation
+     * @param learning_rate Not used here, kept for compatibility
+     */
+    inline void AccumulateGradients(const std::vector<T>& x,
+                                   T error,
+                                   float learning_rate = 0) {
+        assert(x.size() == m_weights.size());
+        for (size_t i = 0; i < m_weights.size(); i++) {
+            m_gradient_accumulator[i] += x[i] * error;
+        }
+    }
+
+        /**
+     * @brief Apply accumulated gradients and clear accumulator
+     * @param learning_rate Learning rate for weight update
+     * @param batch_size Size of the batch for averaging
+     */
+    inline void ApplyAccumulatedGradients(float learning_rate, size_t batch_size) {
+        T scale = learning_rate / static_cast<T>(batch_size);
+        for (size_t i = 0; i < m_weights.size(); i++) {
+            m_weights[i] -= m_gradient_accumulator[i] * scale;
+            m_gradient_accumulator[i] = 0;  // Reset accumulator
+        }
+    }
+
+   /**
+     * @brief Clear gradient accumulator
+     */
+    inline void ClearGradientAccumulator() {
+        std::fill(m_gradient_accumulator.begin(), m_gradient_accumulator.end(), 0);
+    }    
+
+    /**
      * @brief Gets the number of inputs to this node
      * @return Number of inputs
      */
@@ -371,6 +414,11 @@ bool LoadNodeSD(File &file) {
     T m_bias{ 0.0 };         /**< Bias value for this node */
     std::vector<T> m_weights; /**< Vector of input weights */
     T inner_prod;            /**< Cached inner product value */
+
+    /**
+     * @brief Accumulated gradients for batch training
+     */
+    std::vector<T> m_gradient_accumulator;    
 
 private:
     Node<T>& operator=(Node<T> const &) = delete; /**< Deleted assignment operator */

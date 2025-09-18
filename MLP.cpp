@@ -416,6 +416,115 @@ void MLP<T>::UpdateWeights(const std::vector<std::vector<T>> & all_layers_activa
     }
 };
 
+template<typename T>
+T MLP<T>::TrainBatch(const training_pair_t& training_sample_set_with_bias,
+                     float learning_rate,
+                     int max_iterations,
+                     size_t batch_size,
+                     float min_error_cost,
+                     bool output_log) {
+    
+    auto training_features = training_sample_set_with_bias.first;
+    auto training_labels = training_sample_set_with_bias.second;
+    
+    size_t n_samples = training_features.size();
+    size_t n_batches = (n_samples + batch_size - 1) / batch_size;
+    
+    T epoch_loss = 0;
+    for (int iter = 0; iter < max_iterations; iter++) {
+
+        epoch_loss = 0;
+        
+        // Shuffle indices
+        std::vector<size_t> indices(n_samples);
+        std::iota(indices.begin(), indices.end(), 0);
+        
+        static std::random_device rd;
+        static std::mt19937 g(rd());
+        std::shuffle(indices.begin(), indices.end(), g);
+        
+        size_t sample_idx = 0;
+        
+        for (size_t batch = 0; batch < n_batches; batch++) {
+            size_t current_batch_size = std::min(batch_size, n_samples - sample_idx);
+            
+            // Initialize gradient accumulators
+            InitializeAllGradientAccumulators();
+            
+            T batch_loss = 0;
+            
+            // Process batch - accumulate gradients
+            for (size_t i = 0; i < current_batch_size; i++) {
+                size_t idx = indices[sample_idx++];
+                
+                // Forward pass
+                std::vector<T> predicted_output;
+                std::vector<std::vector<T>> all_layers_activations;
+                
+                GetOutput(training_features[idx],
+                         &predicted_output,
+                         &all_layers_activations,
+                         false);
+                
+                // Compute loss and derivatives
+                std::vector<T> deriv_error_output(predicted_output.size());
+                T loss = loss_fn_(training_labels[idx],
+                                 predicted_output,
+                                 deriv_error_output,
+                                 1.0f);
+                
+                batch_loss += loss;
+                
+                // Accumulate gradients through backpropagation
+                BackpropagateWithAccumulation(all_layers_activations,
+                                             deriv_error_output,
+                                             true);
+            }
+            
+            // Apply accumulated gradients
+            ApplyAllAccumulatedGradients(learning_rate, current_batch_size);
+            
+            epoch_loss += batch_loss / current_batch_size;
+        }
+        
+        epoch_loss /= n_batches;
+        
+        if (output_log && (iter % 100 == 0)) {
+            ReportProgress(output_log, 100, iter, epoch_loss);
+        }
+        
+        if (m_progress_callback) {
+            m_progress_callback(iter, epoch_loss);
+        }
+        
+        if (epoch_loss < min_error_cost) {
+            break;
+        }
+    }
+    
+    return epoch_loss;
+}
+
+template<typename T>
+void MLP<T>::BackpropagateWithAccumulation(const std::vector<std::vector<T>>& all_layers_activations,
+                                           const std::vector<T>& deriv_error,
+                                           bool accumulate) {
+    std::vector<T> temp_deriv_error = deriv_error;
+    std::vector<T> deltas;
+    
+    for (int i = m_num_hidden_layers; i >= 0; --i) {
+        m_layers[i].UpdateWeights(all_layers_activations[i],
+                                 temp_deriv_error,
+                                 0,  // Learning rate not used when accumulating
+                                 &deltas,
+                                 accumulate);  // Use accumulation flag
+        
+        if (i > 0) {
+            temp_deriv_error = std::move(deltas);
+            deltas.clear();
+        }
+    }
+}
 
 template<typename T>
 T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
