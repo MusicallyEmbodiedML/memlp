@@ -28,6 +28,7 @@
 #include <cassert> // for assert()
 #include "Node.h"
 #include "Utils.h"
+#include <span>
 
 
 
@@ -130,7 +131,7 @@ public:
    * @brief Gets the list of nodes in the layer
    * @return Constant reference to the list of nodes
    */
-  const std::vector<Node<T>> & GetNodes() const {
+  std::span<const Node<T>> GetNodes() {
     return m_nodes;
   }
 

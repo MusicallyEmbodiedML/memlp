@@ -30,7 +30,7 @@
 #include <cassert> // for assert()
 #include <numeric>
 #include <algorithm>
-
+#include <span>
 
 #define CONSTANT_WEIGHT_INITIALIZATION 0
 
@@ -107,7 +107,7 @@ public:
      * @brief Randomizes weights with Gaussian noise
      * @param variance The variance of the Gaussian distribution
      */
-    void WeightRandomisation(float variance) {
+    void WeightRandomisation(const float variance) {
         std::transform(m_weights.begin(),
                        m_weights.end(),
                        m_weights.begin(),
@@ -128,7 +128,7 @@ public:
      * @param error Error signal from backpropagation
      * @param learning_rate Not used here, kept for compatibility
      */
-    inline void AccumulateGradients(const std::vector<T>& x,
+    inline void AccumulateGradients(std::span<const T> x,
                                    T error,
                                    float learning_rate = 0) {
         assert(x.size() == m_weights.size());
@@ -209,10 +209,11 @@ public:
      * @brief Sets new weights for the node
      * @param weights Vector of new weights
      */
-    void SetWeights( std::vector<T> & weights ){
+    void SetWeights( std::span<T> weights ){
         // check size of the weights vector
         assert(weights.size() == m_num_inputs);
-        m_weights = weights;
+        // m_weights = weights;
+        m_weights.assign(weights.begin(), weights.end());
     }
 
     /**
@@ -221,7 +222,7 @@ public:
      * @param alpha Learning rate for new weights
      * @param alphaInv Learning rate for current weights (typically 1-alpha)
      */
-    inline void SmoothUpdateWeights(std::vector<T> & incomingWeights, const float alpha, const float alphaInv) {
+    inline void SmoothUpdateWeights(std::span<T> incomingWeights, const float alpha, const float alphaInv) {
         assert(incomingWeights.size() == m_weights.size());
         for(size_t i = 0; i < m_weights.size(); i++) {
             m_weights[i] = (alphaInv * m_weights[i]) + (alpha * incomingWeights[i]);
@@ -243,7 +244,7 @@ public:
      * @param input Vector of input values
      * @return Inner product result
      */
-    inline T GetInputInnerProdWithWeights(const std::vector<T> &input) {
+    inline T GetInputInnerProdWithWeights(std::span<const T> &input) {
 
         // static const T kInit(0);
 
@@ -273,7 +274,7 @@ public:
      * @param activation_function Activation function to use
      * @param output Pointer to store the output value
      */
-    inline void GetOutputAfterActivationFunction(const std::vector<T> &input,
+    inline void GetOutputAfterActivationFunction(std::span<const T> input,
                                           MLP_ACTIVATION_FN activation_func_t<T> activation_function,
                                           T * output) {
         // T inner_prod = 0.0;
@@ -288,7 +289,7 @@ public:
      * @param bool_output Pointer to store the binary output
      * @param threshold Threshold value for binary decision
      */
-    void  GetBooleanOutput(const std::vector<T> &input,
+    void  GetBooleanOutput(std::vector<const T> input,
                           MLP_ACTIVATION_FN activation_func_t<T> activation_function,
                           bool * bool_output,
                           T threshold = 0.5) {
@@ -303,7 +304,7 @@ public:
      * @param error Error value
      * @param learning_rate Learning rate for weight update
      */
-    inline void UpdateWeights(const std::vector<T> &x,
+    inline void UpdateWeights(std::span<const T> x,
                        T error,
                        T learning_rate) {
         assert(x.size() == m_weights.size());
