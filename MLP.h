@@ -168,23 +168,23 @@ public:
                  float min_error_cost = 0.001,
                  bool output_log = true);                
 
-    /**
-     * @brief Train the network using mini-batch gradient descent
-     *
-     * @param training_sample_set_with_bias Training data pairs
-     * @param learning_rate Learning rate for gradient descent
-     * @param max_iterations Maximum training iterations
-     * @param miniBatchSize Size of mini-batches
-     * @param min_error_cost Minimum error threshold for early stopping
-     * @param output_log Whether to output training progress
-     * @return Final training error
-     */
-    T MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
-                float learning_rate,
-                int max_iterations = 5000,
-                size_t miniBatchSize=8,
-                float min_error_cost = 0.001,
-                bool output_log = true);
+    // /**
+    //  * @brief Train the network using mini-batch gradient descent
+    //  *
+    //  * @param training_sample_set_with_bias Training data pairs
+    //  * @param learning_rate Learning rate for gradient descent
+    //  * @param max_iterations Maximum training iterations
+    //  * @param miniBatchSize Size of mini-batches
+    //  * @param min_error_cost Minimum error threshold for early stopping
+    //  * @param output_log Whether to output training progress
+    //  * @return Final training error
+    //  */
+    // T MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
+    //             float learning_rate,
+    //             int max_iterations = 5000,
+    //             size_t miniBatchSize=8,
+    //             float min_error_cost = 0.001,
+    //             bool output_log = true);
 
     /**
      * @deprecated Use Train() with training_pair_t instead
@@ -230,6 +230,8 @@ public:
      * @brief Randomize network weights
      */
     void DrawWeights(float scale=1.f);
+
+    void InitXavier();
 
     /**
      * @brief Add Gaussian noise to network weights
@@ -308,7 +310,7 @@ public:
                                     float learning_rate);
 
     void PurturbWeights(const size_t nWeights) {
-        utils::gen_rand<float> randf(0.01f);
+        utils::gen_rand<float> randf(0.1f);
         for(size_t i=0; i < nWeights; i++) {
             size_t layer_i = rand() % (m_layers.size()-1);
             size_t node_i = rand() %  (m_layers[layer_i].GetOutputSize()-1);
@@ -322,6 +324,21 @@ public:
     void SetProgressCallback(std::function<void(size_t,float)> callback) {
         m_progress_callback = std::move(callback);
     }
+
+    /**
+     * @brief Calculate global gradient norm across all layers
+     *
+     * @return Global gradient norm
+     */
+    T GetGlobalWeightNorm() {
+        T sum_sq = 0.0f;
+        for(auto &layer : m_layers) {
+            T layerWeightNorm = layer.getWeightNorm();
+            sum_sq +=  layerWeightNorm * layerWeightNorm;
+        }
+        return std::sqrt(sum_sq);
+    }
+
 
     /**
      * @brief Vector of network layers
@@ -362,9 +379,9 @@ protected:
     /**
      * @brief Apply all accumulated gradients
      */
-    void ApplyAllAccumulatedGradients(float learning_rate, size_t batch_size) {
+    void ApplyAllAccumulatedGradients(float learning_rate, float batch_size_inv) {
         for (auto& layer : m_layers) {
-            layer.ApplyAccumulatedGradients(learning_rate, batch_size);
+            layer.ApplyAccumulatedGradients(learning_rate, batch_size_inv);
         }
     }
     

@@ -56,6 +56,7 @@ public:
         m_num_inputs = 0;
         m_bias = 0;
         m_weights.clear();
+        squared_gradient_avg.clear();
     };
 
     /**
@@ -77,9 +78,6 @@ public:
     };
 
     ~Node() {
-        m_num_inputs = 0;
-        m_bias = 0.0;
-        m_weights.clear();
     };
 
     /**
@@ -101,6 +99,8 @@ public:
                             m_num_inputs,
                             utils::gen_rand<T>());
         }
+        squared_gradient_avg.resize(m_num_inputs);
+        std::fill(squared_gradient_avg.begin(), squared_gradient_avg.end(), 0.f);
     }
 
     /**
@@ -129,24 +129,58 @@ public:
      * @param learning_rate Not used here, kept for compatibility
      */
     inline void AccumulateGradients(std::span<const T> x,
-                                   T error,
-                                   float learning_rate = 0) {
+                                   T error) {
         assert(x.size() == m_weights.size());
         for (size_t i = 0; i < m_weights.size(); i++) {
             m_gradient_accumulator[i] += x[i] * error;
         }
     }
 
-        /**
-     * @brief Apply accumulated gradients and clear accumulator
-     * @param learning_rate Learning rate for weight update
-     * @param batch_size Size of the batch for averaging
-     */
-    inline void ApplyAccumulatedGradients(float learning_rate, size_t batch_size) {
-        T scale = learning_rate / static_cast<T>(batch_size);
+    //     /**
+    //  * @brief Apply accumulated gradients and clear accumulator
+    //  * @param learning_rate Learning rate for weight update
+    //  * @param batch_size Size of the batch for averaging
+    //  */
+    // inline void ApplyAccumulatedGradients(float learning_rate, T batch_size_inv) {
+    //     T scale = learning_rate * batch_size_inv;
+    //     for (size_t i = 0; i < m_weights.size(); i++) {
+    //         m_weights[i] -= m_gradient_accumulator[i] * scale;
+    //         m_gradient_accumulator[i] = 0;  // Reset accumulator
+    //     }
+    // }
+
+
+    float rmsPropDecay = 0.9f;
+    float rmsPropDecayInv = 0.1f;
+    float rmsPropEpsilon = 1e-7f;
+    inline void ApplyAccumulatedGradients(float learning_rate, T batch_size_inv) {
+        // Serial.printf("expected num inputs: %d, sga size: %zu, nwei: %zu\n", m_num_inputs, squared_gradient_avg.size(), m_weights.size());
         for (size_t i = 0; i < m_weights.size(); i++) {
-            m_weights[i] -= m_gradient_accumulator[i] * scale;
-            m_gradient_accumulator[i] = 0;  // Reset accumulator
+            T gradient = m_gradient_accumulator[i] * batch_size_inv;
+            squared_gradient_avg[i] = (rmsPropDecay * squared_gradient_avg[i]) + 
+                                         (rmsPropDecayInv * gradient * gradient);
+            float adjusted_learning_rate = learning_rate / 
+                                   (std::sqrt(squared_gradient_avg[i]) + rmsPropEpsilon);  
+            // Serial.printf("Adjusted LR for weight %zu: %f, sga: %f, g:%f\n", i, adjusted_learning_rate, squared_gradient_avg[i], gradient);
+            m_weights[i] -= adjusted_learning_rate * gradient;
+            
+            m_gradient_accumulator[i] = 0.f;  // Reset accumulator
+        }
+    }
+
+
+    inline float GetGradSumSquared(T batch_size_inv) {
+        T sumsq = 0;
+        for (size_t i = 0; i < m_gradient_accumulator.size(); i++) {
+            T scaledGrad = m_gradient_accumulator[i] * batch_size_inv;
+            sumsq +=  scaledGrad*scaledGrad;
+        }
+        return sumsq;
+    }
+
+    void ScaleAccumulatedGradients(T clip_coef) {
+        for (size_t i = 0; i < m_gradient_accumulator.size(); i++) {
+            m_gradient_accumulator[i] *= clip_coef;
         }
     }
 
@@ -226,7 +260,6 @@ public:
         assert(incomingWeights.size() == m_weights.size());
         for(size_t i = 0; i < m_weights.size(); i++) {
             m_weights[i] = (alphaInv * m_weights[i]) + (alpha * incomingWeights[i]);
-            // #sleep_us(50);
         }
 
     }
@@ -249,6 +282,7 @@ public:
         // static const T kInit(0);
 
         // assert(input.size() == m_weights.size());
+
 
         // T res = std::inner_product(begin(input),
         //                            end(input),
@@ -414,15 +448,19 @@ bool LoadNodeSD(File &file) {
     size_t m_num_inputs{ 0 }; /**< Number of inputs to this node */
     T m_bias{ 0.0 };         /**< Bias value for this node */
     std::vector<T> m_weights; /**< Vector of input weights */
-    T inner_prod;            /**< Cached inner product value */
 
     /**
      * @brief Accumulated gradients for batch training
      */
-    std::vector<T> m_gradient_accumulator;    
+    std::vector<T> m_gradient_accumulator;
+    std::vector<T> squared_gradient_avg;    
 
+    inline T GetInnerProd() const {
+        return inner_prod;
+    }
 private:
     Node<T>& operator=(Node<T> const &) = delete; /**< Deleted assignment operator */
+    T inner_prod;            /**< Cached inner product value */
 };
 
 #endif //NODE_H

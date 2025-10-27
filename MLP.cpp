@@ -447,6 +447,7 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set_with_bias,
         
         for (size_t batch = 0; batch < n_batches; batch++) {
             size_t current_batch_size = std::min(batch_size, n_samples - sample_idx);
+            T batch_size_reciprocal = (T)1.0 / static_cast<T>(current_batch_size);
             
             // Initialize gradient accumulators
             InitializeAllGradientAccumulators();
@@ -480,9 +481,24 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set_with_bias,
                                              deriv_error_output,
                                              true);
             }
+
+            // clipping gradients
+            // T grad_sumsq = 0.0f;
+            // for (auto& layer : m_layers) {
+            //     grad_sumsq += layer.GetGradSumSquared(batch_size_reciprocal);
+            // }
+            // T grad_norm = std::sqrt(grad_sumsq );
+            // // Serial.printf("Grad norm: %f\n", grad_norm);
+            // if (grad_norm > 10.0f) {
+            //     T clip_coef = 10.0f / grad_norm;
+            //     for (auto& layer : m_layers) {
+            //         layer.ScaleAccumulatedGradients(clip_coef);
+            //     }
+            //     Serial.printf("Clipped gradients with coef: %f\n", clip_coef);
+            // }
             
             // Apply accumulated gradients
-            ApplyAllAccumulatedGradients(learning_rate, current_batch_size);
+            ApplyAllAccumulatedGradients(learning_rate, batch_size_reciprocal);
             
             epoch_loss += batch_loss / current_batch_size;
         }
@@ -703,105 +719,105 @@ void MLP<T>::ApplyPolicyGradient(const std::vector<T>& state,
     UpdateWeights(all_layers_activations, neg_gradient, learning_rate);
 }
 
-template<typename T>
-T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
-    float learning_rate,
-    int max_iterations,
-    size_t miniBatchSize,
-    float min_error_cost,
-    bool) {
+// template<typename T>
+// T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
+//     float learning_rate,
+//     int max_iterations,
+//     size_t miniBatchSize,
+//     float min_error_cost,
+//     bool) {
 
-    assert(miniBatchSize > 0);
+//     assert(miniBatchSize > 0);
 
-    int i = 0;
-    T epochLoss = 0;
+//     int i = 0;
+//     T epochLoss = 0;
 
-    auto training_features = training_sample_set_with_bias.first;
-    auto training_labels = training_sample_set_with_bias.second;
-#if 0
-    auto t_feat = training_features.begin();
-    auto t_label = training_labels.begin();
-#endif
+//     auto training_features = training_sample_set_with_bias.first;
+//     auto training_labels = training_sample_set_with_bias.second;
+// #if 0
+//     auto t_feat = training_features.begin();
+//     auto t_label = training_labels.begin();
+// #endif
 
-    //how many batches
-    size_t nBatches = training_features.size() / miniBatchSize;
-    size_t lastBatchSize = training_features.size() % miniBatchSize;
-    //extra batch if not precisely divisible by batch size
-    nBatches += (lastBatchSize > 0);
+//     //how many batches
+//     size_t nBatches = training_features.size() / miniBatchSize;
+//     size_t lastBatchSize = training_features.size() % miniBatchSize;
+//     //extra batch if not precisely divisible by batch size
+//     nBatches += (lastBatchSize > 0);
 
 
-    for (i = 0; i < max_iterations; i++) {
+//     for (i = 0; i < max_iterations; i++) {
 
-        //randomly shuffle training data into mini batches
-        std::vector<size_t> shuffledIndexes(training_features.size());
-        //fill with indexes
-        for(size_t i_shuffle=0; i_shuffle < shuffledIndexes.size(); i_shuffle++) {
-          shuffledIndexes[i_shuffle] = i_shuffle;
-        }
-        //shuffle
-        static std::random_device rd;
-        static std::mt19937 g(rd());
-        std::shuffle(shuffledIndexes.begin(), shuffledIndexes.end(), g);
+//         //randomly shuffle training data into mini batches
+//         std::vector<size_t> shuffledIndexes(training_features.size());
+//         //fill with indexes
+//         for(size_t i_shuffle=0; i_shuffle < shuffledIndexes.size(); i_shuffle++) {
+//           shuffledIndexes[i_shuffle] = i_shuffle;
+//         }
+//         //shuffle
+//         static std::random_device rd;
+//         static std::mt19937 g(rd());
+//         std::shuffle(shuffledIndexes.begin(), shuffledIndexes.end(), g);
 
-        //process the mini batches
-        epochLoss = 0;
-        size_t trainingIndex = 0;
+//         //process the mini batches
+//         epochLoss = 0;
+//         size_t trainingIndex = 0;
         
-        for(size_t i_batch=0; i_batch < nBatches; i_batch++) {
-            T sampleSizeReciprocal;
-            size_t currBatchSize = miniBatchSize;
-            if (lastBatchSize > 0 && i_batch + 1 == nBatches) {
-                currBatchSize = lastBatchSize;
-                sampleSizeReciprocal = (T)1 / currBatchSize;
-            }else{
-                sampleSizeReciprocal = (T)1 / miniBatchSize;
-            }
+//         for(size_t i_batch=0; i_batch < nBatches; i_batch++) {
+//             T sampleSizeReciprocal;
+//             size_t currBatchSize = miniBatchSize;
+//             if (lastBatchSize > 0 && i_batch + 1 == nBatches) {
+//                 currBatchSize = lastBatchSize;
+//                 sampleSizeReciprocal = (T)1 / currBatchSize;
+//             }else{
+//                 sampleSizeReciprocal = (T)1 / miniBatchSize;
+//             }
 
-            //process minibatch
-            T sampleLoss = 0;
+//             //process minibatch
+//             T sampleLoss = 0;
 
-            for(size_t i_trainingItem=0; i_trainingItem < currBatchSize; i_trainingItem++) {
-                size_t shuffledTrainingIndex = shuffledIndexes[trainingIndex];
-                auto feat = training_features[shuffledTrainingIndex];
-                auto label = training_labels[shuffledTrainingIndex];
+//             for(size_t i_trainingItem=0; i_trainingItem < currBatchSize; i_trainingItem++) {
+//                 size_t shuffledTrainingIndex = shuffledIndexes[trainingIndex];
+//                 auto feat = training_features[shuffledTrainingIndex];
+//                 auto label = training_labels[shuffledTrainingIndex];
 
-                sampleLoss += _TrainOnExample(feat, label,
-                        learning_rate, sampleSizeReciprocal);
-                trainingIndex++;
-            }
-            epochLoss += sampleLoss; 
-        }
+//                 sampleLoss += _TrainOnExample(feat, label,
+//                         learning_rate, sampleSizeReciprocal);
+//                 trainingIndex++;
+//             }
+//             epochLoss += sampleLoss; 
+//         }
 
-#if 1
-        ReportProgress(true, 2, i, epochLoss);
+// #if 1
+//         ReportProgress(true, 2, i, epochLoss);
 
-#endif  // EASYLOGGING_ON
+// #endif  // EASYLOGGING_ON
 
-        if (m_progress_callback && !(i & 0x1F)) { // Call progress callback every 32 iterations
-            m_progress_callback(i, epochLoss);
-        }
-#if ARDUINO
-        delay(1);  // Allow time for other tasks to run
-#endif  // ARDUINO
+//         if (m_progress_callback && !(i & 0x1F)) { // Call progress callback every 32 iterations
+//             m_progress_callback(i, epochLoss);
+//         }
+// #if ARDUINO
+//         delay(1);  // Allow time for other tasks to run
+// #endif  // ARDUINO
 
-        // Early stopping
-        // TODO AM early stopping should be optional and metric-dependent
-        if (epochLoss < min_error_cost) {
-            break;
-        }
+//         // Early stopping
+//         // TODO AM early stopping should be optional and metric-dependent
+//         if (epochLoss < min_error_cost) {
+//             break;
+//         }
 
-    }
+//     }
 
-#if 1
-    ReportFinish(i, epochLoss);
-#endif  // EASYLOGGING_ON
-    if(m_progress_callback) {
-        // Final callback to report completion
-        m_progress_callback(i, epochLoss);
-    }
+// #if 1
+//     ReportFinish(i, epochLoss);
+// #endif  // EASYLOGGING_ON
+//     if(m_progress_callback) {
+//         // Final callback to report completion
+//         m_progress_callback(i, epochLoss);
+//     }
 
-    return epochLoss;
-}
+//     return epochLoss;
+// }
 
 template <typename T>
 void MLP<T>::Train(const std::vector<TrainingSample<T>>
@@ -923,32 +939,13 @@ void MLP<T>::DrawWeights(float scale)
 {
     T before = m_layers[0].m_nodes[0].m_weights[0];
     utils::gen_rand<T> gen;
-    // utils::gen_randn<T> gen(1.f,0.f); //mean, stddev
+    // utils::gen_randn<T> gen(0.f, scale); //mean, stddev
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
-                // T w, w2;
-                // size_t counter = 0;
                 float mod = gen() * scale;
-                m_layers[n].m_nodes[k].m_weights[j] += mod;
-                //wrap
-                if (m_layers[n].m_nodes[k].m_weights[j] > 1.f) {
-                    m_layers[n].m_nodes[k].m_weights[j] -=2.f;
-                }
-                if (m_layers[n].m_nodes[k].m_weights[j] < -1.f) {
-                    m_layers[n].m_nodes[k].m_weights[j] +=2.f;
-                }
-
-                //comment out for now - unlikely to draw same values
-                // do {
-                //     w = m_layers[n].m_nodes[k].m_weights[j];
-                //     m_layers[n].m_nodes[k].m_weights[j] = gen();
-                //     w2 = m_layers[n].m_nodes[k].m_weights[j];
-                //     counter++;
-                //     if (counter >= 10) break;
-                // } while (w == w2);
-                // assert(w != w2);
+                m_layers[n].m_nodes[k].m_weights[j] = mod;
             }
         }
     }
@@ -978,6 +975,14 @@ void MLP<T>::MoveWeights(T speed)
 
     assert(m_layers[0].m_nodes[0].m_weights[0] != before);
 }
+
+template <typename T>
+void MLP<T>::InitXavier() {
+    for(auto & layer : m_layers) {
+        layer.InitXavier();
+    }
+}
+
 
 // Explicit instantiations
 #if !defined(__XS3A__)

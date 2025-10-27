@@ -29,7 +29,7 @@
 #include "Node.h"
 #include "Utils.h"
 #include <span>
-
+#include <random>
 
 
 /**
@@ -72,11 +72,6 @@ public:
     m_num_nodes = num_nodes;
     m_nodes.resize(num_nodes);
 
-    for (int i = 0; i < num_nodes; i++) {
-      m_nodes[i].WeightInitialization(num_inputs_per_node,
-                                      use_constant_weight_init,
-                                      constant_weight_init);
-    }
 
     std::pair<activation_func_t<T>,
         activation_func_t<T> > *pair;
@@ -87,6 +82,13 @@ public:
     m_activation_function = (*pair).first;
     m_deriv_activation_function = (*pair).second;
     m_activation_function_type = activation_function;
+    for (int i = 0; i < num_nodes; i++) {
+      m_nodes[i].WeightInitialization(num_inputs_per_node,
+                                      use_constant_weight_init,
+                                      constant_weight_init);
+    }
+
+    // InitXavier();
   };
 
   /**
@@ -199,7 +201,7 @@ public:
         
         for (size_t i = 0; i < m_nodes.size(); i++) {
             T dE_doj = deriv_error[i];
-            T doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod);
+            T doj_dnetj = m_deriv_activation_function(m_nodes[i].GetInnerProd());
             T error_signal = dE_doj * doj_dnetj;
             
             // Accumulate gradients in the node
@@ -217,9 +219,23 @@ public:
      * @param learning_rate Learning rate
      * @param batch_size Batch size for averaging
      */
-    void ApplyAccumulatedGradients(float learning_rate, size_t batch_size) {
+    void ApplyAccumulatedGradients(float learning_rate, T batch_size_inv) {
         for (auto& node : m_nodes) {
-            node.ApplyAccumulatedGradients(learning_rate, batch_size);
+            node.ApplyAccumulatedGradients(learning_rate, batch_size_inv);
+        }
+    }
+
+    float GetGradSumSquared( float batch_size_inv ) {
+        float sumsq = 0.0f;
+        for (auto& node : m_nodes) {
+            sumsq += node.GetGradSumSquared(batch_size_inv);
+        }
+        return sumsq;
+    }
+
+    void ScaleAccumulatedGradients(T clip_coef) {
+        for (auto& node : m_nodes) {
+            node.ScaleAccumulatedGradients(clip_coef);
         }
     }
         
@@ -280,7 +296,6 @@ public:
         if (accumulate) {
             AccumulateGradients(input_layer_activation, deriv_error, deltas);
         } else {
-            // Original immediate update implementation
             assert(input_layer_activation.size() == m_num_inputs_per_node);
             assert(deriv_error.size() == m_nodes.size());
             
@@ -288,7 +303,7 @@ public:
             
             for (size_t i = 0; i < m_nodes.size(); i++) {
                 T dE_doj = deriv_error[i];
-                T doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod);
+                T doj_dnetj = m_deriv_activation_function(m_nodes[i].GetInnerProd());
                 
                 for (size_t j = 0; j < m_num_inputs_per_node; j++) {
                     (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
@@ -320,7 +335,7 @@ public:
       //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
       T dE_doj=0,doj_dnetj =0;
       dE_doj = deriv_error[i];
-      doj_dnetj = m_deriv_activation_function(m_nodes[i].inner_prod); //cached from earlier calculation
+      doj_dnetj = m_deriv_activation_function(m_nodes[i].GetInnerProd()); //cached from earlier calculation
       for (size_t j = 0; j < m_num_inputs_per_node; j++) {
         (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
       }
@@ -372,6 +387,52 @@ public:
     for(size_t n=0; n < m_nodes.size(); n++) {
       m_nodes[n].SmoothUpdateWeights(l.m_nodes[n].GetWeights(), alpha, alphaInv);
       // sleep_us(70);
+    }
+  }
+
+  /**
+   * @brief Calculate weight norm for the layer
+   * @return Weight norm
+   */
+  T getWeightNorm() {
+      float sum_sq = 0.0f;
+      
+      // Sum weights
+      for(size_t n = 0; n < m_nodes.size(); n++) {
+          const std::vector<T>& weight_grads = m_nodes[n].GetWeights();
+          for (const auto& grad : weight_grads) {
+              sum_sq += grad * grad;
+          }
+      }
+      
+      return std::sqrt(sum_sq);
+  }  
+
+  void InitXavier() {
+
+    float limit = (T)1.0;
+
+    switch(m_activation_function_type) {
+        case ACTIVATION_FUNCTIONS::SIGMOID:
+        case ACTIVATION_FUNCTIONS::TANH:
+          limit = std::sqrt(6.0 / (m_num_inputs_per_node + m_num_nodes));
+          break;
+        case ACTIVATION_FUNCTIONS::RELU:
+          limit = std::sqrt(6.0 / (m_num_inputs_per_node));
+          break;
+        case ACTIVATION_FUNCTIONS::LINEAR:
+          limit = std::sqrt(6.0f / (m_num_inputs_per_node + m_num_nodes));
+          break;
+        default:
+          limit = std::sqrt(6.0f / (m_num_inputs_per_node + m_num_nodes));
+          break;
+      }
+    utils::gen_rand<T> randf(limit);
+    // std::uniform_real_distribution<float> dist{-limit, limit};
+    for(auto & node : m_nodes) {
+        for(auto & weight : node.GetWeights()) {
+            weight = randf();
+        }
     }
   }
 
