@@ -120,6 +120,7 @@ public:
     void InitializeGradientAccumulator() {
         m_gradient_accumulator.clear();
         m_gradient_accumulator.resize(m_weights.size(), 0);
+        m_bias_gradient_accumulator = 0;
     }
     
     /**
@@ -134,6 +135,7 @@ public:
         for (size_t i = 0; i < m_weights.size(); i++) {
             m_gradient_accumulator[i] += x[i] * error;
         }
+        m_bias_gradient_accumulator += error;         
     }
 
     //     /**
@@ -154,18 +156,23 @@ public:
     float rmsPropDecayInv = 0.1f;
     float rmsPropEpsilon = 1e-7f;
     inline void ApplyAccumulatedGradients(float learning_rate, T batch_size_inv) {
-        // Serial.printf("expected num inputs: %d, sga size: %zu, nwei: %zu\n", m_num_inputs, squared_gradient_avg.size(), m_weights.size());
         for (size_t i = 0; i < m_weights.size(); i++) {
             T gradient = m_gradient_accumulator[i] * batch_size_inv;
             squared_gradient_avg[i] = (rmsPropDecay * squared_gradient_avg[i]) + 
                                          (rmsPropDecayInv * gradient * gradient);
             float adjusted_learning_rate = learning_rate / 
                                    (std::sqrt(squared_gradient_avg[i]) + rmsPropEpsilon);  
-            // Serial.printf("Adjusted LR for weight %zu: %f, sga: %f, g:%f\n", i, adjusted_learning_rate, squared_gradient_avg[i], gradient);
             m_weights[i] -= adjusted_learning_rate * gradient;
             
             m_gradient_accumulator[i] = 0.f;  // Reset accumulator
         }
+        T bias_gradient = m_bias_gradient_accumulator * batch_size_inv;
+        bias_squared_gradient_avg = (rmsPropDecay * bias_squared_gradient_avg) + 
+                                    (rmsPropDecayInv * bias_gradient * bias_gradient);
+        float bias_adjusted_lr = learning_rate / (std::sqrt(bias_squared_gradient_avg) + rmsPropEpsilon);
+        m_bias -= bias_adjusted_lr * bias_gradient;
+        m_bias_gradient_accumulator = 0;
+        // printf("Bias: %f\n", m_bias);
     }
 
 
@@ -279,24 +286,12 @@ public:
      */
     inline T GetInputInnerProdWithWeights(std::span<const T> &input) {
 
-        // static const T kInit(0);
-
-        // assert(input.size() == m_weights.size());
-
-
-        // T res = std::inner_product(begin(input),
-        //                            end(input),
-        //                            begin(m_weights),
-        //                            kInit);
-        // // *output = res;
-        // inner_prod = res;
 
         T res=0;
         for(size_t j=0; j < input.size(); j++) {
           res += input[j] * m_weights[j];
         }
-
-        // *output = res;
+        res += m_bias;
         inner_prod = res;
 
         return inner_prod;
@@ -454,6 +449,8 @@ bool LoadNodeSD(File &file) {
      */
     std::vector<T> m_gradient_accumulator;
     std::vector<T> squared_gradient_avg;    
+    T m_bias_gradient_accumulator{0}; 
+    T bias_squared_gradient_avg=0;
 
     inline T GetInnerProd() const {
         return inner_prod;

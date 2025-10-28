@@ -30,6 +30,7 @@
 #include "Utils.h"
 #include <span>
 #include <random>
+#include <span>
 
 
 /**
@@ -329,7 +330,7 @@ public:
                      std::vector<T> * deltas) {
     assert(input_layer_activation.size() == m_num_inputs_per_node);
     assert(deriv_error.size() == m_nodes.size());
-    grads = deriv_error; //keep a copy
+    // grads = deriv_error; //keep a copy
     deltas->resize(m_num_inputs_per_node, 0);
     for (size_t i = 0; i < m_nodes.size(); i++) {
       //dE/dwij = dE/doj . doj/dnetj . dnetj/dwij
@@ -340,6 +341,7 @@ public:
         (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
       }
     }
+    grads = *deltas;
   };
 
   /**
@@ -428,7 +430,6 @@ public:
           break;
       }
     utils::gen_rand<T> randf(limit);
-    // std::uniform_real_distribution<float> dist{-limit, limit};
     for(auto & node : m_nodes) {
         for(auto & weight : node.GetWeights()) {
             weight = randf();

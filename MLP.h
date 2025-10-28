@@ -271,6 +271,15 @@ public:
         }
     }
 
+    inline void SmoothUpdateWeights(MLP<T> *anotherMLP, const float alpha) {
+        //assuming the other MLP has the same structure
+        //calc this once here
+        const float alphaInv = 1.f-alpha;
+
+        for(size_t i=0; i < m_layers.size(); i++) {
+            m_layers[i].SmoothUpdateWeights(anotherMLP->m_layers[i], alpha, alphaInv);
+        }
+    }
     /**
      * @brief Calculate gradients through the network (autograd)
      *
@@ -305,12 +314,14 @@ public:
           float learning_rate);
 
     
-    void ApplyPolicyGradient(const std::vector<T>& state,
-                                    const std::vector<T>& action_gradient,
-                                    float learning_rate);
+    // void ApplyPolicyGradient(const std::vector<T>& state,
+    //                                 const std::vector<T>& action_gradient,
+    //                                 float learning_rate);
+    void AccumulatePolicyGradient(const std::vector<T>& state,
+                                    const std::vector<T>& action_gradient);
 
-    void PurturbWeights(const size_t nWeights) {
-        utils::gen_rand<float> randf(0.1f);
+    void PurturbWeights(const size_t nWeights, const float scale=0.1f) {
+        utils::gen_rand<float> randf(scale);
         for(size_t i=0; i < nWeights; i++) {
             size_t layer_i = rand() % (m_layers.size()-1);
             size_t node_i = rand() %  (m_layers[layer_i].GetOutputSize()-1);
@@ -358,15 +369,7 @@ public:
     int get_num_hidden_layers() const {
         return m_num_hidden_layers;
     }
-protected:
 
-    /**
-     * @brief Process single sample with optional gradient accumulation
-     */
-    T ProcessSample(const std::vector<T>& features,
-                   const std::vector<T>& labels,
-                   bool accumulate_only = false);
-    
     /**
      * @brief Initialize gradient accumulators for all layers
      */
@@ -375,7 +378,7 @@ protected:
             layer.InitializeGradientAccumulators();
         }
     }
-    
+
     /**
      * @brief Apply all accumulated gradients
      */
@@ -393,6 +396,17 @@ protected:
             layer.ClearGradientAccumulators();
         }
     }
+
+protected:
+
+    /**
+     * @brief Process single sample with optional gradient accumulation
+     */
+    T ProcessSample(const std::vector<T>& features,
+                   const std::vector<T>& labels,
+                   bool accumulate_only = false);
+    
+    
     
     /**
      * @brief Backpropagate with optional gradient accumulation

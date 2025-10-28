@@ -483,19 +483,19 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set_with_bias,
             }
 
             // clipping gradients
-            // T grad_sumsq = 0.0f;
-            // for (auto& layer : m_layers) {
-            //     grad_sumsq += layer.GetGradSumSquared(batch_size_reciprocal);
-            // }
-            // T grad_norm = std::sqrt(grad_sumsq );
-            // // Serial.printf("Grad norm: %f\n", grad_norm);
-            // if (grad_norm > 10.0f) {
-            //     T clip_coef = 10.0f / grad_norm;
-            //     for (auto& layer : m_layers) {
-            //         layer.ScaleAccumulatedGradients(clip_coef);
-            //     }
-            //     Serial.printf("Clipped gradients with coef: %f\n", clip_coef);
-            // }
+            T grad_sumsq = 0.0f;
+            for (auto& layer : m_layers) {
+                grad_sumsq += layer.GetGradSumSquared(batch_size_reciprocal);
+            }
+            T grad_norm = std::sqrt(grad_sumsq );
+            // Serial.printf("Grad norm: %f\n", grad_norm);
+            if (grad_norm > 5.0f) {
+                T clip_coef = 5.0f / grad_norm;
+                for (auto& layer : m_layers) {
+                    layer.ScaleAccumulatedGradients(clip_coef);
+                }
+                printf("Clipped gradients with coef: %f\n", clip_coef);
+            }
             
             // Apply accumulated gradients
             ApplyAllAccumulatedGradients(learning_rate, batch_size_reciprocal);
@@ -699,10 +699,29 @@ void MLP<T>::ApplyLoss(std::vector<T> feat,
         learning_rate);
 }
 
+// template<typename T>
+// void MLP<T>::ApplyPolicyGradient(const std::vector<T>& state,
+//                                   const std::vector<T>& action_gradient,
+//                                   float learning_rate) {
+//     std::vector<T> predicted_output;
+//     std::vector<std::vector<T>> all_layers_activations;
+    
+//     // Forward pass
+//     GetOutput(state, &predicted_output, &all_layers_activations, false);
+    
+//     // Negate gradients for maximization
+//     std::vector<T> neg_gradient(action_gradient.size());
+//     for(size_t i = 0; i < action_gradient.size(); i++) {
+//         neg_gradient[i] = -action_gradient[i];
+//     }
+    
+//     // Backprop
+//     UpdateWeights(all_layers_activations, neg_gradient, learning_rate);
+// }
+
 template<typename T>
-void MLP<T>::ApplyPolicyGradient(const std::vector<T>& state,
-                                  const std::vector<T>& action_gradient,
-                                  float learning_rate) {
+void MLP<T>::AccumulatePolicyGradient(const std::vector<T>& state,
+                                  const std::vector<T>& action_gradient) {
     std::vector<T> predicted_output;
     std::vector<std::vector<T>> all_layers_activations;
     
@@ -715,9 +734,14 @@ void MLP<T>::ApplyPolicyGradient(const std::vector<T>& state,
         neg_gradient[i] = -action_gradient[i];
     }
     
-    // Backprop
-    UpdateWeights(all_layers_activations, neg_gradient, learning_rate);
+    // Accumulate gradients through backpropagation
+    BackpropagateWithAccumulation(all_layers_activations,
+                                    neg_gradient,
+                                    true);
+
 }
+
+
 
 // template<typename T>
 // T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
