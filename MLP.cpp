@@ -28,6 +28,7 @@
 #include <cassert>
 #include <random>
 
+#define SAFE_MODE
 
 
 //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
@@ -36,9 +37,11 @@ MLP<T>::MLP(const std::vector<size_t> & layers_nodes,
          const std::vector<ACTIVATION_FUNCTIONS> & layers_activfuncs,
          loss::LOSS_FUNCTIONS loss_function,
          bool use_constant_weight_init,
-         T constant_weight_init) {
+         T constant_weight_init) : g(rd()) {
+#ifdef SAFE_MODE
   assert(layers_nodes.size() >= 2);
   assert(layers_activfuncs.size() + 1 == layers_nodes.size());
+#endif
 
   CreateMLP(layers_nodes,
             layers_activfuncs,
@@ -452,8 +455,6 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
         std::vector<size_t> indices(n_samples);
         std::iota(indices.begin(), indices.end(), 0);
         
-        static std::random_device rd;
-        static std::mt19937 g(rd());
         std::shuffle(indices.begin(), indices.end(), g);
         
         size_t sample_idx = 0;
@@ -569,6 +570,7 @@ void MLP<T>::BackpropagateWithAccumulation(const std::vector<std::vector<T>>& al
     }
 }
 
+[[deprecated]]
 template<typename T>
 T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
@@ -769,107 +771,7 @@ void MLP<T>::AccumulatePolicyGradient(const std::vector<T>& state,
 }
 
 
-
-// template<typename T>
-// T MLP<T>::MiniBatchTrain(const training_pair_t& training_sample_set_with_bias,
-//     float learning_rate,
-//     int max_iterations,
-//     size_t miniBatchSize,
-//     float min_error_cost,
-//     bool) {
-
-//     assert(miniBatchSize > 0);
-
-//     int i = 0;
-//     T epochLoss = 0;
-
-//     auto training_features = training_sample_set_with_bias.first;
-//     auto training_labels = training_sample_set_with_bias.second;
-// #if 0
-//     auto t_feat = training_features.begin();
-//     auto t_label = training_labels.begin();
-// #endif
-
-//     //how many batches
-//     size_t nBatches = training_features.size() / miniBatchSize;
-//     size_t lastBatchSize = training_features.size() % miniBatchSize;
-//     //extra batch if not precisely divisible by batch size
-//     nBatches += (lastBatchSize > 0);
-
-
-//     for (i = 0; i < max_iterations; i++) {
-
-//         //randomly shuffle training data into mini batches
-//         std::vector<size_t> shuffledIndexes(training_features.size());
-//         //fill with indexes
-//         for(size_t i_shuffle=0; i_shuffle < shuffledIndexes.size(); i_shuffle++) {
-//           shuffledIndexes[i_shuffle] = i_shuffle;
-//         }
-//         //shuffle
-//         static std::random_device rd;
-//         static std::mt19937 g(rd());
-//         std::shuffle(shuffledIndexes.begin(), shuffledIndexes.end(), g);
-
-//         //process the mini batches
-//         epochLoss = 0;
-//         size_t trainingIndex = 0;
-        
-//         for(size_t i_batch=0; i_batch < nBatches; i_batch++) {
-//             T sampleSizeReciprocal;
-//             size_t currBatchSize = miniBatchSize;
-//             if (lastBatchSize > 0 && i_batch + 1 == nBatches) {
-//                 currBatchSize = lastBatchSize;
-//                 sampleSizeReciprocal = (T)1 / currBatchSize;
-//             }else{
-//                 sampleSizeReciprocal = (T)1 / miniBatchSize;
-//             }
-
-//             //process minibatch
-//             T sampleLoss = 0;
-
-//             for(size_t i_trainingItem=0; i_trainingItem < currBatchSize; i_trainingItem++) {
-//                 size_t shuffledTrainingIndex = shuffledIndexes[trainingIndex];
-//                 auto feat = training_features[shuffledTrainingIndex];
-//                 auto label = training_labels[shuffledTrainingIndex];
-
-//                 sampleLoss += _TrainOnExample(feat, label,
-//                         learning_rate, sampleSizeReciprocal);
-//                 trainingIndex++;
-//             }
-//             epochLoss += sampleLoss; 
-//         }
-
-// #if 1
-//         ReportProgress(true, 2, i, epochLoss);
-
-// #endif  // EASYLOGGING_ON
-
-//         if (m_progress_callback && !(i & 0x1F)) { // Call progress callback every 32 iterations
-//             m_progress_callback(i, epochLoss);
-//         }
-// #if ARDUINO
-//         delay(1);  // Allow time for other tasks to run
-// #endif  // ARDUINO
-
-//         // Early stopping
-//         // TODO AM early stopping should be optional and metric-dependent
-//         if (epochLoss < min_error_cost) {
-//             break;
-//         }
-
-//     }
-
-// #if 1
-//     ReportFinish(i, epochLoss);
-// #endif  // EASYLOGGING_ON
-//     if(m_progress_callback) {
-//         // Final callback to report completion
-//         m_progress_callback(i, epochLoss);
-//     }
-
-//     return epochLoss;
-// }
-
+[[deprecated]]
 template <typename T>
 void MLP<T>::Train(const std::vector<TrainingSample<T>>
         &training_sample_set_with_bias,
@@ -946,13 +848,15 @@ void MLP<T>::SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weig
 template <typename T>
 void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 {
-#if !defined(ARDUINO)
-    if (weights.size() != m_layers.size()) {
-        printf("SetWeights: vector dim not equal. Expected=%zu, actual=%zu",
-                   weights.size(), m_layers.size());
-    }
-#endif
+#ifdef SAFE_MODE
+    #if !defined(ARDUINO)
+        if (weights.size() != m_layers.size()) {
+            printf("SetWeights: vector dim not equal. Expected=%zu, actual=%zu",
+                    weights.size(), m_layers.size());
+        }
+    #endif
     assert(weights.size() == m_layers.size());
+#endif
 #if 0
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         size_t expected = m_layers[n].m_nodes.size();

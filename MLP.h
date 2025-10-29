@@ -442,6 +442,10 @@ protected:
     MLP_LOSS_FN loss::loss_func_t<T> loss_fn_;
     loss::LOSS_FUNCTIONS m_loss_function_type; /**< Store loss function type for runtime checks */
     std::function<void(size_t,float)> m_progress_callback{};
+
+    std::random_device rd;
+    std::mt19937 g;
+
 };
 
 #endif //MLP_H
