@@ -352,16 +352,29 @@ void MLP<T>::GetOutput(const std::vector<T> &input,
                     std::vector<T> * output,
                     std::vector<std::vector<T>> * all_layers_activations,
                     bool for_inference) {
+#ifdef ARDUINO
+    // Add safety check for MCU
+    if (input.size() != m_num_inputs) {
+        Serial.printf("ERROR: input.size()=%d != m_num_inputs=%d\n", input.size(), m_num_inputs);
+        return;
+    }
+#else
     assert(input.size() == m_num_inputs);
+#endif
+
     int temp_size;
     if (m_num_hidden_layers == 0)
         temp_size = m_num_outputs;
     else
         temp_size = m_layers_nodes[1];
 
-    std::vector<T> temp_in(m_num_inputs, 0);
-    std::vector<T> temp_out(temp_size, 0);
+    // Pre-allocate with capacity to avoid reallocations
+    std::vector<T> temp_in;
+    temp_in.reserve(m_num_inputs);
     temp_in = input;
+
+    std::vector<T> temp_out;
+    temp_out.reserve(temp_size);
 
     for (size_t i = 0; i < m_layers.size(); ++i) {
         if (i > 0) {
@@ -417,15 +430,15 @@ void MLP<T>::UpdateWeights(const std::vector<std::vector<T>> & all_layers_activa
 };
 
 template<typename T>
-T MLP<T>::TrainBatch(const training_pair_t& training_sample_set_with_bias,
+T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
                      float learning_rate,
                      int max_iterations,
                      size_t batch_size,
                      float min_error_cost,
                      bool output_log) {
     
-    auto training_features = training_sample_set_with_bias.first;
-    auto training_labels = training_sample_set_with_bias.second;
+    auto training_features = training_sample_set.first;
+    auto training_labels = training_sample_set.second;
     
     size_t n_samples = training_features.size();
     size_t n_batches = (n_samples + batch_size - 1) / batch_size;
@@ -453,29 +466,43 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set_with_bias,
             InitializeAllGradientAccumulators();
             
             T batch_loss = 0;
-            
+
+            // Pre-allocate vectors outside loop to avoid repeated allocations
+            std::vector<T> predicted_output;
+            std::vector<std::vector<T>> all_layers_activations;
+            std::vector<T> deriv_error_output;
+
             // Process batch - accumulate gradients
             for (size_t i = 0; i < current_batch_size; i++) {
                 size_t idx = indices[sample_idx++];
-                
+
+                // Bounds check
+                if (idx >= training_features.size()) {
+                    Serial.printf("ERROR: idx %d >= training_features.size() %d\n", idx, training_features.size());
+                    continue;
+                }
+
+                // Clear and reuse vectors
+                predicted_output.clear();
+                all_layers_activations.clear();
+
                 // Forward pass
-                std::vector<T> predicted_output;
-                std::vector<std::vector<T>> all_layers_activations;
-                
+                Serial.printf("Processing sample %d (idx=%d), input_size=%d\n", i, idx, training_features[idx].size());
                 GetOutput(training_features[idx],
                          &predicted_output,
                          &all_layers_activations,
                          false);
-                
+
                 // Compute loss and derivatives
-                std::vector<T> deriv_error_output(predicted_output.size());
+                deriv_error_output.clear();
+                deriv_error_output.resize(predicted_output.size());
                 T loss = loss_fn_(training_labels[idx],
                                  predicted_output,
                                  deriv_error_output,
                                  1.0f);
-                
+
                 batch_loss += loss;
-                
+
                 // Accumulate gradients through backpropagation
                 BackpropagateWithAccumulation(all_layers_activations,
                                              deriv_error_output,
@@ -494,7 +521,7 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set_with_bias,
                 for (auto& layer : m_layers) {
                     layer.ScaleAccumulatedGradients(clip_coef);
                 }
-                printf("Clipped gradients with coef: %f\n", clip_coef);
+                // printf("Clipped gradients with coef: %f\n", clip_coef);
             }
             
             // Apply accumulated gradients

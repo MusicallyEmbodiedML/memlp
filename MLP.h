@@ -161,7 +161,7 @@ public:
      * @brief Training with batch support
      * @param use_batch_update If true, accumulate gradients for batch update
      */
-    T TrainBatch(const training_pair_t& training_sample_set_with_bias,
+    T TrainBatch(const training_pair_t& training_sample_set,
                  float learning_rate,
                  int max_iterations = 5000,
                  size_t batch_size = 8,
@@ -190,6 +190,7 @@ public:
      * @deprecated Use Train() with training_pair_t instead
      * @brief Legacy training method using TrainingSample objects
      */
+     [[deprecated("Use TrainBatch")]] 
     void Train(const std::vector<TrainingSample<T>> &training_sample_set_with_bias,
                         float learning_rate,
                         int max_iterations = 5000,
@@ -420,6 +421,7 @@ protected:
                      const std::vector<T> &error,
                      float learning_rate);
                      
+     [[deprecated("Use TrainBatch")]]                  
     T _TrainOnExample(std::vector<T> feat, std::vector<T> label,
                       float learning_rate, T sampleSizeReciprocal);
     void CreateMLP(const std::vector<size_t> & layers_nodes,

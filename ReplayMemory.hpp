@@ -124,13 +124,16 @@ public:
     std::vector<trainingItem> sample(size_t nMemories) {
         std::vector<trainingItem> samp;
         samp.resize(std::min(nMemories, mem.size()));
-        // std::shuffle(indexList.begin(), indexList.end(), g);
-        //risk of identical items in selection, but much quicker on an MCU
-        std::uniform_int_distribution<size_t> dist(0, mem.size()-1);
 
-        for(size_t i=0; i < samp.size(); i++) {
-            size_t index = dist(g);
-            samp[i] = mem.at(index).item;
+        if (mem.size() > 0) {
+            // std::shuffle(indexList.begin(), indexList.end(), g);
+            //risk of identical items in selection, but much quicker on an MCU
+            std::uniform_int_distribution<size_t> dist(0, mem.size()-1);
+
+            for(size_t i=0; i < samp.size(); i++) {
+                size_t index = dist(g);
+                samp[i] = mem.at(index).item;
+            }
         }
         return samp;
     }
