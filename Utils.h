@@ -29,7 +29,10 @@ enum ACTIVATION_FUNCTIONS {
     TANH,    /**< Hyperbolic tangent activation function */
     LINEAR,  /**< Linear activation function */
     RELU,     /**< Rectified Linear Unit (ReLU) activation function */
-    LEAKY_RELU /**< Leaky ReLU activation function */
+    // LEAKY_RELU /**< Leaky ReLU activation function */
+    HARDSIGMOID,
+    HARDSWISH,
+    HARDTANH
 };
 
 #if defined(_WIN32) || (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
@@ -152,7 +155,84 @@ inline T deriv_relu(T x) {
     return (x > (T)0) ? (T)1 : kReLUSlope;
 }
 
+/**
+ * @brief Computes the Hard Sigmoid activation function.
+ * @tparam T The type of the input value.
+ * @param x The input value.
+ * @return The Hard Sigmoid of x: clip((x + 3) / 6, 0, 1)
+ */
+template<typename T>
+MLP_ACTIVATION_FN
+inline T hardsigmoid(T x) {
+    if (x <= (T)-3) return (T)0;
+    if (x >= (T)3) return (T)1;
+    return (x + (T)3) / (T)6;
+}
 
+/**
+ * @brief Computes the derivative of the Hard Sigmoid function.
+ * @tparam T The type of the input value.
+ * @param x The input value.
+ * @return The derivative of the Hard Sigmoid function.
+ */
+template<typename T>
+MLP_ACTIVATION_FN
+inline T deriv_hardsigmoid(T x) {
+    return (x > (T)-3 && x < (T)3) ? (T)1 / (T)6 : (T)0;
+}
+/**
+ * @brief Computes the Hard Tanh activation function.
+ * @tparam T The type of the input value.
+ * @param x The input value.
+ * @return The Hard Tanh of x: clip(x, -1, 1)
+ */
+template<typename T>
+MLP_ACTIVATION_FN
+inline T hardtanh(T x) {
+    if (x <= (T)-1) return (T)-1;
+    if (x >= (T)1) return (T)1;
+    return x;
+}
+
+/**
+ * @brief Computes the derivative of the Hard Tanh function.
+ * @tparam T The type of the input value.
+ * @param x The input value.
+ * @return The derivative of the Hard Tanh function.
+ */
+template<typename T>
+MLP_ACTIVATION_FN
+inline T deriv_hardtanh(T x) {
+    return (x > (T)-1 && x < (T)1) ? (T)1 : (T)0;
+}
+
+/**
+ * @brief Computes the Hard Swish activation function.
+ * @tparam T The type of the input value.
+ * @param x The input value.
+ * @return The Hard Swish of x: x * hardsigmoid(x)
+ */
+template<typename T>
+MLP_ACTIVATION_FN
+inline T hardswish(T x) {
+    if (x <= (T)-3) return (T)0;
+    if (x >= (T)3) return x;
+    return x * (x + (T)3) / (T)6;
+}
+
+/**
+ * @brief Computes the derivative of the Hard Swish function.
+ * @tparam T The type of the input value.
+ * @param x The input value.
+ * @return The derivative of the Hard Swish function.
+ */
+template<typename T>
+MLP_ACTIVATION_FN
+inline T deriv_hardswish(T x) {
+    if (x <= (T)-3) return (T)0;
+    if (x >= (T)3) return (T)1;
+    return ((T)2 * x + (T)3) / (T)6;
+}
 /**
  * @brief Computes the sign of a value.
  * @tparam T The type of the input value.
@@ -228,6 +308,9 @@ private:
     AddNewPair(ACTIVATION_FUNCTIONS::TANH, &hyperbolic_tan<T>, &deriv_hyperbolic_tan<T>);
     AddNewPair(ACTIVATION_FUNCTIONS::LINEAR, &linear<T>, &deriv_linear<T>);
     AddNewPair(ACTIVATION_FUNCTIONS::RELU, &relu<T>, &deriv_relu<T>);
+    AddNewPair(ACTIVATION_FUNCTIONS::HARDSIGMOID, &hardsigmoid<T>, &deriv_hardsigmoid<T>);
+    AddNewPair(ACTIVATION_FUNCTIONS::HARDSWISH, &hardswish<T>, &deriv_hardswish<T>);
+    AddNewPair(ACTIVATION_FUNCTIONS::HARDTANH, &hardtanh<T>, &deriv_hardtanh<T>);
   }
 
   std::unordered_map<

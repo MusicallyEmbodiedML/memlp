@@ -28,7 +28,7 @@
 #include <cassert>
 #include <random>
 
-#define SAFE_MODE
+// #define SAFE_MODE
 
 
 //desired call syntax :  MLP({64*64,20,4}, {"sigmoid", "linear"},
@@ -476,19 +476,19 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
             // Process batch - accumulate gradients
             for (size_t i = 0; i < current_batch_size; i++) {
                 size_t idx = indices[sample_idx++];
-
+#ifdef SAFE_MODE
                 // Bounds check
                 if (idx >= training_features.size()) {
                     Serial.printf("ERROR: idx %d >= training_features.size() %d\n", idx, training_features.size());
                     continue;
                 }
-
+#endif
                 // Clear and reuse vectors
                 predicted_output.clear();
                 all_layers_activations.clear();
 
                 // Forward pass
-                Serial.printf("Processing sample %d (idx=%d), input_size=%d\n", i, idx, training_features[idx].size());
+                // Serial.printf("Processing sample %d (idx=%d), input_size=%d\n", i, idx, training_features[idx].size());
                 GetOutput(training_features[idx],
                          &predicted_output,
                          &all_layers_activations,
@@ -569,8 +569,6 @@ void MLP<T>::BackpropagateWithAccumulation(const std::vector<std::vector<T>>& al
         }
     }
 }
-
-[[deprecated]]
 template<typename T>
 T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
@@ -771,7 +769,6 @@ void MLP<T>::AccumulatePolicyGradient(const std::vector<T>& state,
 }
 
 
-[[deprecated]]
 template <typename T>
 void MLP<T>::Train(const std::vector<TrainingSample<T>>
         &training_sample_set_with_bias,
@@ -892,7 +889,7 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 template <typename T>
 void MLP<T>::DrawWeights(float scale)
 {
-    T before = m_layers[0].m_nodes[0].m_weights[0];
+    // T before = m_layers[0].m_nodes[0].m_weights[0];
     utils::gen_rand<T> gen;
     // utils::gen_randn<T> gen(0.f, scale); //mean, stddev
 
@@ -905,7 +902,7 @@ void MLP<T>::DrawWeights(float scale)
         }
     }
 
-    assert(m_layers[0].m_nodes[0].m_weights[0] != before);
+    // assert(m_layers[0].m_nodes[0].m_weights[0] != before);
 }
 
 template <typename T>
@@ -935,6 +932,22 @@ template <typename T>
 void MLP<T>::InitXavier() {
     for(auto & layer : m_layers) {
         layer.InitXavier();
+    }
+}
+
+template <typename T>
+void MLP<T>::RandomiseWeightsAndBiasesLin(T weightMin, T weightMax, T biasMin, T biasMax) {
+    std::uniform_real_distribution<> disWeight(weightMin, weightMax);
+    std::uniform_real_distribution<> disBias(biasMin, biasMin);
+
+    // utils::gen_randn<T> gen(0.f, scale); //mean, stddev
+    for (unsigned int n = 0; n < m_layers.size(); n++) {
+        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
+            for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
+                m_layers[n].m_nodes[k].m_weights[j] = disWeight(g);
+            }
+            m_layers[n].m_nodes[k].m_bias = disBias(g);
+        }
     }
 }
 

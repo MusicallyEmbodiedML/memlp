@@ -232,6 +232,8 @@ public:
      */
     void DrawWeights(float scale=1.f);
 
+    void RandomiseWeightsAndBiasesLin(T weightMin, T weightMax, T biasMin, T biasMax);
+
     void InitXavier();
 
     /**
