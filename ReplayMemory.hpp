@@ -51,7 +51,7 @@ public:
      * @brief Constructs a ReplayMemory object with a default memory limit of 64 items.
      */
     ReplayMemory() : g(rd()) {
-        setMemoryLimit(32);
+        setMemoryLimit(64);
     }
 
     /**

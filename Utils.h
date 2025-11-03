@@ -164,9 +164,10 @@ inline T deriv_relu(T x) {
 template<typename T>
 MLP_ACTIVATION_FN
 inline T hardsigmoid(T x) {
+    constexpr T oneOverSix = (T)1/(T)6;
     if (x <= (T)-3) return (T)0;
     if (x >= (T)3) return (T)1;
-    return (x + (T)3) / (T)6;
+    return (x + (T)3) * oneOverSix;
 }
 
 /**
@@ -176,9 +177,10 @@ inline T hardsigmoid(T x) {
  * @return The derivative of the Hard Sigmoid function.
  */
 template<typename T>
-MLP_ACTIVATION_FN
+// MLP_ACTIVATION_FN
 inline T deriv_hardsigmoid(T x) {
-    return (x > (T)-3 && x < (T)3) ? (T)1 / (T)6 : (T)0;
+    constexpr T oneOverSix = (T)1/(T)6;
+    return (x > (T)-3 && x < (T)3) ? oneOverSix : (T)0;
 }
 /**
  * @brief Computes the Hard Tanh activation function.
