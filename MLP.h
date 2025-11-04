@@ -230,6 +230,7 @@ public:
     /**
      * @brief Randomize network weights
      */
+    [[deprecated]]
     void DrawWeights(float scale=1.f);
 
     void RandomiseWeightsAndBiasesLin(T weightMin, T weightMax, T biasMin, T biasMax);

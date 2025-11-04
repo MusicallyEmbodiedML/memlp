@@ -61,10 +61,10 @@ public:
      */
     void setMemoryLimit(const size_t limit) {
         memlimit = limit;
-        // mem.resize(memlimit);
-        //fill index list - later this is shuffled for random samples
-        // indexList.resize(memlimit);
-        // for(size_t i=0; i < memlimit; i++) indexList[i]=i;
+    }
+
+    size_t getMemoryLimit() {
+        return memlimit;
     }
 
     /**
@@ -138,9 +138,67 @@ public:
         return samp;
     }
 
+    std::vector<size_t> sampleIndices(size_t nMemories) {
+	    std::vector<size_t> indices;
+		indices.reserve(std::min(nMemories, mem.size()));
+
+		if (mem.size() > 0) {
+			std::uniform_int_distribution<size_t> dist(0, mem.size()-1);
+
+			for(size_t i=0; i < std::min(nMemories, mem.size()); i++) {
+				indices.push_back(dist(g));
+			}
+		}
+		return indices;
+	}
+
+	/**
+	 * @brief Returns a reference to an item at the specified index for in-place editing.
+	 * 
+	 * @param index The index of the item to access.
+	 * @return A reference to the training item.
+	 */
+	inline trainingItem& getItem(size_t index) {
+		return mem.at(index).item;
+	}
+
+	// Optional: const version for read-only access
+	const trainingItem& getItem(size_t index) const {
+		return mem.at(index).item;
+	}
+
+    void eraseItem(const size_t index) {
+        mem.erase(mem.begin() + index);
+    }
+		
+// Then access with: mem[index].item
     void clear() {
         mem.clear();
     }
+
+    /**
+     * @brief Removes multiple items by their indices efficiently.
+     * 
+     * @param indicesToRemove Vector of indices to remove (will be sorted internally).
+     */
+    bool removeItems(std::vector<size_t> indicesToRemove) {
+        if (indicesToRemove.empty()) return false;
+        
+        // Sort in descending order to remove from back to front
+        std::sort(indicesToRemove.begin(), indicesToRemove.end(), std::greater<size_t>());
+        
+        // Remove duplicates
+        indicesToRemove.erase(std::unique(indicesToRemove.begin(), indicesToRemove.end()), 
+                            indicesToRemove.end());
+        
+        // Remove items from back to front so indices remain valid
+        for (size_t idx : indicesToRemove) {
+            if (idx < mem.size()) {
+                mem.erase(mem.begin() + idx);
+            }
+        }
+        return true;
+    }    
 
 private:
     /**
