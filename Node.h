@@ -152,24 +152,49 @@ public:
     // }
 
 
-    float rmsPropDecay = 0.9f;
-    float rmsPropDecayInv = 0.1f;
-    float rmsPropEpsilon = 1e-7f;
+    static constexpr float rmsPropDecay = 0.9f;
+    static constexpr float rmsPropDecayInv = 0.1f;
+    static constexpr float rmsPropEpsilon = 1e-6f;
     inline void ApplyAccumulatedGradients(float learning_rate, T batch_size_inv) {
+        #ifdef MLP_ALLOW_DEBUG
+        bool has_inf_nan = false;
+        #endif
+
         for (size_t i = 0; i < m_weights.size(); i++) {
             T gradient = m_gradient_accumulator[i] * batch_size_inv;
-            squared_gradient_avg[i] = (rmsPropDecay * squared_gradient_avg[i]) + 
+            squared_gradient_avg[i] = (rmsPropDecay * squared_gradient_avg[i]) +
                                          (rmsPropDecayInv * gradient * gradient);
-            float adjusted_learning_rate = learning_rate / 
-                                   (std::sqrt(squared_gradient_avg[i]) + rmsPropEpsilon);  
+            float adjusted_learning_rate = learning_rate /
+                                   (std::sqrt(squared_gradient_avg[i]) + rmsPropEpsilon);
+
+            #ifdef MLP_ALLOW_DEBUG
+            if (std::isinf(gradient) || std::isnan(gradient) ||
+                std::isinf(adjusted_learning_rate) || std::isnan(adjusted_learning_rate)) {
+                if (!has_inf_nan) {
+                    Serial.printf("[NODE DEBUG] Weight %d: grad=%f, sq_grad_avg=%f, adj_lr=%f\n",
+                                 i, gradient, squared_gradient_avg[i], adjusted_learning_rate);
+                    has_inf_nan = true;
+                }
+            }
+            #endif
+
             m_weights[i] -= adjusted_learning_rate * gradient;
-            
+
             m_gradient_accumulator[i] = 0.f;  // Reset accumulator
         }
         T bias_gradient = m_bias_gradient_accumulator * batch_size_inv;
-        bias_squared_gradient_avg = (rmsPropDecay * bias_squared_gradient_avg) + 
+        bias_squared_gradient_avg = (rmsPropDecay * bias_squared_gradient_avg) +
                                     (rmsPropDecayInv * bias_gradient * bias_gradient);
         float bias_adjusted_lr = learning_rate / (std::sqrt(bias_squared_gradient_avg) + rmsPropEpsilon);
+
+        #ifdef MLP_ALLOW_DEBUG
+        if (std::isinf(bias_gradient) || std::isnan(bias_gradient) ||
+            std::isinf(bias_adjusted_lr) || std::isnan(bias_adjusted_lr)) {
+            Serial.printf("[NODE DEBUG] Bias: grad=%f, sq_grad_avg=%f, adj_lr=%f\n",
+                         bias_gradient, bias_squared_gradient_avg, bias_adjusted_lr);
+        }
+        #endif
+
         m_bias -= bias_adjusted_lr * bias_gradient;
         m_bias_gradient_accumulator = 0;
         // printf("Bias: %f\n", m_bias);
@@ -284,7 +309,7 @@ public:
      * @param input Vector of input values
      * @return Inner product result
      */
-    inline T GetInputInnerProdWithWeights(std::span<const T> &input) {
+    inline T GetInputInnerProdWithWeights(std::span<const T> input) {
 
 
         T res=0;
@@ -358,9 +383,10 @@ bool SaveNodeSD(File &file) const {
     if (file.write((char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
       return false;
     }
-    if (file.write((char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
+    if (file.write((char*)&m_bias, sizeof(m_bias)) != sizeof(m_bias)) {
       return false;
     }
+    
 
     if (!m_weights.empty()) {
         int dataSize = m_weights.size() * sizeof(m_weights[0]);
@@ -388,6 +414,9 @@ bool LoadNodeSD(File &file) {
             return false;
         }
     }
+    squared_gradient_avg.resize(m_num_inputs);
+    std::fill(squared_gradient_avg.begin(), squared_gradient_avg.end(), 0.f);
+
     return true;
 };
 
@@ -436,6 +465,9 @@ bool LoadNodeSD(File &file) {
                 return false;
             }
         }
+        squared_gradient_avg.resize(m_num_inputs);
+        std::fill(squared_gradient_avg.begin(), squared_gradient_avg.end(), 0.f);
+
         return true;
     };
 #endif

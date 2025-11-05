@@ -502,6 +502,14 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
                                  deriv_error_output,
                                  1.0f);
 
+                #ifdef MLP_ALLOW_DEBUG
+                if (std::isinf(loss) || std::isnan(loss)) {
+                    Serial.printf("[MLP DEBUG] *** INF/NAN loss at sample %d! loss=%f\n", i, loss);
+                    Serial.printf("[MLP DEBUG]   pred[0]=%f, label[0]=%f\n",
+                                 predicted_output[0], training_labels[idx][0]);
+                }
+                #endif
+
                 batch_loss += loss;
 
                 // Accumulate gradients through backpropagation
@@ -516,7 +524,15 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
                 grad_sumsq += layer.GetGradSumSquared(batch_size_reciprocal);
             }
             T grad_norm = std::sqrt(grad_sumsq );
-            // Serial.printf("Grad norm: %f\n", grad_norm);
+
+            #ifdef MLP_ALLOW_DEBUG
+            Serial.printf("[MLP DEBUG] Batch %d/%d: batch_loss=%f, grad_norm=%f\n",
+                         batch, n_batches, batch_loss / current_batch_size, grad_norm);
+            if (std::isinf(grad_norm) || std::isnan(grad_norm)) {
+                Serial.printf("[MLP DEBUG] *** INF/NAN grad_norm! ***\n");
+            }
+            #endif
+
             if (grad_norm > 5.0f) {
                 T clip_coef = 5.0f / grad_norm;
                 for (auto& layer : m_layers) {
@@ -524,28 +540,39 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
                 }
                 // printf("Clipped gradients with coef: %f\n", clip_coef);
             }
-            
+
             // Apply accumulated gradients
             ApplyAllAccumulatedGradients(learning_rate, batch_size_reciprocal);
-            
+
             epoch_loss += batch_loss / current_batch_size;
         }
         
         epoch_loss /= n_batches;
-        
+
+        #ifdef MLP_ALLOW_DEBUG
+        if (std::isinf(epoch_loss) || std::isnan(epoch_loss)) {
+            Serial.printf("[MLP DEBUG] *** INF/NAN epoch_loss after iteration %d! ***\n", iter);
+        }
+        #endif
+
         if (output_log && (iter % 100 == 0)) {
             ReportProgress(output_log, 100, iter, epoch_loss);
         }
-        
+
         if (m_progress_callback) {
             m_progress_callback(iter, epoch_loss);
         }
-        
+
         if (epoch_loss < min_error_cost) {
             break;
         }
     }
-    
+
+    #ifdef MLP_ALLOW_DEBUG
+    Serial.printf("[MLP DEBUG] TrainBatch returning epoch_loss=%f (inf=%d, nan=%d)\n",
+                 epoch_loss, std::isinf(epoch_loss), std::isnan(epoch_loss));
+    #endif
+
     return epoch_loss;
 }
 

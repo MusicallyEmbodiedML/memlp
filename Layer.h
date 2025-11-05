@@ -155,6 +155,10 @@ public:
                                         std::vector<T> * output) {
     assert(input.size() == m_num_inputs_per_node);
 
+    // Reserve capacity if needed to avoid reallocation
+    if (output->capacity() < m_num_nodes) {
+      output->reserve(m_num_nodes);
+    }
     output->resize(m_num_nodes);
 
     for (size_t i = 0; i < m_num_nodes; ++i) {
