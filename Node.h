@@ -32,6 +32,10 @@
 #include <algorithm>
 #include <span>
 
+#ifdef ARM_MATH_CM33
+#include <arm_math.h>
+#endif
+
 #define CONSTANT_WEIGHT_INITIALIZATION 0
 
 /**
@@ -310,12 +314,23 @@ public:
      * @return Inner product result
      */
     inline T GetInputInnerProdWithWeights(std::span<const T> input) {
+        T res = 0;
 
-
-        T res=0;
+        #ifdef ARM_MATH_CM33
+        // Use optimized CMSIS-DSP dot product (SIMD accelerated)
+        arm_dot_prod_f32(
+            (const float32_t*)input.data(),
+            (const float32_t*)m_weights.data(),
+            input.size(),
+            (float32_t*)&res
+        );
+        #else
+        // Fallback to manual loop
         for(size_t j=0; j < input.size(); j++) {
-          res += input[j] * m_weights[j];
+            res += input[j] * m_weights[j];
         }
+        #endif
+
         res += m_bias;
         inner_prod = res;
 
