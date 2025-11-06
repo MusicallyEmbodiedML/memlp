@@ -199,6 +199,27 @@ public:
                         bool output_log = true);
 
     /**
+     * @brief Reset optimizer state for all layers (useful for recovery from numerical issues)
+     */
+    void ResetOptimizerState() {
+        for (auto& layer : m_layers) {
+            layer.ResetOptimizerState();
+        }
+    }
+
+    /**
+     * @brief Check and fix NaN/Inf in all network weights
+     * @return true if any corruption was detected and fixed
+     */
+    bool CheckAndFixWeights() {
+        bool had_corruption = false;
+        for (auto& layer : m_layers) {
+            had_corruption |= layer.CheckAndFixWeights();
+        }
+        return had_corruption;
+    }
+
+    /**
      * @brief Get number of layers in the network
      */
     size_t GetNumLayers();

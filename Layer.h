@@ -243,7 +243,27 @@ public:
             node.ScaleAccumulatedGradients(clip_coef);
         }
     }
-        
+
+    /**
+     * @brief Reset optimizer state for all nodes in this layer
+     */
+    void ResetOptimizerState() {
+        for (auto& node : m_nodes) {
+            node.ResetOptimizerState();
+        }
+    }
+
+    /**
+     * @brief Check and fix NaN/Inf in all node weights
+     * @return true if any corruption was detected and fixed
+     */
+    bool CheckAndFixWeights() {
+        bool had_corruption = false;
+        for (auto& node : m_nodes) {
+            had_corruption |= node.CheckAndFixWeights();
+        }
+        return had_corruption;
+    }
 
 
   // /**

@@ -546,8 +546,19 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
 
             epoch_loss += batch_loss / current_batch_size;
         }
-        
+
         epoch_loss /= n_batches;
+
+        // Periodic weight corruption check (every 10 iterations)
+        // if (iter % 10 == 0) {
+        //     if (CheckAndFixWeights()) {
+        //         #ifdef MLP_ALLOW_DEBUG
+        //         Serial.printf("[MLP DEBUG] *** Weight corruption detected and fixed at iteration %d! ***\n", iter);
+        //         #endif
+        //         // Optionally reset optimizer state after corruption
+        //         // ResetOptimizerState();
+        //     }
+        // }
 
         #ifdef MLP_ALLOW_DEBUG
         if (std::isinf(epoch_loss) || std::isnan(epoch_loss)) {

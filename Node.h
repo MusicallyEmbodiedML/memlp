@@ -159,17 +159,34 @@ public:
     static constexpr float rmsPropDecay = 0.9f;
     static constexpr float rmsPropDecayInv = 0.1f;
     static constexpr float rmsPropEpsilon = 1e-6f;
+
     inline void ApplyAccumulatedGradients(float learning_rate, T batch_size_inv) {
         #ifdef MLP_ALLOW_DEBUG
         bool has_inf_nan = false;
         #endif
 
+        // Constants with proper type casting
+        const T maxSquaredGradAvg = static_cast<T>(1e6);  // Prevent unbounded accumulation
+        const T maxAdjustedLR = static_cast<T>(1.0);      // Cap learning rate adjustments
+        const T gradientClipValue = static_cast<T>(10.0); // Gradient clipping threshold
+
         for (size_t i = 0; i < m_weights.size(); i++) {
             T gradient = m_gradient_accumulator[i] * batch_size_inv;
+
+            // Clamp gradient to prevent extreme values before squaring
+            gradient = std::max(std::min(gradient, gradientClipValue), -gradientClipValue);
+
             squared_gradient_avg[i] = (rmsPropDecay * squared_gradient_avg[i]) +
                                          (rmsPropDecayInv * gradient * gradient);
-            float adjusted_learning_rate = learning_rate /
-                                   (std::sqrt(squared_gradient_avg[i]) + rmsPropEpsilon);
+
+            // Clamp squared gradient average to prevent unbounded growth
+            squared_gradient_avg[i] = std::min(squared_gradient_avg[i], maxSquaredGradAvg);
+
+            T adjusted_learning_rate = static_cast<T>(learning_rate) /
+                                   (std::sqrt(squared_gradient_avg[i]) + static_cast<T>(rmsPropEpsilon));
+
+            // Clamp adjusted learning rate to prevent extreme updates
+            adjusted_learning_rate = std::min(adjusted_learning_rate, maxAdjustedLR);
 
             #ifdef MLP_ALLOW_DEBUG
             if (std::isinf(gradient) || std::isnan(gradient) ||
@@ -187,9 +204,20 @@ public:
             m_gradient_accumulator[i] = 0.f;  // Reset accumulator
         }
         T bias_gradient = m_bias_gradient_accumulator * batch_size_inv;
+
+        // Clamp bias gradient
+        bias_gradient = std::max(std::min(bias_gradient, gradientClipValue), -gradientClipValue);
+
         bias_squared_gradient_avg = (rmsPropDecay * bias_squared_gradient_avg) +
                                     (rmsPropDecayInv * bias_gradient * bias_gradient);
-        float bias_adjusted_lr = learning_rate / (std::sqrt(bias_squared_gradient_avg) + rmsPropEpsilon);
+
+        // Clamp bias squared gradient average
+        bias_squared_gradient_avg = std::min(bias_squared_gradient_avg, maxSquaredGradAvg);
+
+        T bias_adjusted_lr = static_cast<T>(learning_rate) / (std::sqrt(bias_squared_gradient_avg) + static_cast<T>(rmsPropEpsilon));
+
+        // Clamp bias adjusted learning rate
+        bias_adjusted_lr = std::min(bias_adjusted_lr, maxAdjustedLR);
 
         #ifdef MLP_ALLOW_DEBUG
         if (std::isinf(bias_gradient) || std::isnan(bias_gradient) ||
@@ -218,6 +246,34 @@ public:
         for (size_t i = 0; i < m_gradient_accumulator.size(); i++) {
             m_gradient_accumulator[i] *= clip_coef;
         }
+    }
+
+    /**
+     * @brief Reset RMSProp optimizer state (useful for recovery from numerical issues)
+     */
+    inline void ResetOptimizerState() {
+        std::fill(squared_gradient_avg.begin(), squared_gradient_avg.end(), static_cast<T>(0.0));
+        bias_squared_gradient_avg = static_cast<T>(0.0);
+    }
+
+    /**
+     * @brief Check for and fix NaN/Inf in weights (returns true if corruption detected)
+     */
+    inline bool CheckAndFixWeights() {
+        bool had_corruption = false;
+        for (size_t i = 0; i < m_weights.size(); i++) {
+            if (std::isinf(m_weights[i]) || std::isnan(m_weights[i])) {
+                m_weights[i] = static_cast<T>(0.0);  // Reset corrupted weight
+                squared_gradient_avg[i] = static_cast<T>(0.0);  // Reset its optimizer state
+                had_corruption = true;
+            }
+        }
+        if (std::isinf(m_bias) || std::isnan(m_bias)) {
+            m_bias = static_cast<T>(0.0);
+            bias_squared_gradient_avg = static_cast<T>(0.0);
+            had_corruption = true;
+        }
+        return had_corruption;
     }
 
    /**
