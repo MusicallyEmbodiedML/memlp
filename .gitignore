@@ -229,3 +229,7 @@ ModelManifest.xml
 lib/*
 
 .ai/
+build
+.DS_Store
+Thumbs.db
+.vscode/
