@@ -200,6 +200,10 @@ public:
         return true;
     }    
 
+    const size_t size() const {
+        return mem.size();
+    }
+
 private:
     /**
      * @brief Represents a memory entry containing a training item and its timestamp.
