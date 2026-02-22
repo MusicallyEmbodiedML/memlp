@@ -66,7 +66,7 @@ namespace utils {
 template<typename T>
 MLP_ACTIVATION_FN
 inline T sigmoid(T x) {
-  return 1 / (1 + std::exp(-x));
+  return (T)1 / ((T)1 + std::exp(-x));
 }
 
 /**
@@ -129,7 +129,7 @@ inline T deriv_linear(T) {
     return static_cast<T>(1);
 }
 
-static const float kReLUSlope = 0.01f;
+static float kReLUSlope = 0.01f;
 
 /**
  * @brief Computes the ReLU function of a value.
@@ -164,7 +164,7 @@ inline T deriv_relu(T x) {
 template<typename T>
 MLP_ACTIVATION_FN
 inline T hardsigmoid(T x) {
-    constexpr T oneOverSix = (T)1/(T)6;
+    static T oneOverSix = (T)1/(T)6;
     if (x <= (T)-3) return (T)0;
     if (x >= (T)3) return (T)1;
     return (x + (T)3) * oneOverSix;
@@ -179,7 +179,7 @@ inline T hardsigmoid(T x) {
 template<typename T>
 // MLP_ACTIVATION_FN
 inline T deriv_hardsigmoid(T x) {
-    constexpr T oneOverSix = (T)1/(T)6;
+    static T oneOverSix = (T)1/(T)6;
     return (x > (T)-3 && x < (T)3) ? oneOverSix : (T)0;
 }
 /**

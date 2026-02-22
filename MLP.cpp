@@ -976,7 +976,7 @@ void MLP<T>::InitXavier() {
 template <typename T>
 void MLP<T>::RandomiseWeightsAndBiasesLin(T weightMin, T weightMax, T biasMin, T biasMax) {
     std::uniform_real_distribution<> disWeight(weightMin, weightMax);
-    std::uniform_real_distribution<> disBias(biasMin, biasMin);
+    std::uniform_real_distribution<> disBias(biasMin, biasMax);
 
     // utils::gen_randn<T> gen(0.f, scale); //mean, stddev
     for (unsigned int n = 0; n < m_layers.size(); n++) {
