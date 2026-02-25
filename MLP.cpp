@@ -1,6 +1,5 @@
 //============================================================================
 // Name : MLP.cpp
-// Author : David Nogueira
 //============================================================================
 #include "MLP.h"
 
@@ -803,15 +802,8 @@ size_t MLP<T>::GetNumLayers()
 template<typename T>
 std::vector<std::vector<T>> MLP<T>::GetLayerWeights( size_t layer_i )
 {
-    std::vector<std::vector<T>> ret_val;
     assert(layer_i < m_layers.size());
-    {
-        const Layer<T>& current_layer = m_layers[layer_i];
-        for (const Node<T>& node : current_layer.m_nodes) {
-            ret_val.push_back( node.GetWeights() );
-        }
-        return ret_val;
-    }
+    return m_layers[layer_i].GetWeights2D();
 }
 
 template <typename T>
@@ -821,12 +813,13 @@ typename MLP<T>::mlp_weights MLP<T>::GetWeights()
 
     out.resize(m_layers.size());
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        out[n].resize(m_layers[n].m_nodes.size());
-        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
-            out[n][k].resize(m_layers[n].m_nodes[k].m_weights.size());
-            for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
-                out[n][k][j] = m_layers[n].m_nodes[k].m_weights[j];
-            }
+        size_t num_nodes = m_layers[n].m_num_nodes;
+        size_t num_inputs = m_layers[n].m_num_inputs_per_node;
+        out[n].resize(num_nodes);
+        for (unsigned int k = 0; k < num_nodes; k++) {
+            out[n][k].resize(num_inputs);
+            const T *row = m_layers[n].m_weights.data() + k * num_inputs;
+            std::copy(row, row + num_inputs, out[n][k].begin());
         }
     }
 
@@ -856,7 +849,7 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 #endif
 #if 0
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        size_t expected = m_layers[n].m_nodes.size();
+        size_t expected = m_layers[n].m_num_nodes;
         size_t actual = weights[n].size();
         bool assertion = expected == actual;
 #if !defined(ARDUINO)
@@ -866,8 +859,8 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
         }
 #endif
         assert(assertion);
-        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
-            size_t expected = m_layers[n].m_nodes[k].m_weights.size();
+        for (unsigned int k = 0; k < m_layers[n].m_num_nodes; k++) {
+            size_t expected = m_layers[n].m_num_inputs_per_node;
             size_t actual = weights[n][k].size();
             bool assertion = expected == actual;
 #if !defined(ARDUINO)
@@ -892,11 +885,8 @@ void MLP<T>::DrawWeights(float scale)
     utils::gen_rand<T> gen;
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
-            for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
-                float mod = gen() * scale;
-                m_layers[n].m_nodes[k].m_weights[j] = mod;
-            }
+        for (T& w : m_layers[n].m_weights) {
+            w = gen() * scale;
         }
     }
 }
@@ -904,23 +894,20 @@ void MLP<T>::DrawWeights(float scale)
 template <typename T>
 void MLP<T>::MoveWeights(T speed)
 {
-    T before = m_layers[0].m_nodes[0].m_weights[0];
+    T before = m_layers[0].m_weights[0];
     utils::gen_randn<T> gen(speed);
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
-            for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
-                T w = m_layers[n].m_nodes[k].m_weights[j];
-                m_layers[n].m_nodes[k].m_weights[j] = gen(m_layers[n].m_nodes[k].m_weights[j]);
-                T w2 = m_layers[n].m_nodes[k].m_weights[j];
-                if (speed != 0) {
-                    assert(w != w2);
-                }
+        for (T& w : m_layers[n].m_weights) {
+            T w_old = w;
+            w = gen(w);
+            if (speed != 0) {
+                assert(w_old != w);
             }
         }
     }
 
-    assert(m_layers[0].m_nodes[0].m_weights[0] != before);
+    assert(m_layers[0].m_weights[0] != before);
 }
 
 template <typename T>
@@ -936,18 +923,18 @@ void MLP<T>::RandomiseWeightsAndBiasesLin(T weightMin, T weightMax, T biasMin, T
     std::uniform_real_distribution<> disBias(biasMin, biasMax);
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
-            for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
-                m_layers[n].m_nodes[k].m_weights[j] = disWeight(g);
-            }
-            m_layers[n].m_nodes[k].m_bias = disBias(g);
+        for (T& w : m_layers[n].m_weights) {
+            w = disWeight(g);
+        }
+        for (T& b : m_layers[n].m_biases) {
+            b = disBias(g);
         }
     }
 }
 
 
 // Explicit instantiations
-#if !defined(__XS3A__)
-template class MLP<double>;
-#endif
+// #if !defined(__XS3A__)
+// template class MLP<double>;
+// #endif
 template class MLP<float>;

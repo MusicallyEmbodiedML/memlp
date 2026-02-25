@@ -354,7 +354,7 @@ public:
             size_t weight_i = rand() % (m_layers[layer_i].GetInputSize()-1);
 
             T perturbation = randf();
-            m_layers[layer_i].GetNodesChangeable()[node_i].GetWeights()[weight_i] += perturbation;
+            m_layers[layer_i].weight(node_i, weight_i) += perturbation;
         }
     }
 
