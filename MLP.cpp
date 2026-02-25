@@ -105,6 +105,24 @@ void MLP<T>::CreateMLP(const std::vector<size_t> & layers_nodes,
                                     use_constant_weight_init,
                                     constant_weight_init));
     }
+
+    AllocateBuffers();
+}
+
+
+template<typename T>
+void MLP<T>::AllocateBuffers() {
+    size_t max_layer_size = *std::max_element(m_layers_nodes.begin(),
+                                               m_layers_nodes.end());
+    // Forward pass double buffers
+    m_fwd_buf_a.resize(max_layer_size);
+    m_fwd_buf_b.resize(max_layer_size);
+    // Backprop double buffers
+    m_bp_error.resize(max_layer_size);
+    m_bp_deltas.resize(max_layer_size);
+    // Training scratch
+    m_train_predicted.resize(m_num_outputs);
+    m_train_deriv_error.resize(m_num_outputs);
 }
 
 
@@ -226,6 +244,7 @@ bool MLP<T>::LoadMLPNetwork(const std::string & filename) {
     }
 
     fclose(file);
+    AllocateBuffers();
     return true;
 }
 
@@ -320,6 +339,7 @@ bool MLP<T>::LoadMLPNetworkSD(const std::string & filename) {
     }
 
     file.close();
+    AllocateBuffers();
     return true;
 }
 
@@ -350,13 +370,13 @@ size_t MLP<T>::FromSerialised(size_t r_head, const std::vector<uint8_t> &buffer)
 };
 
 
+// ─── CHANGED: GetOutput ─── zero-alloc inference via pre-allocated double buffers
 template<typename T>
 void MLP<T>::GetOutput(const std::vector<T> &input,
                     std::vector<T> * output,
                     std::vector<std::vector<T>> * all_layers_activations,
                     bool for_inference) {
 #ifdef ARDUINO
-    // Add safety check for MCU
     if (input.size() != m_num_inputs) {
         Serial.printf("ERROR: input.size()=%d != m_num_inputs=%d\n", input.size(), m_num_inputs);
         return;
@@ -365,46 +385,36 @@ void MLP<T>::GetOutput(const std::vector<T> &input,
     assert(input.size() == m_num_inputs);
 #endif
 
-    int temp_size;
-    if (m_num_hidden_layers == 0)
-        temp_size = m_num_outputs;
-    else
-        temp_size = m_layers_nodes[1];
+    std::vector<T> *in_ptr  = &m_fwd_buf_a;
+    std::vector<T> *out_ptr = &m_fwd_buf_b;
 
-    // Pre-allocate with capacity to avoid reallocations
-    std::vector<T> temp_in;
-    temp_in.reserve(m_num_inputs);
-    temp_in = input;
-
-    std::vector<T> temp_out;
-    temp_out.reserve(temp_size);
+    // resize is a no-op: buffers already >= max layer size
+    in_ptr->resize(input.size());
+    std::copy(input.begin(), input.end(), in_ptr->begin());
 
     for (size_t i = 0; i < m_layers.size(); ++i) {
-        if (i > 0) {
-            //Store this layer activation
-            if (all_layers_activations != nullptr)
-                all_layers_activations->emplace_back(std::move(temp_in));
+        out_ptr->resize(m_layers[i].GetOutputSize());
 
-            temp_in.clear();
-            temp_in = temp_out;
-            temp_out.clear();
-            temp_out.resize(m_layers[i].GetOutputSize());
+        m_layers[i].GetOutputAfterActivationFunction(*in_ptr, out_ptr);
+
+        if (all_layers_activations != nullptr) {
+            // Training path: must copy because we need all activations retained
+            all_layers_activations->emplace_back(*in_ptr);
         }
-        m_layers[i].GetOutputAfterActivationFunction(temp_in, &temp_out);
+
+        std::swap(in_ptr, out_ptr);
     }
 
-    // Apply softmax for inference with categorical cross-entropy
+    // After the loop, in_ptr holds the final output
     if (for_inference &&
         m_loss_function_type == loss::LOSS_FUNCTIONS::LOSS_CATEGORICAL_CROSSENTROPY &&
-        temp_out.size() > 1) {
-        utils::Softmax(&temp_out);
+        in_ptr->size() > 1) {
+        utils::Softmax(in_ptr);
     }
 
-    *output = temp_out;
-
-    //Add last layer activation
-    if (all_layers_activations != nullptr)
-        all_layers_activations->emplace_back(std::move(temp_in));
+    // One copy out to caller
+    output->resize(in_ptr->size());
+    std::copy(in_ptr->begin(), in_ptr->end(), output->begin());
 }
 
 
@@ -414,24 +424,29 @@ void MLP<T>::GetOutputClass(const std::vector<T> &output, size_t * class_id) con
 }
 
 
+// ─── CHANGED: UpdateWeights ─── uses pre-allocated bp buffers, swap pattern
 template<typename T>
 void MLP<T>::UpdateWeights(const std::vector<std::vector<T>> & all_layers_activations,
                         const std::vector<T> &deriv_error,
                         float learning_rate) {
 
-    std::vector<T> temp_deriv_error = deriv_error;
-    std::vector<T> deltas{};
-    //m_layers.size() equals (m_num_hidden_layers + 1)
+    std::vector<T> *err_ptr   = &m_bp_error;
+    std::vector<T> *delta_ptr = &m_bp_deltas;
+
+    err_ptr->resize(deriv_error.size());
+    std::copy(deriv_error.begin(), deriv_error.end(), err_ptr->begin());
+
     for (int i = m_num_hidden_layers; i >= 0; --i) {
-        m_layers[i].UpdateWeights(all_layers_activations[i], temp_deriv_error, learning_rate, &deltas);
+        delta_ptr->assign(m_layers[i].GetInputSize(), T(0));
+        m_layers[i].UpdateWeights(all_layers_activations[i], *err_ptr, learning_rate, delta_ptr);
         if (i > 0) {
-            temp_deriv_error.clear();
-            temp_deriv_error = std::move(deltas);
-            deltas.clear();
+            std::swap(err_ptr, delta_ptr);
         }
     }
 };
 
+
+// ─── CHANGED: TrainBatch ─── uses member buffers, no per-batch allocations
 template<typename T>
 T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
                      float learning_rate,
@@ -440,20 +455,22 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
                      float min_error_cost,
                      bool output_log) {
     
-    auto training_features = training_sample_set.first;
-    auto training_labels = training_sample_set.second;
+    const auto& training_features = training_sample_set.first;
+    const auto& training_labels = training_sample_set.second;
     
     size_t n_samples = training_features.size();
     size_t n_batches = (n_samples + batch_size - 1) / batch_size;
+
+    std::vector<size_t> indices(n_samples);
+    std::iota(indices.begin(), indices.end(), 0);
     
+    // Reusable per-sample vectors — allocated once, cleared per sample
+    std::vector<std::vector<T>> all_layers_activations;
+
     T epoch_loss = 0;
     for (int iter = 0; iter < max_iterations; iter++) {
 
         epoch_loss = 0;
-        
-        // Shuffle indices
-        std::vector<size_t> indices(n_samples);
-        std::iota(indices.begin(), indices.end(), 0);
         
         std::shuffle(indices.begin(), indices.end(), g);
         
@@ -463,67 +480,54 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
             size_t current_batch_size = std::min(batch_size, n_samples - sample_idx);
             T batch_size_reciprocal = (T)1.0 / static_cast<T>(current_batch_size);
             
-            // Initialize gradient accumulators
             InitializeAllGradientAccumulators();
             
             T batch_loss = 0;
 
-            // Pre-allocate vectors outside loop to avoid repeated allocations
-            std::vector<T> predicted_output;
-            std::vector<std::vector<T>> all_layers_activations;
-            std::vector<T> deriv_error_output;
-
-            // Process batch - accumulate gradients
             for (size_t i = 0; i < current_batch_size; i++) {
                 size_t idx = indices[sample_idx++];
 #ifdef SAFE_MODE
-                // Bounds check
                 if (idx >= training_features.size()) {
                     Serial.printf("ERROR: idx %d >= training_features.size() %d\n", idx, training_features.size());
                     continue;
                 }
 #endif
-                // Clear and reuse vectors
-                predicted_output.clear();
+                // Forward pass — GetOutput uses m_fwd_buf_a/b internally
                 all_layers_activations.clear();
-
-                // Forward pass
-                // Serial.printf("Processing sample %d (idx=%d), input_size=%d\n", i, idx, training_features[idx].size());
                 GetOutput(training_features[idx],
-                         &predicted_output,
+                         &m_train_predicted,
                          &all_layers_activations,
                          false);
 
-                // Compute loss and derivatives
-                deriv_error_output.clear();
-                deriv_error_output.resize(predicted_output.size());
+                // Compute loss — reuse m_train_deriv_error
+                m_train_deriv_error.resize(m_train_predicted.size());
                 T loss = loss_fn_(training_labels[idx],
-                                 predicted_output,
-                                 deriv_error_output,
+                                 m_train_predicted,
+                                 m_train_deriv_error,
                                  1.0f);
 
                 #ifdef MLP_ALLOW_DEBUG
                 if (std::isinf(loss) || std::isnan(loss)) {
                     Serial.printf("[MLP DEBUG] *** INF/NAN loss at sample %d! loss=%f\n", i, loss);
                     Serial.printf("[MLP DEBUG]   pred[0]=%f, label[0]=%f\n",
-                                 predicted_output[0], training_labels[idx][0]);
+                                 m_train_predicted[0], training_labels[idx][0]);
                 }
                 #endif
 
                 batch_loss += loss;
 
-                // Accumulate gradients through backpropagation
+                // Backprop — uses m_bp_error/m_bp_deltas internally
                 BackpropagateWithAccumulation(all_layers_activations,
-                                             deriv_error_output,
+                                             m_train_deriv_error,
                                              true);
             }
 
-            // clipping gradients
+            // Gradient clipping
             T grad_sumsq = 0.0f;
             for (auto& layer : m_layers) {
                 grad_sumsq += layer.GetGradSumSquared(batch_size_reciprocal);
             }
-            T grad_norm = std::sqrt(grad_sumsq );
+            T grad_norm = std::sqrt(grad_sumsq);
 
             #ifdef MLP_ALLOW_DEBUG
             Serial.printf("[MLP DEBUG] Batch %d/%d: batch_loss=%f, grad_norm=%f\n",
@@ -538,27 +542,14 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
                 for (auto& layer : m_layers) {
                     layer.ScaleAccumulatedGradients(clip_coef);
                 }
-                // printf("Clipped gradients with coef: %f\n", clip_coef);
             }
 
-            // Apply accumulated gradients
             ApplyAllAccumulatedGradients(learning_rate, batch_size_reciprocal);
 
             epoch_loss += batch_loss / current_batch_size;
         }
 
         epoch_loss /= n_batches;
-
-        // Periodic weight corruption check (every 10 iterations)
-        // if (iter % 10 == 0) {
-        //     if (CheckAndFixWeights()) {
-        //         #ifdef MLP_ALLOW_DEBUG
-        //         Serial.printf("[MLP DEBUG] *** Weight corruption detected and fixed at iteration %d! ***\n", iter);
-        //         #endif
-        //         // Optionally reset optimizer state after corruption
-        //         // ResetOptimizerState();
-        //     }
-        // }
 
         #ifdef MLP_ALLOW_DEBUG
         if (std::isinf(epoch_loss) || std::isnan(epoch_loss)) {
@@ -587,26 +578,34 @@ T MLP<T>::TrainBatch(const training_pair_t& training_sample_set,
     return epoch_loss;
 }
 
+
+// ─── CHANGED: BackpropagateWithAccumulation ─── uses pre-allocated bp buffers
 template<typename T>
 void MLP<T>::BackpropagateWithAccumulation(const std::vector<std::vector<T>>& all_layers_activations,
                                            const std::vector<T>& deriv_error,
                                            bool accumulate) {
-    std::vector<T> temp_deriv_error = deriv_error;
-    std::vector<T> deltas;
-    
+    std::vector<T> *err_ptr   = &m_bp_error;
+    std::vector<T> *delta_ptr = &m_bp_deltas;
+
+    err_ptr->resize(deriv_error.size());
+    std::copy(deriv_error.begin(), deriv_error.end(), err_ptr->begin());
+
     for (int i = m_num_hidden_layers; i >= 0; --i) {
+        delta_ptr->assign(m_layers[i].GetInputSize(), T(0));
         m_layers[i].UpdateWeights(all_layers_activations[i],
-                                 temp_deriv_error,
+                                 *err_ptr,
                                  0,  // Learning rate not used when accumulating
-                                 &deltas,
-                                 accumulate);  // Use accumulation flag
-        
+                                 delta_ptr,
+                                 accumulate);
+
         if (i > 0) {
-            temp_deriv_error = std::move(deltas);
-            deltas.clear();
+            std::swap(err_ptr, delta_ptr);
         }
     }
 }
+
+
+// ─── CHANGED: Train (legacy) ─── const refs moved outside loop
 template<typename T>
 T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     float learning_rate,
@@ -617,23 +616,21 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
     int i = 0;
     T current_iteration_cost_function = 0.f;
 
-    T sampleSizeReciprocal = 1.f / training_sample_set_with_bias.first.size();
+    const auto& training_features = training_sample_set_with_bias.first;
+    const auto& training_labels = training_sample_set_with_bias.second;
+    T sampleSizeReciprocal = 1.f / training_features.size();
 
     for (i = 0; i < max_iterations; i++) {
         current_iteration_cost_function = 0.f;
 
-        auto training_features = training_sample_set_with_bias.first;
-        auto training_labels = training_sample_set_with_bias.second;
         auto t_feat = training_features.begin();
         auto t_label = training_labels.begin();
 
         while (t_feat != training_features.end() || t_label != training_labels.end()) {
 
-            // Payload
             current_iteration_cost_function +=
                 _TrainOnExample(*t_feat, *t_label, learning_rate, sampleSizeReciprocal);
 
-            // \Payload
             if (t_feat != training_features.end())
             {
                 ++t_feat;
@@ -648,15 +645,12 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
 
 #if !defined(ARDUINO)
         ReportProgress(true, 100, i, current_iteration_cost_function);
+#endif
 
-#endif  // EASYLOGGING_ON
-
-        if (m_progress_callback && !(i & 0x1F)) { // Call progress callback every 32 iterations
+        if (m_progress_callback && !(i & 0x1F)) {
             m_progress_callback(i, current_iteration_cost_function);
         }
 
-        // Early stopping
-        // TODO AM early stopping should be optional and metric-dependent
         if (current_iteration_cost_function < min_error_cost) {
             break;
         }
@@ -672,138 +666,109 @@ T MLP<T>::Train(const training_pair_t& training_sample_set_with_bias,
      MLP_DEBUG_PRINTLN(current_iteration_cost_function, 10);
 #endif
     if (m_progress_callback) {
-        // Final callback to report completion
         m_progress_callback(i, current_iteration_cost_function);
     }
 
     return current_iteration_cost_function;
 };
 
+
+// ─── CHANGED: CalcGradients ─── uses pre-allocated bp buffers
 template <typename T>
 void MLP<T>::CalcGradients(std::vector<T> & feat, std::vector<T> & deriv_error_output)
 {
-    std::vector<T> predicted_output;
     std::vector< std::vector<T> > all_layers_activations;
 
     GetOutput(feat,
-        &predicted_output,
+        &m_train_predicted,
         &all_layers_activations,
-        false); // Training mode - no softmax
+        false);
 
+    std::vector<T> *err_ptr   = &m_bp_error;
+    std::vector<T> *delta_ptr = &m_bp_deltas;
 
-    // std::vector<T> deriv_error_output(predicted_output.size(), 1.0);
+    err_ptr->resize(deriv_error_output.size());
+    std::copy(deriv_error_output.begin(), deriv_error_output.end(), err_ptr->begin());
 
-    // UpdateWeights(all_layers_activations,
-    //     deriv_error_output,
-    //     learning_rate);
-
-    std::vector<T> temp_deriv_error = deriv_error_output;
-    std::vector<T> deltas{};
-    //m_layers.size() equals (m_num_hidden_layers + 1)
     for (int i = m_num_hidden_layers; i >= 0; --i) {
-        m_layers[i].CalcGradients(all_layers_activations[i], temp_deriv_error, &deltas);
+        delta_ptr->assign(m_layers[i].GetInputSize(), T(0));
+        m_layers[i].CalcGradients(all_layers_activations[i], *err_ptr, delta_ptr);
         if (i > 0) {
-            temp_deriv_error.clear();
-            temp_deriv_error = std::move(deltas);
-            deltas.clear();
-        }else {
-            m_layers[0].SetGrads(deltas);
+            std::swap(err_ptr, delta_ptr);
+        } else {
+            m_layers[0].SetGrads(*delta_ptr);
         }
     }
-
 }
 
+
+// ─── CHANGED: _TrainOnExample ─── uses member buffers
 template <typename T>
 T MLP<T>::_TrainOnExample(std::vector<T> feat,
                           std::vector<T> label,
                           float learning_rate,
                           T sampleSizeReciprocal)
 {
-    std::vector<T> predicted_output;
-    std::vector< std::vector<T> > all_layers_activations;
+    std::vector<std::vector<T>> all_layers_activations;
 
     GetOutput(feat,
-        &predicted_output,
+        &m_train_predicted,
         &all_layers_activations,
-        false); // Training mode - no softmax
+        false);
 
-    const std::vector<T>& correct_output{ label };
+    assert(label.size() == m_train_predicted.size());
+    m_train_deriv_error.resize(m_train_predicted.size());
 
-    assert(correct_output.size() == predicted_output.size());
-    std::vector<T> deriv_error_output(predicted_output.size());
-
-    // Loss function
     T current_iteration_cost_function =
-        this->loss_fn_(correct_output, predicted_output,
-        deriv_error_output, sampleSizeReciprocal);
+        this->loss_fn_(label, m_train_predicted,
+        m_train_deriv_error, sampleSizeReciprocal);
 
     UpdateWeights(all_layers_activations,
-        deriv_error_output,
+        m_train_deriv_error,
         learning_rate);
 
     return current_iteration_cost_function;
 }
 
+
+// ─── CHANGED: ApplyLoss ─── uses member buffers
 template <typename T>
 void MLP<T>::ApplyLoss(std::vector<T> feat,
                           std::vector<T> loss,
                           float learning_rate)
 {
-    std::vector<T> predicted_output;
-    std::vector< std::vector<T> > all_layers_activations;
+    std::vector<std::vector<T>> all_layers_activations;
 
     GetOutput(feat,
-        &predicted_output,
+        &m_train_predicted,
         &all_layers_activations,
-        false); // Training mode - no softmax
+        false);
 
-    assert(loss.size() == predicted_output.size());
+    assert(loss.size() == m_train_predicted.size());
 
     UpdateWeights(all_layers_activations,
         loss,
         learning_rate);
 }
 
-// template<typename T>
-// void MLP<T>::ApplyPolicyGradient(const std::vector<T>& state,
-//                                   const std::vector<T>& action_gradient,
-//                                   float learning_rate) {
-//     std::vector<T> predicted_output;
-//     std::vector<std::vector<T>> all_layers_activations;
-    
-//     // Forward pass
-//     GetOutput(state, &predicted_output, &all_layers_activations, false);
-    
-//     // Negate gradients for maximization
-//     std::vector<T> neg_gradient(action_gradient.size());
-//     for(size_t i = 0; i < action_gradient.size(); i++) {
-//         neg_gradient[i] = -action_gradient[i];
-//     }
-    
-//     // Backprop
-//     UpdateWeights(all_layers_activations, neg_gradient, learning_rate);
-// }
 
+// ─── CHANGED: AccumulatePolicyGradient ─── reuses m_train_deriv_error
 template<typename T>
 void MLP<T>::AccumulatePolicyGradient(const std::vector<T>& state,
                                   const std::vector<T>& action_gradient) {
-    std::vector<T> predicted_output;
     std::vector<std::vector<T>> all_layers_activations;
     
-    // Forward pass
-    GetOutput(state, &predicted_output, &all_layers_activations, false);
+    GetOutput(state, &m_train_predicted, &all_layers_activations, false);
     
-    // Negate gradients for maximization
-    std::vector<T> neg_gradient(action_gradient.size());
+    // Negate gradients for maximization — reuse member buffer
+    m_train_deriv_error.resize(action_gradient.size());
     for(size_t i = 0; i < action_gradient.size(); i++) {
-        neg_gradient[i] = -action_gradient[i];
+        m_train_deriv_error[i] = -action_gradient[i];
     }
     
-    // Accumulate gradients through backpropagation
     BackpropagateWithAccumulation(all_layers_activations,
-                                    neg_gradient,
+                                    m_train_deriv_error,
                                     true);
-
 }
 
 
@@ -834,21 +799,19 @@ size_t MLP<T>::GetNumLayers()
 }
 
 
+// ─── CHANGED: GetLayerWeights ─── const ref instead of copying entire layer
 template<typename T>
 std::vector<std::vector<T>> MLP<T>::GetLayerWeights( size_t layer_i )
 {
     std::vector<std::vector<T>> ret_val;
-    // check parameters
-    assert(layer_i < m_layers.size() /* Incorrect layer number in GetLayerWeights call */);
+    assert(layer_i < m_layers.size());
     {
-        Layer<T> current_layer = m_layers[layer_i];
-        for( Node<T> & node : current_layer.GetNodesChangeable() )
-        {
+        const Layer<T>& current_layer = m_layers[layer_i];
+        for (const Node<T>& node : current_layer.m_nodes) {
             ret_val.push_back( node.GetWeights() );
         }
         return ret_val;
     }
-
 }
 
 template <typename T>
@@ -873,8 +836,7 @@ typename MLP<T>::mlp_weights MLP<T>::GetWeights()
 template<typename T>
 void MLP<T>::SetLayerWeights( size_t layer_i, std::vector<std::vector<T>> & weights )
 {
-    // check parameters
-    assert(layer_i < m_layers.size() /* Incorrect layer number in SetLayerWeights call */);
+    assert(layer_i < m_layers.size());
     {
         m_layers[layer_i].SetWeights( weights );
     }
@@ -927,9 +889,7 @@ void MLP<T>::SetWeights(MLP<T>::mlp_weights &weights)
 template <typename T>
 void MLP<T>::DrawWeights(float scale)
 {
-    // T before = m_layers[0].m_nodes[0].m_weights[0];
     utils::gen_rand<T> gen;
-    // utils::gen_randn<T> gen(0.f, scale); //mean, stddev
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
@@ -939,8 +899,6 @@ void MLP<T>::DrawWeights(float scale)
             }
         }
     }
-
-    // assert(m_layers[0].m_nodes[0].m_weights[0] != before);
 }
 
 template <typename T>
@@ -950,7 +908,6 @@ void MLP<T>::MoveWeights(T speed)
     utils::gen_randn<T> gen(speed);
 
     for (unsigned int n = 0; n < m_layers.size(); n++) {
-        // size_t num_inputs = m_layers_nodes[n];
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {
                 T w = m_layers[n].m_nodes[k].m_weights[j];
@@ -978,7 +935,6 @@ void MLP<T>::RandomiseWeightsAndBiasesLin(T weightMin, T weightMax, T biasMin, T
     std::uniform_real_distribution<> disWeight(weightMin, weightMax);
     std::uniform_real_distribution<> disBias(biasMin, biasMax);
 
-    // utils::gen_randn<T> gen(0.f, scale); //mean, stddev
     for (unsigned int n = 0; n < m_layers.size(); n++) {
         for (unsigned int k = 0; k < m_layers[n].m_nodes.size(); k++) {
             for (unsigned int j = 0; j < m_layers[n].m_nodes[k].m_weights.size(); j++) {

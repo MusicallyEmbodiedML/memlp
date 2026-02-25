@@ -174,8 +174,8 @@ public:
             T gradient = m_gradient_accumulator[i] * batch_size_inv;
 
             // Clamp gradient to prevent extreme values before squaring
-            gradient = std::max(std::min(gradient, gradientClipValue), -gradientClipValue);
-
+            // gradient = std::max(std::min(gradient, gradientClipValue), -gradientClipValue);
+            gradient = std::clamp(gradient, -gradientClipValue, gradientClipValue);
             squared_gradient_avg[i] = (rmsPropDecay * squared_gradient_avg[i]) +
                                          (rmsPropDecayInv * gradient * gradient);
 

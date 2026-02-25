@@ -165,7 +165,6 @@ public:
       m_nodes[i].GetOutputAfterActivationFunction(input,
                                                   m_activation_function,
                                                   &((*output)[i]));
-      // sleep_us(70);
     }
     if (m_cacheOutputs) {
       cachedOutputs = *output;
@@ -202,7 +201,7 @@ public:
         assert(input_layer_activation.size() == m_num_inputs_per_node);
         assert(deriv_error.size() == m_nodes.size());
         
-        deltas->resize(m_num_inputs_per_node, 0);
+        deltas->assign(m_num_inputs_per_node, 0);
         
         for (size_t i = 0; i < m_nodes.size(); i++) {
             T dE_doj = deriv_error[i];
@@ -213,8 +212,9 @@ public:
             m_nodes[i].AccumulateGradients(input_layer_activation, error_signal);
             
             // Calculate deltas for previous layer
+            const auto &weights = m_nodes[i].GetWeights();
             for (size_t j = 0; j < m_num_inputs_per_node; j++) {
-                (*deltas)[j] += error_signal * m_nodes[i].GetWeights()[j];
+                (*deltas)[j] += error_signal * weights[j];
             }
         }
     }
@@ -361,8 +361,9 @@ public:
       T dE_doj=0,doj_dnetj =0;
       dE_doj = deriv_error[i];
       doj_dnetj = m_deriv_activation_function(m_nodes[i].GetInnerProd()); //cached from earlier calculation
+      T error_signal = dE_doj * doj_dnetj;
       for (size_t j = 0; j < m_num_inputs_per_node; j++) {
-        (*deltas)[j] += dE_doj * doj_dnetj * m_nodes[i].GetWeights()[j];
+        (*deltas)[j] += error_signal * m_nodes[i].GetWeights()[j];
       }
     }
     grads = *deltas;

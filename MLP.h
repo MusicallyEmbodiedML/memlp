@@ -471,6 +471,23 @@ protected:
     std::random_device rd;
     std::mt19937 g;
 
+    // ── Pre-allocated work buffers (zero-alloc hot paths) ──
+    // Forward pass double buffers
+    std::vector<T> m_fwd_buf_a;
+    std::vector<T> m_fwd_buf_b;
+    // Backprop double buffers
+    std::vector<T> m_bp_error;
+    std::vector<T> m_bp_deltas;
+    // Training scratch buffers
+    std::vector<T> m_train_predicted;
+    std::vector<T> m_train_deriv_error;
+
+    /**
+     * @brief Allocate all internal work buffers after network structure is known.
+     * Called from CreateMLP and Load functions.
+     */
+    void AllocateBuffers();
+
 };
 
 #endif //MLP_H
