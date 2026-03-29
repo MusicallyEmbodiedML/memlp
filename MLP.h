@@ -115,7 +115,8 @@ public:
 #if ENABLE_SAVE_SD
     bool SaveMLPNetworkSD(const std::string & filename);
     bool LoadMLPNetworkSD(const std::string & filename);
-
+    bool SaveMLPNetworkToFile(File& file);
+    bool LoadMLPNetworkFromFile(File& file);
 #endif
 
     size_t Serialise(size_t w_head, std::vector<uint8_t> &buffer);

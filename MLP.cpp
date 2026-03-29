@@ -251,95 +251,60 @@ bool MLP<T>::LoadMLPNetwork(const std::string & filename) {
 
 #if ENABLE_SAVE_SD
 template<typename T>
-bool MLP<T>::SaveMLPNetworkSD(const std::string & filename) {
-        auto file = SD.open(filename.c_str(), FILE_WRITE);
-        if (!file) {
-            Serial.println("Failed to open file for writing");
-            return false;
-        }
-        file.seek(0);  // Start from beginning
-        // Write network structure
-        if (file.write((const char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
-            file.close();
-            return false;
-        }
-        if (file.write((const char*)&m_num_outputs, sizeof(m_num_outputs)) != sizeof(m_num_outputs)) {
-            file.close();
-            return false;
-        }
-        if (file.write((const char*)&m_num_hidden_layers, sizeof(m_num_hidden_layers)) != sizeof(m_num_hidden_layers)) {
-            file.close();
-            return false;
-        }
-        // Write layer nodes
-        if (!m_layers_nodes.empty()) {
-            int dataSize = m_layers_nodes.size() * sizeof(m_layers_nodes[0]);
-            if (file.write((char*)&m_layers_nodes[0], dataSize) != dataSize) {
-                file.close();
-                return false;
-            }
-        }
-
-        // Write layer weights
-        for (size_t i = 0; i < m_layers.size(); i++) {
-            if (!m_layers[i].SaveLayerSD(file)) {
-                file.close();
-                return false;
-            }
-        }
-
-        file.close();
-        return true;
+bool MLP<T>::SaveMLPNetworkToFile(File& file) {
+    if (file.write((const char*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) return false;
+    if (file.write((const char*)&m_num_outputs, sizeof(m_num_outputs)) != sizeof(m_num_outputs)) return false;
+    if (file.write((const char*)&m_num_hidden_layers, sizeof(m_num_hidden_layers)) != sizeof(m_num_hidden_layers)) return false;
+    if (!m_layers_nodes.empty()) {
+        int dataSize = m_layers_nodes.size() * sizeof(m_layers_nodes[0]);
+        if (file.write((char*)&m_layers_nodes[0], dataSize) != dataSize) return false;
     }
+    for (size_t i = 0; i < m_layers.size(); i++) {
+        if (!m_layers[i].SaveLayerSD(file)) return false;
+    }
+    return true;
+}
 
- template<typename T>
-bool MLP<T>::LoadMLPNetworkSD(const std::string & filename) {
-    // Check if file exists
-    auto file = SD.open(filename.c_str(), FILE_READ);
+template<typename T>
+bool MLP<T>::SaveMLPNetworkSD(const std::string & filename) {
+    auto file = SD.open(filename.c_str(), FILE_WRITE);
     if (!file) {
+        Serial.println("Failed to open file for writing");
         return false;
     }
+    file.seek(0);
+    bool success = SaveMLPNetworkToFile(file);
+    file.close();
+    return success;
+}
 
-    // Clear existing network
+template<typename T>
+bool MLP<T>::LoadMLPNetworkFromFile(File& file) {
     m_layers_nodes.clear();
     m_layers.clear();
-
-    // Read network structure
-    if (file.read((uint8_t*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) {
-        file.close();
-        return false;
-    }
-    if (file.read((uint8_t*)&m_num_outputs, sizeof(m_num_inputs)) != sizeof(m_num_outputs)) {
-        file.close();
-        return false;
-    }
-    if (file.read((uint8_t*)&m_num_hidden_layers, sizeof(m_num_inputs)) != sizeof(m_num_hidden_layers)) {
-        file.close();
-        return false;
-    }
-
-    // Read layer nodes
+    if (file.read((uint8_t*)&m_num_inputs, sizeof(m_num_inputs)) != sizeof(m_num_inputs)) return false;
+    if (file.read((uint8_t*)&m_num_outputs, sizeof(m_num_inputs)) != sizeof(m_num_outputs)) return false;
+    if (file.read((uint8_t*)&m_num_hidden_layers, sizeof(m_num_inputs)) != sizeof(m_num_hidden_layers)) return false;
     m_layers_nodes.resize(m_num_hidden_layers + 2);
-
     if (!m_layers_nodes.empty()) {
         int dataSize = m_layers_nodes.size() * sizeof(T);
-        if (file.read((uint8_t*)&m_layers_nodes[0], dataSize) != dataSize) {
-            return false;
-        }
+        if (file.read((uint8_t*)&m_layers_nodes[0], dataSize) != dataSize) return false;
     }
-
-    // Read layer weights
     m_layers.resize(m_layers_nodes.size() - 1);
     for (size_t i = 0; i < m_layers.size(); i++) {
-        if (!m_layers[i].LoadLayerSD(file)) {
-            file.close();
-            return false;
-        }
+        if (!m_layers[i].LoadLayerSD(file)) return false;
     }
-
-    file.close();
     AllocateBuffers();
     return true;
+}
+
+template<typename T>
+bool MLP<T>::LoadMLPNetworkSD(const std::string & filename) {
+    auto file = SD.open(filename.c_str(), FILE_READ);
+    if (!file) return false;
+    bool success = LoadMLPNetworkFromFile(file);
+    file.close();
+    return success;
 }
 
 #endif
