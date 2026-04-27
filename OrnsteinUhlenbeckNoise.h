@@ -16,8 +16,10 @@ public:
         sigma = new_sigma;
         if (sigma == 0.0f) {
             reset();
-        }        
+        }
     }
+
+    float getSigma() const { return sigma; }
 
     void reset() {
         x = 0.f;
