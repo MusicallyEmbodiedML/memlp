@@ -21,6 +21,14 @@ public:
 
     float getSigma() const { return sigma; }
 
+    // Set volatility from a desired *stationary* standard deviation of the walk.
+    // An OU process settles to std = sigma/sqrt(2*theta), so invert that. This lets a
+    // caller dial "how far the value roams" directly, while theta/dt keep the path
+    // smoothness (correlation time) fixed and independent of the chosen amplitude.
+    void setStationaryStd(float std) {
+        setSigma(std * std::sqrt(2.0f * theta));
+    }
+
     void reset() {
         x = 0.f;
     }
