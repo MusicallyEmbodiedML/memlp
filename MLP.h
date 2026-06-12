@@ -232,6 +232,12 @@ public:
     std::vector<std::vector<T>> GetLayerWeights( size_t layer_i );
 
     /**
+     * @brief Direct mutable access to a layer (for in-place weight modulation, e.g. jolt).
+     * @param layer_i Layer index
+     */
+    Layer<T>& GetLayerRef( size_t layer_i ) { return m_layers[layer_i]; }
+
+    /**
      * @brief Get all network weights
      * @return 3D vector of weights (layer, node, weight)
      */
