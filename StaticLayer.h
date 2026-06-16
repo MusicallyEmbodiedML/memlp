@@ -334,6 +334,52 @@ public:
             m_bias_sq_grad_avg.fill(T(0));
         }
     }
+
+    // ════════════════════════════════════════════════════════════════════
+    //  SD save / load — byte-compatible with dynamic Layer<T>::SaveLayerSD
+    //  (so models saved by the dynamic library still load here, and vice versa)
+    // ════════════════════════════════════════════════════════════════════
+#if defined(ENABLE_SAVE_SD) && ENABLE_SAVE_SD
+    bool SaveLayerSD(File &file) const {
+        std::size_t num_nodes  = NOut;
+        std::size_t num_inputs = NIn;
+        ACTIVATION_FUNCTIONS act = Act;
+        if (file.write((char*)&num_nodes, sizeof(num_nodes)) != sizeof(num_nodes)) return false;
+        if (file.write((char*)&num_inputs, sizeof(num_inputs)) != sizeof(num_inputs)) return false;
+        if (file.write((char*)&act, sizeof(act)) != sizeof(act)) return false;
+
+        std::size_t n_inputs = NIn;
+        for (std::size_t i = 0; i < NOut; ++i) {
+            if (file.write((char*)&n_inputs, sizeof(n_inputs)) != sizeof(n_inputs)) return false;
+            if (file.write((char*)&m_biases[i], sizeof(T)) != sizeof(T)) return false;
+            const T *row = m_weights.data() + i * NIn;
+            int dataSize = NIn * sizeof(T);
+            if (file.write((char*)row, dataSize) != dataSize) return false;
+        }
+        return true;
+    }
+
+    // Reads the dynamic-format layer and validates it matches this compile-time
+    // geometry/activation; returns false on any mismatch (caller falls back).
+    bool LoadLayerSD(File &file) {
+        std::size_t num_nodes = 0, num_inputs = 0;
+        ACTIVATION_FUNCTIONS act{};
+        if (file.read((uint8_t*)&num_nodes, sizeof(num_nodes)) != sizeof(num_nodes)) return false;
+        if (file.read((uint8_t*)&num_inputs, sizeof(num_inputs)) != sizeof(num_inputs)) return false;
+        if (file.read((uint8_t*)&act, sizeof(act)) != sizeof(act)) return false;
+        if (num_nodes != NOut || num_inputs != NIn || act != Act) return false;
+
+        for (std::size_t i = 0; i < NOut; ++i) {
+            std::size_t n_inputs = 0;
+            if (file.read((uint8_t*)&n_inputs, sizeof(n_inputs)) != sizeof(n_inputs)) return false;
+            if (file.read((uint8_t*)&m_biases[i], sizeof(T)) != sizeof(T)) return false;
+            T *row = m_weights.data() + i * NIn;
+            int dataSize = NIn * sizeof(T);
+            if (file.read((uint8_t*)row, dataSize) != dataSize) return false;
+        }
+        return true;
+    }
+#endif
 };
 
 } // namespace smlp

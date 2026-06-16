@@ -41,6 +41,12 @@
 #include <functional>
 #include <algorithm>
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#include <SD.h>
+#define ENABLE_SAVE_SD 1
+#endif
+
 #include "StaticLayer.h"
 #include "Loss.h"
 #include "utils/Serialise.hpp"
@@ -187,6 +193,18 @@ public:
     template<std::size_t I>       auto & layer()       { return std::get<I>(m_layers); }
     template<std::size_t I> const auto & layer() const { return std::get<I>(m_layers); }
 
+    // ── Runtime flat weight access (for jolt-style weight modulation) ──
+    // The static layers are heterogeneous tuple elements indexed at compile
+    // time; this exposes a flat view over all weights (layer 0 first) so callers
+    // can address a weight by a single runtime index.
+    static constexpr std::size_t TotalWeights() {
+        std::size_t t = 0;
+        for (std::size_t i = 0; i < kNumLayers; ++i) t += kSizes[i] * kSizes[i + 1];
+        return t;
+    }
+    /// Pointer to the weight at global flat index `g` (nullptr if out of range).
+    T* WeightPtrAt(std::size_t g) { return weight_ptr_impl<0>(g); }
+
     // ════════════════════════════════════════════════════════════════════
     //  Inference
     // ════════════════════════════════════════════════════════════════════
@@ -251,7 +269,7 @@ public:
     /// gradient-norm clipping at 5.0. Uses the internal FastRNG to shuffle.
     T TrainBatch(const training_pair_t & data, float learning_rate,
                  int max_iterations = 5000, std::size_t batch_size = 8,
-                 float min_error_cost = 0.001f) {
+                 float min_error_cost = 0.001f, bool /*output_log*/ = true) {
         static_assert(EnableTraining, "TrainBatch() requires EnableTraining=true");
         const auto & feats = data.first;
         const auto & labels = data.second;
@@ -399,6 +417,42 @@ public:
         return deserialise_impl<0>(static_cast<uint32_t>(r_head), buffer);
     }
 
+    // ════════════════════════════════════════════════════════════════════
+    //  SD save / load — byte-compatible with dynamic MLP<T> (weights + biases
+    //  + activations), so existing on-card presets load unchanged.
+    // ════════════════════════════════════════════════════════════════════
+#if defined(ENABLE_SAVE_SD) && ENABLE_SAVE_SD
+    bool SaveMLPNetworkToFile(File & file) {
+        std::size_t num_inputs = kNumInputs;
+        int num_outputs = (int)kNumOutputs;
+        int num_hidden  = (int)kNumLayers - 1;
+        if (file.write((const char*)&num_inputs, sizeof(num_inputs)) != sizeof(num_inputs)) return false;
+        if (file.write((const char*)&num_outputs, sizeof(num_outputs)) != sizeof(num_outputs)) return false;
+        if (file.write((const char*)&num_hidden, sizeof(num_hidden)) != sizeof(num_hidden)) return false;
+        for (std::size_t i = 0; i < kSizes.size(); ++i) {
+            std::size_t node = kSizes[i];
+            if (file.write((const char*)&node, sizeof(node)) != sizeof(node)) return false;
+        }
+        return save_layers_sd<0>(file);
+    }
+
+    bool LoadMLPNetworkFromFile(File & file) {
+        std::size_t num_inputs = 0;
+        int num_outputs = 0, num_hidden = 0;
+        if (file.read((uint8_t*)&num_inputs, sizeof(num_inputs)) != sizeof(num_inputs)) return false;
+        if (file.read((uint8_t*)&num_outputs, sizeof(num_outputs)) != sizeof(num_outputs)) return false;
+        if (file.read((uint8_t*)&num_hidden, sizeof(num_hidden)) != sizeof(num_hidden)) return false;
+        if (num_inputs != kNumInputs || num_outputs != (int)kNumOutputs ||
+            num_hidden != (int)kNumLayers - 1) return false;
+        for (std::size_t i = 0; i < kSizes.size(); ++i) {
+            std::size_t node = 0;
+            if (file.read((uint8_t*)&node, sizeof(node)) != sizeof(node)) return false;
+            if (node != kSizes[i]) return false;
+        }
+        return load_layers_sd<0>(file);
+    }
+#endif
+
     // ── Diagnostics (parity) ──
     bool CheckAndFixWeights() {
         bool any = false;
@@ -455,6 +509,29 @@ private:
         layer.AccumulateGradients(layer.m_cached_input.data(), err, delta);
         if constexpr (I > 0) backprop_accumulate<I - 1>(delta);
     }
+
+    template<std::size_t I>
+    T* weight_ptr_impl(std::size_t g) {
+        auto & L = std::get<I>(m_layers);
+        if (g < L.kWeights) return &L.m_weights[g];
+        if constexpr (I + 1 < kNumLayers) return weight_ptr_impl<I + 1>(g - L.kWeights);
+        else return nullptr;
+    }
+
+#if defined(ENABLE_SAVE_SD) && ENABLE_SAVE_SD
+    template<std::size_t I>
+    bool save_layers_sd(File & file) {
+        if (!std::get<I>(m_layers).SaveLayerSD(file)) return false;
+        if constexpr (I + 1 < kNumLayers) return save_layers_sd<I + 1>(file);
+        else return true;
+    }
+    template<std::size_t I>
+    bool load_layers_sd(File & file) {
+        if (!std::get<I>(m_layers).LoadLayerSD(file)) return false;
+        if constexpr (I + 1 < kNumLayers) return load_layers_sd<I + 1>(file);
+        else return true;
+    }
+#endif
 
     template<std::size_t I>
     void calc_grad_impl(const T* err) {
