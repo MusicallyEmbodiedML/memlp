@@ -167,6 +167,11 @@ public:
 		return mem.at(index).item;
 	}
 
+	// Timestamp passed to add() for this item (e.g. millis()), for age-based expiry.
+	inline size_t getTimestamp(size_t index) const {
+		return mem.at(index).timestamp;
+	}
+
     void eraseItem(const size_t index) {
         mem.erase(mem.begin() + index);
     }
