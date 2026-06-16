@@ -30,7 +30,7 @@
 
 #include "Utils.h"   // ACTIVATION_FUNCTIONS + utils:: activation math (reused, not modified)
 
-#ifdef ARM_MATH_CM33
+#if defined(ARM_MATH_CM33) && defined(__arm__)
 #include <arm_math.h>
 #endif
 
@@ -149,7 +149,7 @@ public:
         const T* w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
             T sum = m_biases[i];
-#ifdef ARM_MATH_CM33
+#if defined(ARM_MATH_CM33) && defined(__arm__)
             float dp;
             arm_dot_prod_f32((const float32_t*)w, (const float32_t*)input,
                              NIn, (float32_t*)&dp);

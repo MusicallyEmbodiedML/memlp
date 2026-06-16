@@ -23,6 +23,15 @@
 #include <LittleFS.h>
 #define ENABLE_SAVE    1
 
+// arduino-pico defines abs()/round()/min()/max() as C-style macros on the
+// RISC-V core (Arduino.h, guarded by !defined(__riscv)). They collide with the
+// STL <random>/<cmath> headers below (std::round, numeric_limits::min(), ...),
+// so drop them here before any standard header is pulled in.
+#undef abs
+#undef round
+#undef min
+#undef max
+
 #endif
 
 #include <vector>
@@ -35,7 +44,7 @@
 
 #include "Utils.h"
 
-#ifdef ARM_MATH_CM33
+#if defined(ARM_MATH_CM33) && defined(__arm__)
 #include <arm_math.h>
 #endif
 
@@ -152,7 +161,7 @@ public:
     assert(input.size() == m_num_inputs_per_node);
     output->resize(m_num_nodes);
 
-    #ifdef ARM_MATH_CM33
+    #if defined(ARM_MATH_CM33) && defined(__arm__)
     // ── CMSIS-DSP: per-row dot product over contiguous weight matrix ──
     const T *w_ptr = m_weights.data();
     for (size_t i = 0; i < m_num_nodes; ++i) {
