@@ -89,25 +89,25 @@ template<loss::LOSS_FUNCTIONS L, typename T>
 inline T compute_loss(const T* expected, const T* actual, T* deriv,
                       std::size_t n, T ssr) {
     if constexpr (L == loss::LOSS_FUNCTIONS::LOSS_MSE) {
-        T one_over_n = T(1) / static_cast<T>(n);
+        T one_over_n = T(1.0) / static_cast<T>(n);
         T accum = T(0);
         for (std::size_t j = 0; j < n; ++j) {
             T diff = expected[j] - actual[j];
             accum += diff * diff * one_over_n;
-            deriv[j] = T(-2) * one_over_n * diff * ssr;
+            deriv[j] = T(-2.0) * one_over_n * diff * ssr;
         }
         return accum * ssr;
     } else { // LOSS_CATEGORICAL_CROSSENTROPY
         T max_logit = actual[0];
         for (std::size_t i = 1; i < n; ++i) if (actual[i] > max_logit) max_logit = actual[i];
         T sum_exp = T(0);
-        for (std::size_t i = 0; i < n; ++i) sum_exp += std::exp(actual[i] - max_logit);
-        T log_sum_exp = max_logit + std::log(sum_exp);
+        for (std::size_t i = 0; i < n; ++i) sum_exp += nn::exp(actual[i] - max_logit);
+        T log_sum_exp = max_logit + nn::log(sum_exp);
         T loss = T(0);
         for (std::size_t i = 0; i < n; ++i)
             if (expected[i] > T(0.5)) { loss = -actual[i] + log_sum_exp; break; }
         for (std::size_t i = 0; i < n; ++i) {
-            T sm = std::exp(actual[i] - max_logit) / sum_exp;
+            T sm = nn::exp(actual[i] - max_logit) / sum_exp;
             deriv[i] = (sm - expected[i]) * ssr;
         }
         return loss * ssr;
@@ -250,7 +250,7 @@ public:
         static_assert(EnableTraining, "Train() requires EnableTraining=true");
         const auto & feats = data.first;
         const auto & labels = data.second;
-        const T ssr = T(1) / static_cast<T>(feats.size());
+        const T ssr = T(1.0) / static_cast<T>(feats.size());
 
         T cost = T(0);
         for (int it = 0; it < max_iterations; ++it) {
@@ -260,7 +260,7 @@ public:
                                          learning_rate, ssr);
             cost *= ssr;
             if (m_progress_callback) m_progress_callback(it, cost);
-            if (cost < min_error_cost) break;
+            if (cost < nn::from_float<T>(min_error_cost)) break;
         }
         return cost;
     }
@@ -289,7 +289,7 @@ public:
             std::size_t cursor = 0;
             for (std::size_t b = 0; b < n_batches; ++b) {
                 std::size_t cur = std::min(batch_size, n - cursor);
-                T batch_inv = T(1) / static_cast<T>(cur);
+                T batch_inv = T(1.0) / static_cast<T>(cur);
                 for_each_layer([](auto & l) { l.InitGradientAccumulators(); });
 
                 T batch_loss = T(0);
@@ -298,16 +298,16 @@ public:
                     const T* out = forward_layer<0>(feats[s].data());
                     for (std::size_t o = 0; o < kNumOutputs; ++o) m_pred[o] = out[o];
                     batch_loss += compute_loss<Loss>(labels[s].data(), m_pred.data(),
-                                                     m_deriv.data(), kNumOutputs, T(1));
+                                                     m_deriv.data(), kNumOutputs, T(1.0));
                     backprop_accumulate<kNumLayers - 1>(m_deriv.data());
                 }
 
                 // Gradient-norm clipping (threshold 5.0, matches dynamic).
                 T sumsq = T(0);
                 for_each_layer([&](auto & l) { sumsq += l.GetGradSumSquared(batch_inv); });
-                T norm = std::sqrt(sumsq);
-                if (norm > T(5)) {
-                    T coef = T(5) / norm;
+                T norm = nn::sqrt(sumsq);
+                if (norm > T(5.0)) {
+                    T coef = T(5.0) / norm;
                     for_each_layer([coef](auto & l) { l.ScaleAccumulatedGradients(coef); });
                 }
                 for_each_layer([&](auto & l) {
@@ -317,7 +317,7 @@ public:
             }
             epoch_loss /= static_cast<T>(n_batches);
             if (m_progress_callback) m_progress_callback(it, epoch_loss);
-            if (epoch_loss < min_error_cost) break;
+            if (epoch_loss < nn::from_float<T>(min_error_cost)) break;
         }
         return epoch_loss;
     }
@@ -467,7 +467,7 @@ public:
         for_each_layer([&sumsq](auto & layer) {
             T n = layer.getWeightNorm(); sumsq += n * n;
         });
-        return std::sqrt(sumsq);
+        return nn::sqrt(sumsq);
     }
 
 private:
@@ -559,8 +559,8 @@ private:
         T total = T(0);
         for (std::size_t i = 0; i < kNumOutputs; ++i) {
             T x = p[i];
-            if (x > T(15)) x = T(15); else if (x < T(-15)) x = T(-15);
-            p[i] = std::exp(x);
+            if (x > T(15.0)) x = T(15.0); else if (x < T(-15.0)) x = T(-15.0);
+            p[i] = nn::exp(x);
             total += p[i];
         }
         for (std::size_t i = 0; i < kNumOutputs; ++i) p[i] /= total;

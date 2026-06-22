@@ -27,8 +27,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cmath>
+#include <limits>
 
 #include "Utils.h"   // ACTIVATION_FUNCTIONS + utils:: activation math (reused, not modified)
+#include "FixedNN.h" // is_fixed_point_v, nn:: math wrappers, fixednn:: activations
 
 #if defined(ARM_MATH_CM33) && defined(__arm__)
 #include <arm_math.h>
@@ -84,7 +86,8 @@ private:
 // ════════════════════════════════════════════════════════════════════════
 template<ACTIVATION_FUNCTIONS A, typename T>
 inline T activate(T x) {
-    if constexpr (A == ACTIVATION_FUNCTIONS::SIGMOID)          return utils::sigmoid(x);
+    if constexpr (is_fixed_point_v<T>)                         return fixednn::activate<A>(x);
+    else if constexpr (A == ACTIVATION_FUNCTIONS::SIGMOID)     return utils::sigmoid(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::TANH)        return utils::hyperbolic_tan(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::LINEAR)      return utils::linear(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::RELU)        return utils::relu(x);
@@ -96,7 +99,8 @@ inline T activate(T x) {
 
 template<ACTIVATION_FUNCTIONS A, typename T>
 inline T activate_deriv(T x) {
-    if constexpr (A == ACTIVATION_FUNCTIONS::SIGMOID)          return utils::deriv_sigmoid(x);
+    if constexpr (is_fixed_point_v<T>)                         return fixednn::activate_deriv<A>(x);
+    else if constexpr (A == ACTIVATION_FUNCTIONS::SIGMOID)     return utils::deriv_sigmoid(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::TANH)        return utils::deriv_hyperbolic_tan(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::LINEAR)      return utils::deriv_linear(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::RELU)        return utils::deriv_relu(x);
@@ -104,6 +108,25 @@ inline T activate_deriv(T x) {
     else if constexpr (A == ACTIVATION_FUNCTIONS::HARDSWISH)   return utils::deriv_hardswish(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::HARDTANH)    return utils::deriv_hardtanh(x);
     else                                                       return static_cast<T>(1);
+}
+
+// Derivative from the cached post-activation output `y` (pre-activation `x` kept
+// for the activations whose derivative isn't cleanly a function of y). For fixed
+// tanh/sigmoid this avoids re-evaluating the rational approximation (and its
+// division) in the backward pass: deriv_tanh = 1 - y^2, deriv_sigmoid = y(1-y).
+// Float is left on the exact x-based path so it stays bit-identical to MLP<T>.
+template<ACTIVATION_FUNCTIONS A, typename T>
+inline T activate_deriv_cached(T y, T x) {
+    if constexpr (is_fixed_point_v<T>) {
+        if constexpr (A == ACTIVATION_FUNCTIONS::TANH)
+            return T::from_int(1) - y.mul_fast(y);
+        else if constexpr (A == ACTIVATION_FUNCTIONS::SIGMOID)
+            return y.mul_fast(T::from_int(1) - y);
+        else
+            return activate_deriv<A>(x);
+    } else {
+        return activate_deriv<A>(x);
+    }
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -130,6 +153,7 @@ public:
     std::array<T, EnableTraining ? NOut    : 0> m_bias_sq_grad_avg{};
     std::array<T, EnableTraining ? NIn     : 0> m_cached_input{};
     std::array<T, EnableTraining ? NIn     : 0> m_grads{}; ///< input-gradient (autograd)
+    std::array<T, EnableTraining ? NOut    : 0> m_act_output{}; ///< cached post-activation y (for cheap derivatives)
 
     // ── Accessors (parity with dynamic Layer<T>) ──
     static constexpr int GetInputSize()  { return (int)NIn; }
@@ -148,17 +172,33 @@ public:
         }
         const T* w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
-            T sum = m_biases[i];
+            T sum;
+            if constexpr (is_fixed_point_v<T>) {
+                // ── Fixed-point MAC: 32-bit only, no int64 (critical on M0+) ──
+                // Accumulate raw w*x products (each carries 2*F fractional bits)
+                // in the storage integer, add the bias shifted into that space,
+                // and do a single arithmetic shift back to F fractional bits.
+                // Range budget: |bias + sum(w*x)| < 2^(31 - 2*F).
+                using S = typename T::storage_type;
+                constexpr int F = T::FRACTIONAL_BITS;
+                S acc = static_cast<S>(m_biases[i].value) << F;
+                for (std::size_t j = 0; j < NIn; ++j)
+                    acc += w[j].value * input[j].value;
+                sum = T::from_raw(static_cast<S>(acc >> F));
+            } else {
+                sum = m_biases[i];
 #if defined(ARM_MATH_CM33) && defined(__arm__)
-            float dp;
-            arm_dot_prod_f32((const float32_t*)w, (const float32_t*)input,
-                             NIn, (float32_t*)&dp);
-            sum += dp;
+                float dp;
+                arm_dot_prod_f32((const float32_t*)w, (const float32_t*)input,
+                                 NIn, (float32_t*)&dp);
+                sum += dp;
 #else
-            for (std::size_t j = 0; j < NIn; ++j) sum += w[j] * input[j];
+                for (std::size_t j = 0; j < NIn; ++j) sum += w[j] * input[j];
 #endif
+            }
             m_inner_products[i] = sum;
             output[i] = activate<Act>(sum);
+            if constexpr (EnableTraining) m_act_output[i] = output[i];  // cache y for backward
             w += NIn;
         }
     }
@@ -178,10 +218,19 @@ public:
         for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
         T* w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
-            T es = deriv_err[i] * activate_deriv<Act>(m_inner_products[i]);
-            for (std::size_t j = 0; j < NIn; ++j) {
-                delta_out[j] += es * w[j];                       // uses old weight
-                w[j] += static_cast<T>(lr * (-(es * input[j]))); // then updates
+            T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
+            if constexpr (is_fixed_point_v<T>) {
+                // 32-bit MAC + lr hoisted out of the inner loop (no int64).
+                const T es_lr = es.mul_fast(nn::from_float<T>(lr));
+                for (std::size_t j = 0; j < NIn; ++j) {
+                    delta_out[j] += es.mul_fast(w[j]);           // uses old weight
+                    w[j] -= es_lr.mul_fast(input[j]);            // then updates
+                }
+            } else {
+                for (std::size_t j = 0; j < NIn; ++j) {
+                    delta_out[j] += es * w[j];                   // uses old weight
+                    w[j] += static_cast<T>(lr * (-(es * input[j]))); // then updates
+                }
             }
             w += NIn;
         }
@@ -193,10 +242,10 @@ public:
         const T* w = m_weights.data();
         T* g = m_grad_accum.data();
         for (std::size_t i = 0; i < NOut; ++i) {
-            T es = deriv_err[i] * activate_deriv<Act>(m_inner_products[i]);
+            T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
             for (std::size_t j = 0; j < NIn; ++j) {
-                g[j] += input[j] * es;
-                delta_out[j] += es * w[j];
+                g[j] += nn::fmul(input[j], es);
+                delta_out[j] += nn::fmul(es, w[j]);
             }
             m_bias_grad_accum[i] += es;
             w += NIn;
@@ -211,16 +260,33 @@ public:
 
     /// Apply accumulated gradients with RMSProp (matches Layer<T>::ApplyAccumulatedGradients).
     void ApplyAccumulatedGradients(float lr, T batch_size_inv) {
-        const T maxSq = static_cast<T>(1e6);
+        // maxSq caps the squared-gradient EMA. 1e6 isn't representable in the
+        // smaller fixed formats (e.g. Q17.14 maxes ~131072) and would wrap to a
+        // negative raw value, so for fixed use the format's largest value — the
+        // EMA of clipped gradients (|g|<=clip) never approaches it anyway.
+        T maxSq;
+        if constexpr (is_fixed_point_v<T>)
+            maxSq = T::from_raw(std::numeric_limits<typename T::storage_type>::max());
+        else
+            maxSq = static_cast<T>(1e6);
         const T maxLR = static_cast<T>(1.0);
         const T clip  = static_cast<T>(10.0);
 
         for (std::size_t k = 0; k < kWeights; ++k) {
             T g = m_grad_accum[k] * batch_size_inv;
             g = (g < -clip) ? -clip : (g > clip ? clip : g);
-            m_sq_grad_avg[k] = rmsPropDecay * m_sq_grad_avg[k] + rmsPropDecayInv * g * g;
+            m_sq_grad_avg[k] = nn::scale(m_sq_grad_avg[k], rmsPropDecay)
+                             + nn::scale(g, rmsPropDecayInv) * g;
             if (m_sq_grad_avg[k] > maxSq) m_sq_grad_avg[k] = maxSq;
-            T adj = static_cast<T>(lr) / (std::sqrt(m_sq_grad_avg[k]) + static_cast<T>(rmsPropEpsilon));
+            T adj;
+            if constexpr (is_fixed_point_v<T>)   // lr / sqrt(v), 32-bit (no int64 sqrt/divide)
+                // v underflows to 0 for tiny gradients (g^2 below the LSB); real
+                // RMSProp's lr/(sqrt(v)+eps) -> lr/eps -> clamps to maxLR there, so
+                // degrade to bounded SGD rather than a dead (adj=0) update.
+                adj = (m_sq_grad_avg[k].value <= 0) ? maxLR
+                    : nn::from_float<T>(lr).mul_fast(nn::rsqrt(m_sq_grad_avg[k]));
+            else
+                adj = static_cast<T>(lr) / (nn::sqrt(m_sq_grad_avg[k]) + static_cast<T>(rmsPropEpsilon));
             if (adj > maxLR) adj = maxLR;
             m_weights[k] -= adj * g;
             m_grad_accum[k] = T(0);
@@ -228,16 +294,22 @@ public:
         for (std::size_t i = 0; i < NOut; ++i) {
             T bg = m_bias_grad_accum[i] * batch_size_inv;
             bg = (bg < -clip) ? -clip : (bg > clip ? clip : bg);
-            m_bias_sq_grad_avg[i] = rmsPropDecay * m_bias_sq_grad_avg[i] + rmsPropDecayInv * bg * bg;
+            m_bias_sq_grad_avg[i] = nn::scale(m_bias_sq_grad_avg[i], rmsPropDecay)
+                                  + nn::scale(bg, rmsPropDecayInv) * bg;
             if (m_bias_sq_grad_avg[i] > maxSq) m_bias_sq_grad_avg[i] = maxSq;
-            T adj = static_cast<T>(lr) / (std::sqrt(m_bias_sq_grad_avg[i]) + static_cast<T>(rmsPropEpsilon));
+            T adj;
+            if constexpr (is_fixed_point_v<T>)   // lr / sqrt(v), 32-bit (no int64 sqrt/divide)
+                adj = (m_bias_sq_grad_avg[i].value <= 0) ? maxLR
+                    : nn::from_float<T>(lr).mul_fast(nn::rsqrt(m_bias_sq_grad_avg[i]));
+            else
+                adj = static_cast<T>(lr) / (nn::sqrt(m_bias_sq_grad_avg[i]) + static_cast<T>(rmsPropEpsilon));
             if (adj > maxLR) adj = maxLR;
             m_biases[i] -= adj * bg;
             m_bias_grad_accum[i] = T(0);
         }
     }
 
-    float GetGradSumSquared(float batch_size_inv) const {
+    T GetGradSumSquared(T batch_size_inv) const {
         T s = T(0);
         for (std::size_t k = 0; k < kWeights; ++k) {
             T scaled = m_grad_accum[k] * batch_size_inv;
@@ -257,8 +329,8 @@ public:
         for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
         const T* w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
-            T es = deriv_err[i] * activate_deriv<Act>(m_inner_products[i]);
-            for (std::size_t j = 0; j < NIn; ++j) delta_out[j] += es * w[j];
+            T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
+            for (std::size_t j = 0; j < NIn; ++j) delta_out[j] += nn::fmul(es, w[j]);
             w += NIn;
         }
         for (std::size_t j = 0; j < NIn; ++j) m_grads[j] = delta_out[j];
@@ -270,9 +342,9 @@ public:
     /// Polyak/soft update toward `src` (matches Layer<T>::SmoothUpdateWeights).
     void SmoothUpdateWeights(const StaticLayer & src, float alpha, float alphaInv) {
         for (std::size_t k = 0; k < kWeights; ++k)
-            m_weights[k] = alphaInv * m_weights[k] + alpha * src.m_weights[k];
+            m_weights[k] = nn::scale(m_weights[k], alphaInv) + nn::scale(src.m_weights[k], alpha);
         for (std::size_t i = 0; i < NOut; ++i)
-            m_biases[i] = alphaInv * m_biases[i] + alpha * src.m_biases[i];
+            m_biases[i] = nn::scale(m_biases[i], alphaInv) + nn::scale(src.m_biases[i], alpha);
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -289,8 +361,10 @@ public:
     }
 
     void RandomiseLin(FastRNG & rng, T wmin, T wmax, T bmin, T bmax) {
-        for (T & w : m_weights) w = static_cast<T>(rng.next_range(wmin, wmax));
-        for (T & b : m_biases)  b = static_cast<T>(rng.next_range(bmin, bmax));
+        for (T & w : m_weights)
+            w = static_cast<T>(rng.next_range(nn::to_float(wmin), nn::to_float(wmax)));
+        for (T & b : m_biases)
+            b = static_cast<T>(rng.next_range(nn::to_float(bmin), nn::to_float(bmax)));
     }
 
     void DrawWeights(FastRNG & rng, float scale) {
@@ -299,27 +373,27 @@ public:
 
     /// Add Gaussian noise to weights (matches Layer<T>::MoveWeights spirit).
     void MoveWeights(FastRNG & rng, T speed) {
-        for (T & w : m_weights) w += static_cast<T>(rng.next_normal((float)speed));
+        for (T & w : m_weights) w += static_cast<T>(rng.next_normal(nn::to_float(speed)));
     }
 
     // ── Diagnostics ──
     T getWeightNorm() const {
         T s = T(0);
         for (const T& w : m_weights) s += w * w;
-        return std::sqrt(s);
+        return nn::sqrt(s);
     }
 
     bool CheckAndFixWeights() {
         bool corrupt = false;
         for (std::size_t k = 0; k < kWeights; ++k) {
-            if (std::isinf(m_weights[k]) || std::isnan(m_weights[k])) {
+            if (nn::isinf(m_weights[k]) || nn::isnan(m_weights[k])) {
                 m_weights[k] = T(0);
                 if constexpr (EnableTraining) m_sq_grad_avg[k] = T(0);
                 corrupt = true;
             }
         }
         for (std::size_t i = 0; i < NOut; ++i) {
-            if (std::isinf(m_biases[i]) || std::isnan(m_biases[i])) {
+            if (nn::isinf(m_biases[i]) || nn::isnan(m_biases[i])) {
                 m_biases[i] = T(0);
                 if constexpr (EnableTraining) m_bias_sq_grad_avg[i] = T(0);
                 corrupt = true;
