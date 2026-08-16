@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdlib>
 #include <concepts>
 #include <type_traits>
 #include <limits>
@@ -519,7 +520,7 @@ public:
         
         if (range == 0) return min_val;
         
-        uint32_t r = get_rand_32();
+        uint32_t r = static_cast<uint32_t>(rand());
         
         // For small ranges, avoid 64-bit math
         // Safe if range * (r >> 16) fits in 32 bits
@@ -540,7 +541,7 @@ public:
         
         if (range == 0) return min_val;
         
-        uint32_t r = rand();
+        uint32_t r = static_cast<uint32_t>(rand());
         
         // For small ranges, avoid 64-bit math
         // Safe if range * (r >> 16) fits in 32 bits
@@ -556,14 +557,14 @@ public:
     }
     // Fast [0, 1) range using hardware RNG
     static Fixed random_unit_hw() {
-        uint32_t r = get_rand_32();
+        uint32_t r = static_cast<uint32_t>(rand());
         // Shift to fit our fractional bits
         return Fixed::from_raw(static_cast<storage_type>(r >> (32 - FRACTIONAL_BITS)));
     }
 
     // Fast [-1, 1) range using hardware RNG  
     static Fixed random_bipolar_hw() {
-        int32_t r = static_cast<int32_t>(get_rand_32());
+        int32_t r = static_cast<int32_t>(rand());
         return Fixed::from_raw(r >> (32 - FRACTIONAL_BITS - 1));
     }
     
