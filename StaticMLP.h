@@ -47,6 +47,7 @@
 #define ENABLE_SAVE_SD 1
 #endif
 
+#include "MemoryDefs.hpp"
 #include "StaticLayer.h"
 #include "Loss.h"
 #include "utils/Serialise.hpp"
@@ -209,7 +210,7 @@ public:
     //  Inference
     // ════════════════════════════════════════════════════════════════════
     /// Core: reads kNumInputs from `input`, writes kNumOutputs to `output`.
-    void GetOutput(const T* input, T* output, bool for_inference = true) {
+    SMLP_CODE_ATTR void GetOutput(const T* input, T* output, bool for_inference = true) {
         const T* result = forward_layer<0>(input);
         for (std::size_t i = 0; i < kNumOutputs; ++i) output[i] = result[i];
 
@@ -218,7 +219,7 @@ public:
         }
     }
 
-    void GetOutput(const std::array<T, kNumInputs> & input,
+    SMLP_CODE_ATTR void GetOutput(const std::array<T, kNumInputs> & input,
                    std::array<T, kNumOutputs> & output,
                    bool for_inference = true) {
         GetOutput(input.data(), output.data(), for_inference);
@@ -267,7 +268,7 @@ public:
 
     /// Mini-batch RMSProp training (matches dynamic MLP<T>::TrainBatch), with
     /// gradient-norm clipping at 5.0. Uses the internal FastRNG to shuffle.
-    T TrainBatch(const training_pair_t & data, float learning_rate,
+    SMLP_CODE_ATTR T TrainBatch(const training_pair_t & data, float learning_rate,
                  int max_iterations = 5000, std::size_t batch_size = 8,
                  float min_error_cost = 0.001f, bool /*output_log*/ = true) {
         static_assert(EnableTraining, "TrainBatch() requires EnableTraining=true");
@@ -495,7 +496,7 @@ private:
     // Descend layers, immediate weight update; err for layer I is the delta
     // produced by layer I+1. Parity of I keeps err and delta on distinct buffers.
     template<std::size_t I>
-    void backprop_immediate(const T* err, float lr) {
+    SMLP_CODE_ATTR void backprop_immediate(const T* err, float lr) {
         auto & layer = std::get<I>(m_layers);
         T* delta = (I & 1) ? m_bp1.data() : m_bp0.data();
         layer.UpdateImmediate(layer.m_cached_input.data(), err, lr, delta);
@@ -503,7 +504,7 @@ private:
     }
 
     template<std::size_t I>
-    void backprop_accumulate(const T* err) {
+    SMLP_CODE_ATTR void backprop_accumulate(const T* err) {
         auto & layer = std::get<I>(m_layers);
         T* delta = (I & 1) ? m_bp1.data() : m_bp0.data();
         layer.AccumulateGradients(layer.m_cached_input.data(), err, delta);
@@ -548,14 +549,14 @@ private:
     }
 
     template<std::size_t I>
-    const T* forward_layer(const T* in) {
+    SMLP_CODE_ATTR const T* forward_layer(const T* in) {
         T* out = (I & 1) ? m_buf_b.data() : m_buf_a.data();
         std::get<I>(m_layers).forward(in, out);
         if constexpr (I + 1 < kNumLayers) return forward_layer<I + 1>(out);
         else                              return out;
     }
 
-    void softmax_inplace(T* p) {
+    SMLP_CODE_ATTR void softmax_inplace(T* p) {
         T total = T(0);
         for (std::size_t i = 0; i < kNumOutputs; ++i) {
             T x = p[i];
