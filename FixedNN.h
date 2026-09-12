@@ -69,7 +69,7 @@ inline constexpr bool is_fixed_point_v = is_fixed_point<T>::value;
 namespace nn {
 
 /// sqrt — integer Newton for fixed (no float), std::sqrt for float.
-template<typename T> inline T sqrt(T x) {
+template<typename T> SMLP_CODE_ATTR inline T sqrt(T x) {
     if constexpr (is_fixed_point_v<T>) return FixedPoint::sqrt(x);
     else                               return std::sqrt(x);
 }
@@ -102,13 +102,13 @@ template<typename T> inline float to_float(T x) {
 
 /// v * s where s is a runtime float. Float: identical to s*v (commutative).
 /// Fixed: convert the scalar once, then multiply.
-template<typename T> inline T scale(T v, float s) {
+template<typename T> SMLP_CODE_ATTR inline T scale(T v, float s) {
     if constexpr (is_fixed_point_v<T>) return v * T(s);
     else                               return v * s;
 }
 
 /// Make a T from a runtime float (e.g. min_error_cost compares).
-template<typename T> inline T from_float(float s) {
+template<typename T> SMLP_CODE_ATTR inline T from_float(float s) {
     if constexpr (is_fixed_point_v<T>) return T(s);
     else                               return static_cast<T>(s);
 }
@@ -125,7 +125,7 @@ template<typename T> inline T floor_eps(T e) {
 /// product + shift, no int64). Used in the backprop inner loops. The product
 /// `a_raw * b_raw` must fit int32 (range budget, same as the forward MAC), which
 /// holds for the bounded errors/weights/inputs of a normalised net (F <= 15).
-template<typename T> inline T fmul(T a, T b) {
+template<typename T> SMLP_CODE_ATTR inline T fmul(T a, T b) {
     if constexpr (is_fixed_point_v<T>) return a.mul_fast(b);
     else                               return a * b;
 }
@@ -135,7 +135,7 @@ template<typename T> inline T fmul(T a, T b) {
 /// per-weight integer sqrt + division. Newton's method on a base-4 normalised
 /// mantissa: x = nx * 4^e with nx in [1,4); r0 = 0.5 converges there. Requires
 /// 2*FRACTIONAL_BITS <= 30 (true for Q24.7 / Q20.11 / Q17.14).
-template<typename T> inline T rsqrt(T x) {
+template<typename T> SMLP_CODE_ATTR inline T rsqrt(T x) {
     using S = typename T::storage_type;
     if (x.value <= 0) return T(0);                    // guard: avoid infinite loop
     const S ONE  = T::ONE;

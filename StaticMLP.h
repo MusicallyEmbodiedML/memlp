@@ -330,6 +330,109 @@ public:
         return epoch_loss;
     }
 
+    /**
+     * @brief Zero-copy mini-batch RMSProp training directly over caller-owned
+     * strided arrays (e.g. `dataset::features[i].data()`), with no vector
+     * construction, array-to-vector conversion, or heap allocation.
+     *
+     * Mirrors the vector-based TrainBatch()'s RMSProp-plus-clipping semantics
+     * exactly, but reads samples via `features + s * feature_stride` /
+     * `labels + s * label_stride` and shuffles the caller-supplied
+     * `shuffle_indices` buffer in place instead of an internal std::vector.
+     *
+     * @param features Base pointer to `sample_count` rows of `kNumInputs`
+     * feature values each, `feature_stride` elements apart.
+     * @param feature_stride Elements between the start of consecutive feature
+     * rows; must be at least `kNumInputs`.
+     * @param labels Base pointer to `sample_count` rows of `kNumOutputs`
+     * label/target values each, `label_stride` elements apart.
+     * @param label_stride Elements between the start of consecutive label
+     * rows; must be at least `kNumOutputs`.
+     * @param sample_count Number of rows available at `features`/`labels`.
+     * @param learning_rate RMSProp learning rate.
+     * @param epochs Number of passes over the (re-shuffled) dataset.
+     * @param batch_size Samples accumulated per gradient step.
+     * @param shuffle_indices Caller-owned index storage, overwritten with the
+     * per-epoch shuffle order; never allocated by this function.
+     * @param shuffle_index_capacity Capacity of `shuffle_indices`; must be at
+     * least `sample_count`.
+     * @param final_loss Receives the last epoch's mean loss; only written on
+     * success, so a failed call leaves it untouched.
+     * @param min_error_cost Early-stopping threshold on the epoch loss.
+     * @return `false` on any invalid argument, leaving the network, `final_loss`,
+     * and `shuffle_indices` unmodified; `true` after a completed training run.
+     */
+    SMLP_CODE_ATTR bool TrainBatch(const T* features, std::size_t feature_stride,
+                 const T* labels, std::size_t label_stride,
+                 std::size_t sample_count,
+                 float learning_rate, uint32_t epochs,
+                 std::size_t batch_size,
+                 std::size_t* shuffle_indices, std::size_t shuffle_index_capacity,
+                 T& final_loss,
+                 float min_error_cost = 0.001f) {
+        static_assert(EnableTraining, "TrainBatch() requires EnableTraining=true");
+        // Validate every precondition before touching the network, final_loss,
+        // or the caller's shuffle buffer.
+        if (features == nullptr || labels == nullptr || shuffle_indices == nullptr) return false;
+        if (sample_count == 0 || batch_size == 0) return false;
+        if (feature_stride < kNumInputs || label_stride < kNumOutputs) return false;
+        if (shuffle_index_capacity < sample_count) return false;
+
+        const std::size_t n = sample_count;
+        const std::size_t n_batches = (n + batch_size - 1) / batch_size;
+
+        // Identity-initialise the caller-owned index buffer; no allocation.
+        for (std::size_t i = 0; i < n; ++i) shuffle_indices[i] = i;
+
+        T epoch_loss = T(0);
+        for (uint32_t it = 0; it < epochs; ++it) {
+            epoch_loss = T(0);
+            // Fisher-Yates shuffle in place on the caller's buffer, using the
+            // internal PRNG (same deterministic sequence as the vector overload).
+            for (std::size_t i = n; i > 1; --i)
+                std::swap(shuffle_indices[i - 1], shuffle_indices[m_rng.next_u32() % i]);
+
+            std::size_t cursor = 0;
+            for (std::size_t b = 0; b < n_batches; ++b) {
+                std::size_t cur = std::min(batch_size, n - cursor);
+                T batch_inv = T(1.0) / static_cast<T>(cur);
+                for_each_layer([](auto & l) { l.InitGradientAccumulators(); });
+
+                T batch_loss = T(0);
+                for (std::size_t i = 0; i < cur; ++i) {
+                    // Read this sample's row directly from the caller's strided
+                    // arrays; no copy into an intermediate container.
+                    std::size_t s = shuffle_indices[cursor++];
+                    const T* feat  = features + s * feature_stride;
+                    const T* label = labels   + s * label_stride;
+                    const T* out = forward_layer<0>(feat);
+                    for (std::size_t o = 0; o < kNumOutputs; ++o) m_pred[o] = out[o];
+                    batch_loss += compute_loss<Loss>(label, m_pred.data(),
+                                                     m_deriv.data(), kNumOutputs, T(1.0));
+                    backprop_accumulate<kNumLayers - 1>(m_deriv.data());
+                }
+
+                // Gradient-norm clipping (threshold 5.0, matches dynamic/vector path).
+                T sumsq = T(0);
+                for_each_layer([&](auto & l) { sumsq += l.GetGradSumSquared(batch_inv); });
+                T norm = nn::sqrt(sumsq);
+                if (norm > T(5.0)) {
+                    T coef = T(5.0) / norm;
+                    for_each_layer([coef](auto & l) { l.ScaleAccumulatedGradients(coef); });
+                }
+                for_each_layer([&](auto & l) {
+                    l.ApplyAccumulatedGradients(learning_rate, batch_inv);
+                });
+                epoch_loss += batch_loss / static_cast<T>(cur);
+            }
+            epoch_loss /= static_cast<T>(n_batches);
+            if (m_progress_callback) m_progress_callback(static_cast<int>(it), epoch_loss);
+            if (epoch_loss < nn::from_float<T>(min_error_cost)) break; // early stop
+        }
+        final_loss = epoch_loss; // write-back only on success
+        return true;
+    }
+
     void SetProgressCallback(std::function<void(int, T)> cb) {
         m_progress_callback = std::move(cb);
     }
