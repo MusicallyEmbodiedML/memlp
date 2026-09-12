@@ -89,6 +89,20 @@ struct BuildLayers<T, EnableTraining, Layout<S0>, Activations<>> {
 // ════════════════════════════════════════════════════════════════════════
 //  Loss — compile-time dispatch on raw pointers (no allocation, matches Loss.h)
 // ════════════════════════════════════════════════════════════════════════
+/**
+ * @brief Compile-time-selected loss and its gradient, on raw pointers.
+ * @tparam L Loss function selector.
+ * @tparam T Value type.
+ * @param expected Pointer to `n` target values (labels, or class probabilities).
+ * @param actual Pointer to `n` predictions (raw logits for categorical cross-entropy).
+ * @param deriv Pointer to `n` elements receiving the loss gradient.
+ * @param n Number of elements.
+ * @param ssr Sample-size reciprocal applied to the loss and gradient.
+ * @return The computed loss value.
+ *
+ * The categorical-cross-entropy branch delegates to the shared, allocation-free
+ * ::loss::CategoricalCrossEntropyLogits() rather than duplicating it here.
+ */
 template<loss::LOSS_FUNCTIONS L, typename T>
 SMLP_CODE_ATTR inline T compute_loss(const T* expected, const T* actual, T* deriv,
                       std::size_t n, T ssr) {
@@ -102,19 +116,7 @@ SMLP_CODE_ATTR inline T compute_loss(const T* expected, const T* actual, T* deri
         }
         return accum * ssr;
     } else { // LOSS_CATEGORICAL_CROSSENTROPY
-        T max_logit = actual[0];
-        for (std::size_t i = 1; i < n; ++i) if (actual[i] > max_logit) max_logit = actual[i];
-        T sum_exp = T(0);
-        for (std::size_t i = 0; i < n; ++i) sum_exp += nn::exp(actual[i] - max_logit);
-        T log_sum_exp = max_logit + nn::log(sum_exp);
-        T loss = T(0);
-        for (std::size_t i = 0; i < n; ++i)
-            if (expected[i] > T(0.5)) { loss = -actual[i] + log_sum_exp; break; }
-        for (std::size_t i = 0; i < n; ++i) {
-            T sm = nn::exp(actual[i] - max_logit) / sum_exp;
-            deriv[i] = (sm - expected[i]) * ssr;
-        }
-        return loss * ssr;
+        return loss::CategoricalCrossEntropyLogits(expected, actual, deriv, n, ssr);
     }
 }
 
@@ -218,7 +220,9 @@ public:
         for (std::size_t i = 0; i < kNumOutputs; ++i) output[i] = result[i];
 
         if constexpr (Loss == loss::LOSS_FUNCTIONS::LOSS_CATEGORICAL_CROSSENTROPY) {
-            if (for_inference && kNumOutputs > 1) softmax_inplace(output);
+            // Probabilities are only materialised on request; class prediction
+            // and accuracy elsewhere use the raw-logit argmax directly.
+            if (for_inference && kNumOutputs > 1) utils::SoftmaxInPlace(output, kNumOutputs);
         }
     }
 
@@ -557,17 +561,6 @@ private:
         std::get<I>(m_layers).forward(in, out);
         if constexpr (I + 1 < kNumLayers) return forward_layer<I + 1>(out);
         else                              return out;
-    }
-
-    SMLP_CODE_ATTR void softmax_inplace(T* p) {
-        T total = T(0);
-        for (std::size_t i = 0; i < kNumOutputs; ++i) {
-            T x = p[i];
-            if (x > T(15.0)) x = T(15.0); else if (x < T(-15.0)) x = T(-15.0);
-            p[i] = nn::exp(x);
-            total += p[i];
-        }
-        for (std::size_t i = 0; i < kNumOutputs; ++i) p[i] /= total;
     }
 
     // ── Compile-time tuple iteration helpers ──

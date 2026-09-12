@@ -16,9 +16,14 @@
 
 #include <vector>
 #include <cmath>
+#include <cstddef>
 #include <unordered_map>
 // #include <string>
 
+// Placement.h defines SMLP_CODE_ATTR as blank if not already bound. A host
+// project that wants real placement must #include its own binding header
+// (e.g. MemoryDefs.hpp) before any mlp/*.h header, this one included.
+#include "Placement.h"
 
 #if defined(__XS3A__)
 
@@ -76,54 +81,74 @@ inline T MSE(const std::vector<T> &expected, const std::vector<T> &actual,
 }
 
 /**
+ * @brief Computes stable categorical cross-entropy loss and its logits gradient
+ *        from raw pointers, allocating nothing.
+ * @tparam T The type of the values
+ * @param target Pointer to `n` target class probabilities (one-hot or general)
+ * @param logits Pointer to `n` raw (pre-softmax) logits
+ * @param logits_grad Pointer to `n` elements receiving softmax(logits) - target,
+ *        scaled by `sampleSizeReciprocal`
+ * @param n Number of classes
+ * @param sampleSizeReciprocal Reciprocal of the sample size for normalization
+ * @return The computed categorical cross-entropy loss value
+ *
+ * Uses the log-sum-exp trick for numerical stability and evaluates the full
+ * `-Σ target[i] * log_softmax[i]` contract, so `target` need not be one-hot.
+ */
+template<typename T>
+MLP_LOSS_FN
+SMLP_CODE_ATTR
+inline T CategoricalCrossEntropyLogits(const T *target, const T *logits, T *logits_grad,
+                                        std::size_t n, T sampleSizeReciprocal) {
+
+    // Max-shift the logits before exponentiating (log-sum-exp trick).
+    T max_logit = logits[0];
+    for (std::size_t i = 1; i < n; i++) {
+        if (logits[i] > max_logit) {
+            max_logit = logits[i];
+        }
+    }
+
+    // log-sum-exp(logits) computed from the shifted exponentials.
+    T sum_exp = T(0);
+    for (std::size_t i = 0; i < n; i++) {
+        sum_exp += std::exp(logits[i] - max_logit);
+    }
+    T log_sum_exp = max_logit + std::log(sum_exp);
+
+    // Full cross-entropy sum, not just the one-hot fast path: supports any
+    // target distribution (probabilities), not only one-hot class labels.
+    T loss = T(0);
+    for (std::size_t i = 0; i < n; i++) {
+        loss -= target[i] * (logits[i] - log_sum_exp);
+    }
+
+    // Gradient w.r.t. logits is softmax(logits) - target, scaled per-sample.
+    for (std::size_t i = 0; i < n; i++) {
+        T softmax_i = std::exp(logits[i] - log_sum_exp);
+        logits_grad[i] = (softmax_i - target[i]) * sampleSizeReciprocal;
+    }
+
+    return loss * sampleSizeReciprocal;
+}
+
+/**
  * @brief Computes the Categorical Cross-Entropy loss between expected and actual values
  * @tparam T The type of the values
- * @param expected Vector of one-hot encoded expected values
+ * @param expected Vector of expected class-probability values (one-hot or general)
  * @param actual Vector of raw logits (pre-softmax)
  * @param loss_deriv Vector to store the loss derivatives
  * @param sampleSizeReciprocal Reciprocal of the sample size for normalization
  * @return The computed categorical cross-entropy loss value
+ *
+ * Thin delegator over the allocation-free ::CategoricalCrossEntropyLogits().
  */
 template<typename T>
 MLP_LOSS_FN
 inline T CategoricalCrossEntropy(const std::vector<T> &expected, const std::vector<T> &actual,
                                 std::vector<T> &loss_deriv, T sampleSizeReciprocal) {
-
-    // T n_elem = actual.size();
-
-    // Find maximum logit for numerical stability (log-sum-exp trick)
-    T max_logit = actual[0];
-    for (unsigned int i = 1; i < actual.size(); i++) {
-        if (actual[i] > max_logit) {
-            max_logit = actual[i];
-        }
-    }
-
-    // Compute log-sum-exp with numerical stability
-    T sum_exp = 0.;
-    for (unsigned int i = 0; i < actual.size(); i++) {
-        sum_exp += expf(actual[i] - max_logit);
-    }
-    T log_sum_exp = max_logit + logf(sum_exp);
-
-    // Find target class index and compute loss
-    T loss = 0.;
-    // int target_class = -1;
-    for (unsigned int i = 0; i < expected.size(); i++) {
-        if (expected[i] > (T)0.5) { // One-hot encoded, so target class has value 1
-            // target_class = i;
-            loss = -actual[i] + log_sum_exp;
-            break;
-        }
-    }
-
-    // Compute softmax probabilities and gradients
-    for (unsigned int i = 0; i < actual.size(); i++) {
-        T softmax_prob = expf(actual[i] - max_logit) / sum_exp;
-        loss_deriv[i] = (softmax_prob - expected[i]) * sampleSizeReciprocal;
-    }
-
-    return loss * sampleSizeReciprocal;
+    return CategoricalCrossEntropyLogits(expected.data(), actual.data(), loss_deriv.data(),
+                                          actual.size(), sampleSizeReciprocal);
 }
 
 /**

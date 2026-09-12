@@ -17,8 +17,14 @@
 #include <unordered_map>
 #include <vector>
 #include <cmath>
+#include <cstddef>
 #include <utility>
 #include <algorithm>
+
+// Placement.h defines SMLP_CODE_ATTR as blank if not already bound. A host
+// project that wants real placement must #include its own binding header
+// (e.g. MemoryDefs.hpp) before any mlp/*.h header, this one included.
+#include "Placement.h"
 
 /**
  * @enum ACTIVATION_FUNCTIONS
@@ -394,29 +400,44 @@ struct gen_randn {
 };
 
 /**
+ * @brief Applies softmax in place over a raw buffer, allocating nothing.
+ * @tparam T The type of the elements.
+ * @param values Pointer to `count` elements, overwritten with their softmax.
+ * @param count Number of elements.
+ *
+ * Max-shifts the inputs before exponentiating (subtracts the maximum element),
+ * which keeps every exponent <= 0 so the result stays finite for arbitrarily
+ * large positive or negative inputs while leaving the softmax value unchanged.
+ */
+template<typename T>
+MLP_ACTIVATION_FN
+SMLP_CODE_ATTR
+inline void SoftmaxInPlace(T *values, std::size_t count) {
+  T max_val = values[0];
+  for (std::size_t i = 1; i < count; i++) {
+    if (values[i] > max_val) max_val = values[i];
+  }
+  T total = T(0);
+  for (std::size_t i = 0; i < count; i++) {
+    values[i] = std::exp(values[i] - max_val);
+    total += values[i];
+  }
+  for (std::size_t i = 0; i < count; i++) {
+    values[i] /= total;
+  }
+}
+
+/**
  * @brief Applies the softmax function to a vector.
  * @tparam T The type of the elements in the vector.
  * @param output Pointer to the vector to apply softmax to.
+ *
+ * Thin delegator over the allocation-free ::SoftmaxInPlace().
  */
 template<typename T>
 MLP_ACTIVATION_FN
 inline void Softmax(std::vector<T> *output) {
-  size_t num_elements = output->size();
-  std::vector<T> exp_output(num_elements);
-  T exp_total = 0;
-  for (size_t i = 0; i < num_elements; i++) {
-    float output_i = (*output)[i];
-    if (output_i > 15.f) {
-      output_i = 15.f;
-    } else if (output_i < -15.f) {
-      output_i = -15.f;
-    }
-    exp_output[i] = std::exp(output_i);
-    exp_total += exp_output[i];
-  }
-  for (size_t i = 0; i < num_elements; i++) {
-    (*output)[i] = exp_output[i] / exp_total;
-  }
+  SoftmaxInPlace(output->data(), output->size());
 }
 
 /**
