@@ -47,7 +47,10 @@
 #define ENABLE_SAVE_SD 1
 #endif
 
-#include "MemoryDefs.hpp"
+// Placement.h defines SMLP_CODE_ATTR/SMLP_DATA_ATTR as blank if not already
+// defined. A host project that wants real placement must #include its own
+// binding header (e.g. MemoryDefs.hpp) before this header in the same TU.
+#include "Placement.h"
 #include "StaticLayer.h"
 #include "Loss.h"
 #include "utils/Serialise.hpp"
@@ -87,7 +90,7 @@ struct BuildLayers<T, EnableTraining, Layout<S0>, Activations<>> {
 //  Loss — compile-time dispatch on raw pointers (no allocation, matches Loss.h)
 // ════════════════════════════════════════════════════════════════════════
 template<loss::LOSS_FUNCTIONS L, typename T>
-inline T compute_loss(const T* expected, const T* actual, T* deriv,
+SMLP_CODE_ATTR inline T compute_loss(const T* expected, const T* actual, T* deriv,
                       std::size_t n, T ssr) {
     if constexpr (L == loss::LOSS_FUNCTIONS::LOSS_MSE) {
         T one_over_n = T(1.0) / static_cast<T>(n);
@@ -569,7 +572,7 @@ private:
 
     // ── Compile-time tuple iteration helpers ──
     template<typename F, std::size_t I = 0>
-    void for_each_layer(F && f) {
+    SMLP_CODE_ATTR void for_each_layer(F && f) {
         f(std::get<I>(m_layers));
         if constexpr (I + 1 < kNumLayers) for_each_layer<F, I + 1>(std::forward<F>(f));
     }

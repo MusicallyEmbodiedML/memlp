@@ -31,6 +31,7 @@
 
 #include "Utils.h"   // ACTIVATION_FUNCTIONS + utils:: activation math (reused, not modified)
 #include "FixedNN.h" // is_fixed_point_v, nn:: math wrappers, fixednn:: activations
+#include "Placement.h" // SMLP_CODE_ATTR hook (blank unless a host project binds it)
 
 #if defined(ARM_MATH_CM33) && defined(__arm__)
 #include <arm_math.h>
@@ -53,7 +54,7 @@ public:
 
     void seed(uint32_t s) { state_ = s ? s : 0x12345678u; }
 
-    uint32_t next_u32() {
+    SMLP_CODE_ATTR uint32_t next_u32() {
         uint32_t x = state_;
         x ^= x << 13;
         x ^= x >> 17;
@@ -85,7 +86,7 @@ private:
 //  Compile-time activation dispatch (reuses the inline math in Utils.h)
 // ════════════════════════════════════════════════════════════════════════
 template<ACTIVATION_FUNCTIONS A, typename T>
-inline T activate(T x) {
+SMLP_CODE_ATTR inline T activate(T x) {
     if constexpr (is_fixed_point_v<T>)                         return fixednn::activate<A>(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::SIGMOID)     return utils::sigmoid(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::TANH)        return utils::hyperbolic_tan(x);
@@ -98,7 +99,7 @@ inline T activate(T x) {
 }
 
 template<ACTIVATION_FUNCTIONS A, typename T>
-inline T activate_deriv(T x) {
+SMLP_CODE_ATTR inline T activate_deriv(T x) {
     if constexpr (is_fixed_point_v<T>)                         return fixednn::activate_deriv<A>(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::SIGMOID)     return utils::deriv_sigmoid(x);
     else if constexpr (A == ACTIVATION_FUNCTIONS::TANH)        return utils::deriv_hyperbolic_tan(x);
@@ -116,7 +117,7 @@ inline T activate_deriv(T x) {
 // division) in the backward pass: deriv_tanh = 1 - y^2, deriv_sigmoid = y(1-y).
 // Float is left on the exact x-based path so it stays bit-identical to MLP<T>.
 template<ACTIVATION_FUNCTIONS A, typename T>
-inline T activate_deriv_cached(T y, T x) {
+SMLP_CODE_ATTR inline T activate_deriv_cached(T y, T x) {
     if constexpr (is_fixed_point_v<T>) {
         if constexpr (A == ACTIVATION_FUNCTIONS::TANH)
             return T::from_int(1) - y.mul_fast(y);
@@ -166,7 +167,7 @@ public:
 
     // ── Forward pass ──
     // Reads NIn values from `input`, writes NOut activations to `output`.
-    inline void forward(const T* input, T* output) {
+    SMLP_CODE_ATTR inline void forward(const T* input, T* output) {
         if constexpr (EnableTraining) {
             for (std::size_t j = 0; j < NIn; ++j) m_cached_input[j] = input[j];
         }
@@ -213,7 +214,7 @@ public:
     /// Immediate per-sample SGD update — weights only, biases untouched
     /// (matches Layer<T>::UpdateWeights with accumulate=false). `delta_out`
     /// receives the back-propagated error for the previous layer (size NIn).
-    inline void UpdateImmediate(const T* input, const T* deriv_err,
+    SMLP_CODE_ATTR inline void UpdateImmediate(const T* input, const T* deriv_err,
                                 float lr, T* delta_out) {
         for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
         T* w = m_weights.data();
@@ -237,7 +238,7 @@ public:
     }
 
     /// Accumulate gradients for a batch (matches Layer<T>::AccumulateGradients).
-    inline void AccumulateGradients(const T* input, const T* deriv_err, T* delta_out) {
+    SMLP_CODE_ATTR inline void AccumulateGradients(const T* input, const T* deriv_err, T* delta_out) {
         for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
         const T* w = m_weights.data();
         T* g = m_grad_accum.data();
@@ -253,13 +254,13 @@ public:
         }
     }
 
-    void InitGradientAccumulators() {
+    SMLP_CODE_ATTR void InitGradientAccumulators() {
         m_grad_accum.fill(T(0));
         m_bias_grad_accum.fill(T(0));
     }
 
     /// Apply accumulated gradients with RMSProp (matches Layer<T>::ApplyAccumulatedGradients).
-    void ApplyAccumulatedGradients(float lr, T batch_size_inv) {
+    SMLP_CODE_ATTR void ApplyAccumulatedGradients(float lr, T batch_size_inv) {
         // maxSq caps the squared-gradient EMA. 1e6 isn't representable in the
         // smaller fixed formats (e.g. Q17.14 maxes ~131072) and would wrap to a
         // negative raw value, so for fixed use the format's largest value — the
@@ -309,7 +310,7 @@ public:
         }
     }
 
-    T GetGradSumSquared(T batch_size_inv) const {
+    SMLP_CODE_ATTR T GetGradSumSquared(T batch_size_inv) const {
         T s = T(0);
         for (std::size_t k = 0; k < kWeights; ++k) {
             T scaled = m_grad_accum[k] * batch_size_inv;
@@ -318,7 +319,7 @@ public:
         return s;
     }
 
-    void ScaleAccumulatedGradients(T coef) {
+    SMLP_CODE_ATTR void ScaleAccumulatedGradients(T coef) {
         for (std::size_t k = 0; k < kWeights; ++k) m_grad_accum[k] *= coef;
         for (std::size_t i = 0; i < NOut; ++i)     m_bias_grad_accum[i] *= coef;
     }
