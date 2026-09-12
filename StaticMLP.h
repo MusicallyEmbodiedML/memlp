@@ -174,9 +174,9 @@ public:
     }
 
     /// Seed the internal PRNG used by all randomised init / training shuffle.
-    void SetSeed(uint32_t s) { m_rng.seed(s); }
+    SMLP_CODE_ATTR void SetSeed(uint32_t s) { m_rng.seed(s); }
 
-    void InitXavier() {
+    SMLP_CODE_ATTR void InitXavier() {
         for_each_layer([this](auto & layer) { layer.InitXavier(m_rng); });
     }
     void RandomiseWeightsAndBiasesLin(T wmin, T wmax, T bmin, T bmax) {

@@ -52,7 +52,7 @@ class FastRNG {
 public:
     explicit FastRNG(uint32_t seed = 0x12345678u) : state_(seed ? seed : 0x12345678u) {}
 
-    void seed(uint32_t s) { state_ = s ? s : 0x12345678u; }
+    SMLP_CODE_ATTR void seed(uint32_t s) { state_ = s ? s : 0x12345678u; }
 
     SMLP_CODE_ATTR uint32_t next_u32() {
         uint32_t x = state_;
@@ -64,10 +64,10 @@ public:
     }
 
     /// Uniform in [0, 1).
-    float next_unit() { return (next_u32() >> 8) * (1.0f / 16777216.0f); }
+    SMLP_CODE_ATTR float next_unit() { return (next_u32() >> 8) * (1.0f / 16777216.0f); }
 
     /// Uniform in [-r, r].
-    float next_sym(float r) { return (next_unit() * 2.0f - 1.0f) * r; }
+    SMLP_CODE_ATTR float next_sym(float r) { return (next_unit() * 2.0f - 1.0f) * r; }
 
     /// Uniform in [lo, hi).
     float next_range(float lo, float hi) { return lo + next_unit() * (hi - lo); }
@@ -352,7 +352,7 @@ public:
     //  Initialisation (uses the caller's PRNG)
     // ════════════════════════════════════════════════════════════════════
     /// Xavier/He init (matches Layer<T>::InitXavier limits).
-    void InitXavier(FastRNG & rng) {
+    SMLP_CODE_ATTR void InitXavier(FastRNG & rng) {
         float limit;
         if constexpr (Act == ACTIVATION_FUNCTIONS::RELU)
             limit = std::sqrt(6.0f / (float)NIn);                 // He
