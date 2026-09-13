@@ -351,7 +351,10 @@ public:
     // ════════════════════════════════════════════════════════════════════
     //  Initialisation (uses the caller's PRNG)
     // ════════════════════════════════════════════════════════════════════
-    /// Xavier/He init (matches Layer<T>::InitXavier limits).
+    /// Xavier/He init (matches Layer<T>::InitXavier limits). Biases reset to
+    /// zero: InitXavier() only randomizes weights on a fresh instance (where
+    /// m_biases already defaults to zero), so a reused instance must be
+    /// reset explicitly to reproduce that same starting state.
     SMLP_CODE_ATTR void InitXavier(FastRNG & rng) {
         float limit;
         if constexpr (Act == ACTIVATION_FUNCTIONS::RELU)
@@ -359,6 +362,7 @@ public:
         else
             limit = std::sqrt(6.0f / (float)(NIn + NOut));        // Xavier
         for (T & w : m_weights) w = static_cast<T>(rng.next_sym(limit));
+        m_biases.fill(T(0));
     }
 
     void RandomiseLin(FastRNG & rng, T wmin, T wmax, T bmin, T bmax) {

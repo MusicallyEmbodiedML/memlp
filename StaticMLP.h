@@ -667,8 +667,13 @@ private:
     }
 
     // ── Compile-time tuple iteration helpers ──
+    // SMLP_CODE_ATTR_MULTI (not SMLP_CODE_ATTR): this template is instantiated
+    // many times per translation unit with genuinely different closure types F
+    // (InitXavier's, TrainBatch's, ...), all sharing SMLP_CODE_ATTR's one fixed
+    // __COUNTER__-derived section name; see mlp/Placement.h for why that needs
+    // `used` to avoid a GCC -O2/-O3 "section type conflict".
     template<typename F, std::size_t I = 0>
-    SMLP_CODE_ATTR void for_each_layer(F && f) {
+    SMLP_CODE_ATTR_MULTI void for_each_layer(F && f) {
         f(std::get<I>(m_layers));
         if constexpr (I + 1 < kNumLayers) for_each_layer<F, I + 1>(std::forward<F>(f));
     }
