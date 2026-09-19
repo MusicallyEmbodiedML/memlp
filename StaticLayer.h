@@ -167,11 +167,11 @@ public:
 
     // ── Forward pass ──
     // Reads NIn values from `input`, writes NOut activations to `output`.
-    SMLP_CODE_ATTR inline void forward(const T* input, T* output) {
+    SMLP_CODE_ATTR inline void forward(const T* __restrict input, T* __restrict output) {
         if constexpr (EnableTraining) {
             for (std::size_t j = 0; j < NIn; ++j) m_cached_input[j] = input[j];
         }
-        const T* w = m_weights.data();
+        const T* __restrict w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
             T sum;
             if constexpr (is_fixed_point_v<T>) {
@@ -214,10 +214,10 @@ public:
     /// Immediate per-sample SGD update — weights only, biases untouched
     /// (matches Layer<T>::UpdateWeights with accumulate=false). `delta_out`
     /// receives the back-propagated error for the previous layer (size NIn).
-    SMLP_CODE_ATTR inline void UpdateImmediate(const T* input, const T* deriv_err,
-                                float lr, T* delta_out) {
+    SMLP_CODE_ATTR inline void UpdateImmediate(const T* __restrict input, const T* __restrict deriv_err,
+                                float lr, T* __restrict delta_out) {
         for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
-        T* w = m_weights.data();
+        T* __restrict w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
             T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
             if constexpr (is_fixed_point_v<T>) {
@@ -238,10 +238,10 @@ public:
     }
 
     /// Accumulate gradients for a batch (matches Layer<T>::AccumulateGradients).
-    SMLP_CODE_ATTR inline void AccumulateGradients(const T* input, const T* deriv_err, T* delta_out) {
+    SMLP_CODE_ATTR inline void AccumulateGradients(const T* __restrict input, const T* __restrict deriv_err, T* __restrict delta_out) {
         for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
-        const T* w = m_weights.data();
-        T* g = m_grad_accum.data();
+        const T* __restrict w = m_weights.data();
+        T* __restrict g = m_grad_accum.data();
         for (std::size_t i = 0; i < NOut; ++i) {
             T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
             for (std::size_t j = 0; j < NIn; ++j) {
@@ -326,9 +326,9 @@ public:
 
     /// Propagate error to inputs WITHOUT updating weights (matches
     /// Layer<T>::CalcGradients). Stores the input-gradient in m_grads.
-    inline void CalcGradients(const T* /*input*/, const T* deriv_err, T* delta_out) {
+    inline void CalcGradients(const T* __restrict /*input*/, const T* __restrict deriv_err, T* __restrict delta_out) {
         for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
-        const T* w = m_weights.data();
+        const T* __restrict w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
             T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
             for (std::size_t j = 0; j < NIn; ++j) delta_out[j] += nn::fmul(es, w[j]);
