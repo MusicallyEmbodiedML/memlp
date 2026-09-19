@@ -146,7 +146,8 @@ static float kReLUSlope = 0.01f;
 template<typename T>
 MLP_ACTIVATION_FN
 inline T relu(T x) {
-    return (x > (T)0) ? (T)x : kReLUSlope * x;
+    T scaled = kReLUSlope * x;
+    return (x > scaled) ? x : scaled;
 }
 
 /**
