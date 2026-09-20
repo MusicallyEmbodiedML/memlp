@@ -55,33 +55,6 @@
 #include "Loss.h"
 #include "utils/Serialise.hpp"
 
-// Wraps a for_each_layer_impl(...) call (StaticMLP's compile-time layer-tuple
-// iteration helper, defined further down) in a locally-defined lambda that is
-// immediately invoked, tagged with SMLP_CODE_ATTR. Macros are expanded fresh
-// at EACH use, so the __COUNTER__-based section name SMLP_CODE_ATTR expands
-// to is genuinely unique per *call site* here -- unlike an attribute placed
-// directly on for_each_layer_impl's own definition, which is textually
-// written once and would be shared by every one of its many differently-
-// typed instantiations (see for_each_layer_impl's own comment). `[&]` only
-// ever needs to reach `this` (for_each_layer_impl is a member function); the
-// closure argument supplies its own capture list. Must be a macro, not a
-// member function, so that SMLP_CODE_ATTR is re-expanded per call site.
-//
-// `noinline`: without it, GCC reliably inlines this wrapper into its caller
-// anyway (an immediately-invoked lambda with exactly one call site is a very
-// strong inlining signal), duplicating for_each_layer_impl's full unrolled
-// body at every one of the ~15 for_each_layer call sites across this file --
-// measured ~4% slower on hardware than keeping one small, shared, per-call-
-// site clone reached via `bl` (which is what GCC's own IPA-SRA pass produces
-// once `noinline` rules out full inlining, byte-identical -- address-
-// normalized -- across all three memory configurations). This is a narrow,
-// deliberate exception to the no-`noinline` rule in MemoryDefs.hpp's
-// MEML_RUNS_ON_CORE_CODE(n) comment: that measured a ~1.7x regression from
-// forcing every *per-weight* helper (fmul, activate, ...) out of line inside
-// the innermost training loop; this forces exactly one wrapper out of line
-// per for_each_layer call site, i.e. once per batch, not once per weight.
-#define MEML_FOR_EACH_LAYER(closure) [&]() SMLP_CODE_ATTR __attribute__((noinline)) { this->for_each_layer_impl(closure); }()
-
 namespace smlp {
 
 // ── Architecture description tags ──
@@ -197,23 +170,23 @@ public:
     /// Fill all weights with a constant (biases left at 0) — mirrors the
     /// dynamic MLP's use_constant_weight_init path.
     void SetConstantWeights(T v) {
-        MEML_FOR_EACH_LAYER([v](auto & layer) { layer.m_weights.fill(v); });
+        for_each_layer([v](auto & layer) { layer.m_weights.fill(v); });
     }
 
     /// Seed the internal PRNG used by all randomised init / training shuffle.
     SMLP_CODE_ATTR void SetSeed(uint32_t s) { m_rng.seed(s); }
 
     SMLP_CODE_ATTR void InitXavier() {
-        MEML_FOR_EACH_LAYER([this](auto & layer) { layer.InitXavier(m_rng); });
+        for_each_layer([this](auto & layer) { layer.InitXavier(m_rng); });
     }
     void RandomiseWeightsAndBiasesLin(T wmin, T wmax, T bmin, T bmax) {
-        MEML_FOR_EACH_LAYER([&](auto & layer) { layer.RandomiseLin(m_rng, wmin, wmax, bmin, bmax); });
+        for_each_layer([&](auto & layer) { layer.RandomiseLin(m_rng, wmin, wmax, bmin, bmax); });
     }
     void DrawWeights(float scale = 1.f) {
-        MEML_FOR_EACH_LAYER([&](auto & layer) { layer.DrawWeights(m_rng, scale); });
+        for_each_layer([&](auto & layer) { layer.DrawWeights(m_rng, scale); });
     }
     void MoveWeights(T speed) {
-        MEML_FOR_EACH_LAYER([&](auto & layer) { layer.MoveWeights(m_rng, speed); });
+        for_each_layer([&](auto & layer) { layer.MoveWeights(m_rng, speed); });
     }
 
     // ── Geometry accessors (parity with MLP<T>) ──
@@ -325,7 +298,7 @@ public:
             for (std::size_t b = 0; b < n_batches; ++b) {
                 std::size_t cur = std::min(batch_size, n - cursor);
                 T batch_inv = T(1.0) / static_cast<T>(cur);
-                MEML_FOR_EACH_LAYER([](auto & l) { l.InitGradientAccumulators(); });
+                for_each_layer([](auto & l) { l.InitGradientAccumulators(); });
 
                 T batch_loss = T(0);
                 for (std::size_t i = 0; i < cur; ++i) {
@@ -339,13 +312,13 @@ public:
 
                 // Gradient-norm clipping (threshold 5.0, matches dynamic).
                 T sumsq = T(0);
-                MEML_FOR_EACH_LAYER([&](auto & l) { sumsq += l.GetGradSumSquared(batch_inv); });
+                for_each_layer([&](auto & l) { sumsq += l.GetGradSumSquared(batch_inv); });
                 T norm = nn::sqrt(sumsq);
                 if (norm > T(5.0)) {
                     T coef = T(5.0) / norm;
-                    MEML_FOR_EACH_LAYER([coef](auto & l) { l.ScaleAccumulatedGradients(coef); });
+                    for_each_layer([coef](auto & l) { l.ScaleAccumulatedGradients(coef); });
                 }
-                MEML_FOR_EACH_LAYER([&](auto & l) {
+                for_each_layer([&](auto & l) {
                     l.ApplyAccumulatedGradients(learning_rate, batch_inv);
                 });
                 epoch_loss += batch_loss / static_cast<T>(cur);
@@ -423,7 +396,7 @@ public:
             for (std::size_t b = 0; b < n_batches; ++b) {
                 std::size_t cur = std::min(batch_size, n - cursor);
                 T batch_inv = T(1.0) / static_cast<T>(cur);
-                MEML_FOR_EACH_LAYER([](auto & l) { l.InitGradientAccumulators(); });
+                for_each_layer([](auto & l) { l.InitGradientAccumulators(); });
 
                 T batch_loss = T(0);
                 for (std::size_t i = 0; i < cur; ++i) {
@@ -441,13 +414,13 @@ public:
 
                 // Gradient-norm clipping (threshold 5.0, matches dynamic/vector path).
                 T sumsq = T(0);
-                MEML_FOR_EACH_LAYER([&](auto & l) { sumsq += l.GetGradSumSquared(batch_inv); });
+                for_each_layer([&](auto & l) { sumsq += l.GetGradSumSquared(batch_inv); });
                 T norm = nn::sqrt(sumsq);
                 if (norm > T(5.0)) {
                     T coef = T(5.0) / norm;
-                    MEML_FOR_EACH_LAYER([coef](auto & l) { l.ScaleAccumulatedGradients(coef); });
+                    for_each_layer([coef](auto & l) { l.ScaleAccumulatedGradients(coef); });
                 }
-                MEML_FOR_EACH_LAYER([&](auto & l) {
+                for_each_layer([&](auto & l) {
                     l.ApplyAccumulatedGradients(learning_rate, batch_inv);
                 });
                 epoch_loss += batch_loss / static_cast<T>(cur);
@@ -513,11 +486,11 @@ public:
 
     // Batch-accumulator controls (parity with dynamic MLP<T>).
     void InitializeAllGradientAccumulators() {
-        MEML_FOR_EACH_LAYER([](auto & l) { l.InitGradientAccumulators(); });
+        for_each_layer([](auto & l) { l.InitGradientAccumulators(); });
     }
     void ClearAllGradientAccumulators() { InitializeAllGradientAccumulators(); }
     void ApplyAllAccumulatedGradients(float lr, T batch_size_inv) {
-        MEML_FOR_EACH_LAYER([&](auto & l) { l.ApplyAccumulatedGradients(lr, batch_size_inv); });
+        for_each_layer([&](auto & l) { l.ApplyAccumulatedGradients(lr, batch_size_inv); });
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -594,15 +567,15 @@ public:
     // ── Diagnostics (parity) ──
     bool CheckAndFixWeights() {
         bool any = false;
-        MEML_FOR_EACH_LAYER([&any](auto & layer) { any |= layer.CheckAndFixWeights(); });
+        for_each_layer([&any](auto & layer) { any |= layer.CheckAndFixWeights(); });
         return any;
     }
     void ResetOptimizerState() {
-        MEML_FOR_EACH_LAYER([](auto & layer) { layer.ResetOptimizerState(); });
+        for_each_layer([](auto & layer) { layer.ResetOptimizerState(); });
     }
     T GetGlobalWeightNorm() {
         T sumsq = T(0);
-        MEML_FOR_EACH_LAYER([&sumsq](auto & layer) {
+        for_each_layer([&sumsq](auto & layer) {
             T n = layer.getWeightNorm(); sumsq += n * n;
         });
         return nn::sqrt(sumsq);
@@ -694,25 +667,42 @@ private:
     }
 
     // ── Compile-time tuple iteration helpers ──
-    // for_each_layer_impl is instantiated many times per translation unit
-    // with genuinely different closure types F (InitXavier's, TrainBatch's,
-    // ...), so it can never carry an explicit `section` attribute of its
-    // own: that attribute would be attached to this ONE textual definition,
-    // giving every instantiation the SAME literal section name and
-    // reintroducing the COMDAT-group-per-section-name folding hazard
-    // MEML_RUNS_ON_CORE(n) works around for ordinary (non-template)
-    // functions (see MemoryDefs.hpp). `always_inline` instead guarantees it
-    // never exists as a standalone symbol needing a section at all: its only
-    // intended caller is MEML_FOR_EACH_LAYER (defined near the top of this
-    // file, before its first use), which gives each *call site* -- not each
-    // template instantiation -- its own uniquely SMLP_CODE_ATTR-tagged
-    // wrapper: the same __COUNTER__-based trick that already makes ordinary
-    // hot-path member functions safe, just moved to the call site since this
-    // template itself can't carry it.
+    // SMLP_CODE_ATTR_MULTI (not SMLP_CODE_ATTR): this template is instantiated
+    // many times per translation unit with genuinely different closure types F
+    // (InitXavier's, TrainBatch's, ...), so it can never carry an explicit
+    // `section` attribute of its own -- that attribute would be attached to
+    // this ONE textual definition, giving every instantiation the SAME
+    // literal section name and reintroducing the COMDAT-group-per-section-
+    // name folding hazard MEML_RUNS_ON_CORE(n) works around for ordinary
+    // (non-template) functions (see MemoryDefs.hpp). Left blank in every
+    // configuration -- including the core-1-pinned build -- -ffunction-
+    // sections still gives each instantiation its own safely-unique
+    // auto-named `.text._ZN...` section, and the compiler is free to choose,
+    // per call site, the fastest structure on its own (fully inline vs. one
+    // small shared out-of-line copy reached via `bl`); forcing a fixed
+    // structure at every call site (either full duplication via
+    // `always_inline`, or a `noinline` wrapper) measured slower on hardware
+    // in every configuration that tried it.
+    //
+    // Core 1's bank (CORE1_RAM) is not the SDK's default RAM region, so
+    // those auto-named sections can't reach it by falling through the
+    // ordinary catch-all the way core 0's (and the unpinned build's) do for
+    // free. Rather than tagging this template (impossible, see above) or
+    // wrapping every call site (works, but pays a real call), the project's
+    // own linker/section_copy_to_ram_text.incl -- included only for the
+    // core-1-pinned build, ahead of the SDK's own copy of that same fragment
+    // -- redirects any auto-named section whose mangled name contains
+    // "for_each_layer" into CORE1_RAM before the general catch-all further
+    // down in that same file claims it. That match is safe for exactly the
+    // reason leaving this template untagged is safe in the first place:
+    // -ffunction-sections already gives every instantiation its own
+    // distinct section name, so a wildcard on that name can never fold two
+    // different instantiations together the way a shared explicit attribute
+    // would.
     template<typename F, std::size_t I = 0>
-    __attribute__((always_inline)) void for_each_layer_impl(F && f) {
+    SMLP_CODE_ATTR_MULTI void for_each_layer(F && f) {
         f(std::get<I>(m_layers));
-        if constexpr (I + 1 < kNumLayers) for_each_layer_impl<F, I + 1>(std::forward<F>(f));
+        if constexpr (I + 1 < kNumLayers) for_each_layer<F, I + 1>(std::forward<F>(f));
     }
 
     template<std::size_t I>
