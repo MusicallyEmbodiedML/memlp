@@ -233,41 +233,64 @@ public:
     /// receives the back-propagated error for the previous layer (size NIn).
     SMLP_CODE_ATTR inline void UpdateImmediate(const T* __restrict input, const T* __restrict deriv_err,
                                 float lr, T* __restrict delta_out) {
-        for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
-        T* __restrict w = m_weights.data();
+        // Precompute es[i] once; NOut is small (<=64 here) so this is stack-cheap.
+        T es[NOut];
+        for (std::size_t i = 0; i < NOut; ++i)
+            es[i] = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
+
+        // delta_out[j] is a genuine NOut-way reduction over the (still-old)
+        // weights -- computed first, with j outermost so it accumulates in a
+        // register across the whole inner loop instead of a load-modify-store
+        // round trip through memory on every (i,j). Must run before the
+        // weight-update loop below, which overwrites w[] in place.
+        const T* __restrict w = m_weights.data();
+        for (std::size_t j = 0; j < NIn; ++j) {
+            T acc = T(0);
+            if constexpr (is_fixed_point_v<T>) {
+                for (std::size_t i = 0; i < NOut; ++i) acc += es[i].mul_fast(w[i * NIn + j]);
+            } else {
+                for (std::size_t i = 0; i < NOut; ++i) acc += es[i] * w[i * NIn + j];
+            }
+            delta_out[j] = acc;
+        }
+
+        // Per-cell weight update -- not a reduction, so the natural i-outer
+        // walk stays.
+        T* __restrict wm = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
-            T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
             if constexpr (is_fixed_point_v<T>) {
                 // 32-bit MAC + lr hoisted out of the inner loop (no int64).
-                const T es_lr = es.mul_fast(nn::from_float<T>(lr));
-                for (std::size_t j = 0; j < NIn; ++j) {
-                    delta_out[j] += es.mul_fast(w[j]);           // uses old weight
-                    w[j] -= es_lr.mul_fast(input[j]);            // then updates
-                }
+                const T es_lr = es[i].mul_fast(nn::from_float<T>(lr));
+                for (std::size_t j = 0; j < NIn; ++j) wm[j] -= es_lr.mul_fast(input[j]);
             } else {
-                for (std::size_t j = 0; j < NIn; ++j) {
-                    delta_out[j] += es * w[j];                   // uses old weight
-                    w[j] += static_cast<T>(lr * (-(es * input[j]))); // then updates
-                }
+                for (std::size_t j = 0; j < NIn; ++j) wm[j] += static_cast<T>(lr * (-(es[i] * input[j])));
             }
-            w += NIn;
+            wm += NIn;
         }
     }
 
     /// Accumulate gradients for a batch (matches Layer<T>::AccumulateGradients).
     SMLP_CODE_ATTR inline void AccumulateGradients(const T* __restrict input, const T* __restrict deriv_err, T* __restrict delta_out) {
-        for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
+        // Precompute es[i] once; NOut is small (<=64 here) so this is stack-cheap.
+        T es[NOut];
+        for (std::size_t i = 0; i < NOut; ++i) {
+            es[i] = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
+            m_bias_grad_accum[i] += es[i];
+        }
         const T* __restrict w = m_weights.data();
         T* __restrict g = m_grad_accum.data();
+        // g[i*NIn+j] is written exactly once per (i,j) -- unaffected by loop
+        // order, keep the natural row-major walk for it.
         for (std::size_t i = 0; i < NOut; ++i) {
-            T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
-            for (std::size_t j = 0; j < NIn; ++j) {
-                g[j] += nn::fmul(input[j], es);
-                delta_out[j] += nn::fmul(es, w[j]);
-            }
-            m_bias_grad_accum[i] += es;
-            w += NIn;
-            g += NIn;
+            for (std::size_t j = 0; j < NIn; ++j) g[i * NIn + j] += nn::fmul(input[j], es[i]);
+        }
+        // delta_out[j] is a genuine NOut-way reduction; put j outermost so it
+        // accumulates in a register across the whole inner loop instead of a
+        // load-modify-store round trip through memory on every (i,j).
+        for (std::size_t j = 0; j < NIn; ++j) {
+            T acc = T(0);
+            for (std::size_t i = 0; i < NOut; ++i) acc += nn::fmul(es[i], w[i * NIn + j]);
+            delta_out[j] = acc;
         }
     }
 
@@ -344,14 +367,20 @@ public:
     /// Propagate error to inputs WITHOUT updating weights (matches
     /// Layer<T>::CalcGradients). Stores the input-gradient in m_grads.
     inline void CalcGradients(const T* __restrict /*input*/, const T* __restrict deriv_err, T* __restrict delta_out) {
-        for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
+        // Precompute es[i] once; NOut is small (<=64 here) so this is stack-cheap.
+        T es[NOut];
+        for (std::size_t i = 0; i < NOut; ++i)
+            es[i] = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
+        // delta_out[j] is a genuine NOut-way reduction; put j outermost so it
+        // accumulates in a register across the whole inner loop instead of a
+        // load-modify-store round trip through memory on every (i,j).
         const T* __restrict w = m_weights.data();
-        for (std::size_t i = 0; i < NOut; ++i) {
-            T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
-            for (std::size_t j = 0; j < NIn; ++j) delta_out[j] += nn::fmul(es, w[j]);
-            w += NIn;
+        for (std::size_t j = 0; j < NIn; ++j) {
+            T acc = T(0);
+            for (std::size_t i = 0; i < NOut; ++i) acc += nn::fmul(es[i], w[i * NIn + j]);
+            delta_out[j] = acc;
+            m_grads[j] = acc;
         }
-        for (std::size_t j = 0; j < NIn; ++j) m_grads[j] = delta_out[j];
     }
 
     auto &       GetGrads()       { return m_grads; }
