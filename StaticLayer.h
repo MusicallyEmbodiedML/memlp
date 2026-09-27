@@ -194,7 +194,24 @@ public:
                                  NIn, (float32_t*)&dp);
                 sum += dp;
 #else
-                for (std::size_t j = 0; j < NIn; ++j) sum += w[j] * input[j];
+                // 4-way accumulator split: breaks the single-accumulator
+                // vfma.f32 dependency chain (each FMA must wait for the
+                // previous result on this core's non-pipelined-latency FPU)
+                // into 4 independent chains that can be in flight at once.
+                // Changes summation order vs. the single accumulator this
+                // replaces -- not bit-exact, see StaticMLPForwardAccumulatorTest.
+                {
+                    T acc0 = T(0), acc1 = T(0), acc2 = T(0), acc3 = T(0);
+                    std::size_t j = 0;
+                    for (; j + 4 <= NIn; j += 4) {
+                        acc0 += w[j + 0] * input[j + 0];
+                        acc1 += w[j + 1] * input[j + 1];
+                        acc2 += w[j + 2] * input[j + 2];
+                        acc3 += w[j + 3] * input[j + 3];
+                    }
+                    sum += (acc0 + acc1) + (acc2 + acc3);
+                    for (; j < NIn; ++j) sum += w[j] * input[j];
+                }
 #endif
             }
             m_inner_products[i] = sum;
