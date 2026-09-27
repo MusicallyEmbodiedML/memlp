@@ -609,7 +609,7 @@ private:
     SMLP_CODE_ATTR void backprop_immediate(const T* err, float lr) {
         auto & layer = std::get<I>(m_layers);
         T* delta = (I & 1) ? m_bp1.data() : m_bp0.data();
-        layer.UpdateImmediate(layer.m_cached_input.data(), err, lr, delta);
+        layer.UpdateImmediate(layer.cached_input(), err, lr, delta);
         if constexpr (I > 0) backprop_immediate<I - 1>(delta, lr);
     }
 
@@ -617,7 +617,7 @@ private:
     SMLP_CODE_ATTR void backprop_accumulate(const T* err) {
         auto & layer = std::get<I>(m_layers);
         T* delta = (I & 1) ? m_bp1.data() : m_bp0.data();
-        layer.AccumulateGradients(layer.m_cached_input.data(), err, delta);
+        layer.AccumulateGradients(layer.cached_input(), err, delta);
         if constexpr (I > 0) backprop_accumulate<I - 1>(delta);
     }
 
@@ -648,7 +648,7 @@ private:
     void calc_grad_impl(const T* err) {
         auto & layer = std::get<I>(m_layers);
         T* delta = (I & 1) ? m_bp1.data() : m_bp0.data();
-        layer.CalcGradients(layer.m_cached_input.data(), err, delta);
+        layer.CalcGradients(layer.cached_input(), err, delta);
         if constexpr (I > 0) calc_grad_impl<I - 1>(delta);
     }
 
@@ -661,7 +661,12 @@ private:
     template<std::size_t I>
     SMLP_CODE_ATTR const T* forward_layer(const T* in) {
         T* out = (I & 1) ? m_buf_b.data() : m_buf_a.data();
-        std::get<I>(m_layers).forward(in, out);
+        // Layer 0's input is always the caller-owned sample buffer (a vector
+        // element, or features+s*stride), stable until backprop reaches layer
+        // 0 -- skip the copy-into-m_cached_input and remember the pointer
+        // instead. Layers >0 read from m_buf_a/m_buf_b, which later layers
+        // overwrite before backprop runs, so they still need the copy.
+        std::get<I>(m_layers).template forward<(I != 0)>(in, out);
         if constexpr (I + 1 < kNumLayers) return forward_layer<I + 1>(out);
         else                              return out;
     }

@@ -153,6 +153,7 @@ public:
     std::array<T, EnableTraining ? kWeights : 0> m_sq_grad_avg{};
     std::array<T, EnableTraining ? NOut    : 0> m_bias_sq_grad_avg{};
     std::array<T, EnableTraining ? NIn     : 0> m_cached_input{};
+    const T* m_input_ptr = nullptr; ///< set instead of m_cached_input by forward<false>() (see cached_input())
     std::array<T, EnableTraining ? NIn     : 0> m_grads{}; ///< input-gradient (autograd)
     std::array<T, EnableTraining ? NOut    : 0> m_act_output{}; ///< cached post-activation y (for cheap derivatives)
 
@@ -165,11 +166,29 @@ public:
     T&       bias(std::size_t node)       { return m_biases[node]; }
     const T& bias(std::size_t node) const { return m_biases[node]; }
 
+    /// This layer's backward-pass input: m_input_ptr when the preceding
+    /// forward<false>() stored a raw pointer instead of copying, else the
+    /// forward<true>() (default) copy in m_cached_input. m_input_ptr stays
+    /// nullptr unless forward<false>() has run at least once, so this is
+    /// correct regardless of which template argument the caller used.
+    const T* cached_input() const { return m_input_ptr ? m_input_ptr : m_cached_input.data(); }
+
     // ── Forward pass ──
     // Reads NIn values from `input`, writes NOut activations to `output`.
+    // CacheInputByCopy=false skips the copy into m_cached_input and instead
+    // remembers `input` itself (see cached_input()) -- only safe when the
+    // caller guarantees `input` is unchanged until this layer's backward call
+    // runs (StaticMLP.h uses this for layer 0 only, whose input is always the
+    // caller-owned sample buffer, never a ping-pong scratch buffer that a
+    // later layer could overwrite before backprop reaches layer 0).
+    template<bool CacheInputByCopy = true>
     SMLP_CODE_ATTR inline void forward(const T* __restrict input, T* __restrict output) {
         if constexpr (EnableTraining) {
-            for (std::size_t j = 0; j < NIn; ++j) m_cached_input[j] = input[j];
+            if constexpr (CacheInputByCopy) {
+                for (std::size_t j = 0; j < NIn; ++j) m_cached_input[j] = input[j];
+            } else {
+                m_input_ptr = input;
+            }
         }
         const T* __restrict w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
