@@ -167,6 +167,15 @@ public:
 
     // ── Forward pass ──
     // Reads NIn values from `input`, writes NOut activations to `output`.
+    // fp-contract=off scoped to just this function: the 4-way accumulator
+    // split below relies on separate VMUL.F32/VADD.F32 issue (datasheet:
+    // interleaved across independent streams, each throughput-1) beating
+    // VFMA.F32's fixed latency; without this, GCC fuses each acc[k] +=
+    // w[j]*input[j] back into a single VFMA, defeating the split's intent.
+    // Scoped (not a build-wide flag) so it doesn't also de-fuse unrelated
+    // FMA sites elsewhere (e.g. RMSProp's rsqrt/div code).
+#pragma GCC push_options
+#pragma GCC optimize ("fp-contract=off")
     SMLP_CODE_ATTR inline void forward(const T* __restrict input, T* __restrict output) {
         if constexpr (EnableTraining) {
             for (std::size_t j = 0; j < NIn; ++j) m_cached_input[j] = input[j];
@@ -220,6 +229,7 @@ public:
             w += NIn;
         }
     }
+#pragma GCC pop_options
 
     // ════════════════════════════════════════════════════════════════════
     //  Training — RMSProp constants (match dynamic Layer<T>)
