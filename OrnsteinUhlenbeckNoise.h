@@ -40,6 +40,9 @@ private:
     float dt;      // Time step
     float x;       // Current state
 
-    std::mt19937 generator;
+    // minstd_rand, not mt19937: one of these exists per network output, and mt19937's
+    // ~2.5KB of state per instance cost ~230KB of heap at 92 outputs (enough to stop the
+    // firmware booting once a mode grew). Plenty for exploration noise; 4 bytes.
+    std::minstd_rand generator;
     std::normal_distribution<float> distribution;
 };
