@@ -33,6 +33,10 @@ public:
         x = 0.f;
     }
 
+    // Current value of the walk, and set it (e.g. to jump the walk somewhere else).
+    float get() const { return x; }
+    void set(float v) { x = v; }
+
 private:
     float theta;   // Mean reversion speed
     float mu;      // Long-term mean
