@@ -97,6 +97,10 @@ void MLP<T>::CreateMLP(const std::vector<size_t> & layers_nodes,
         loss::LossFunctionsManager<T>::Singleton();
     assert(loss_mgr.GetLossFunction(loss_function, &(this->loss_fn_)));
 
+    // Layer has a user-declared destructor, so it has no implicit move ctor and
+    // vector growth would deep-copy every earlier layer (~2x peak heap). Reserve
+    // so each Layer is constructed exactly once, in place.
+    m_layers.reserve(m_layers_nodes.size() - 1);
     for (size_t i = 0; i < m_layers_nodes.size() - 1; i++) {
         m_layers.emplace_back(Layer<T>(m_layers_nodes[i],
                                     m_layers_nodes[i + 1],
