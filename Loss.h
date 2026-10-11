@@ -17,6 +17,7 @@
 #include <vector>
 #include <cmath>
 #include <cstddef>
+#include <type_traits>
 #include <unordered_map>
 // #include <string>
 
@@ -24,6 +25,7 @@
 // project that wants real placement must #include its own binding header
 // (e.g. MemoryDefs.hpp) before any mlp/*.h header, this one included.
 #include "Placement.h"
+#include "FastMath.h" // smlp::exp_f32/log_f32: tagged, no core-0-bank libm dependency
 
 #if defined(__XS3A__)
 
@@ -95,6 +97,19 @@ inline T MSE(const std::vector<T> &expected, const std::vector<T> &actual,
  * Uses the log-sum-exp trick for numerical stability and evaluates the full
  * `-Σ target[i] * log_softmax[i]` contract, so `target` need not be one-hot.
  */
+namespace detail {
+// float uses the private, hot-path-placed exp/log (see mlp/FastMath.h); other
+// types (fixed-point) keep going through std::exp/std::log's own overloads.
+template<typename T> SMLP_CODE_ATTR inline T exp(T x) {
+    if constexpr (std::is_same_v<T, float>) return ::smlp::exp_f32(x);
+    else                                    return std::exp(x);
+}
+template<typename T> SMLP_CODE_ATTR inline T log(T x) {
+    if constexpr (std::is_same_v<T, float>) return ::smlp::log_f32(x);
+    else                                    return std::log(x);
+}
+} // namespace detail
+
 template<typename T>
 MLP_LOSS_FN
 SMLP_CODE_ATTR
@@ -112,9 +127,9 @@ inline T CategoricalCrossEntropyLogits(const T *target, const T *logits, T *logi
     // log-sum-exp(logits) computed from the shifted exponentials.
     T sum_exp = T(0);
     for (std::size_t i = 0; i < n; i++) {
-        sum_exp += std::exp(logits[i] - max_logit);
+        sum_exp += detail::exp(logits[i] - max_logit);
     }
-    T log_sum_exp = max_logit + std::log(sum_exp);
+    T log_sum_exp = max_logit + detail::log(sum_exp);
 
     // Full cross-entropy sum, not just the one-hot fast path: supports any
     // target distribution (probabilities), not only one-hot class labels.
@@ -125,7 +140,7 @@ inline T CategoricalCrossEntropyLogits(const T *target, const T *logits, T *logi
 
     // Gradient w.r.t. logits is softmax(logits) - target, scaled per-sample.
     for (std::size_t i = 0; i < n; i++) {
-        T softmax_i = std::exp(logits[i] - log_sum_exp);
+        T softmax_i = detail::exp(logits[i] - log_sum_exp);
         logits_grad[i] = (softmax_i - target[i]) * sampleSizeReciprocal;
     }
 
