@@ -95,7 +95,11 @@ void MLP<T>::CreateMLP(const std::vector<size_t> & layers_nodes,
     // Loss function selection
     loss::LossFunctionsManager<T> loss_mgr =
         loss::LossFunctionsManager<T>::Singleton();
-    assert(loss_mgr.GetLossFunction(loss_function, &(this->loss_fn_)));
+    // The call must live outside assert(): under NDEBUG the whole expression is
+    // compiled out, which left loss_fn_ null in Release builds.
+    const bool loss_ok = loss_mgr.GetLossFunction(loss_function, &(this->loss_fn_));
+    assert(loss_ok);
+    (void)loss_ok;
 
     // Layer has a user-declared destructor, so it has no implicit move ctor and
     // vector growth would deep-copy every earlier layer (~2x peak heap). Reserve
