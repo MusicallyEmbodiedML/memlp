@@ -106,11 +106,13 @@ void MLP<T>::CreateMLP(const std::vector<size_t> & layers_nodes,
     // so each Layer is constructed exactly once, in place.
     m_layers.reserve(m_layers_nodes.size() - 1);
     for (size_t i = 0; i < m_layers_nodes.size() - 1; i++) {
-        m_layers.emplace_back(Layer<T>(m_layers_nodes[i],
-                                    m_layers_nodes[i + 1],
-                                    layers_activfuncs[i],
-                                    use_constant_weight_init,
-                                    constant_weight_init));
+        // Pass the arguments, not a Layer temporary: with no move ctor the
+        // temporary would be deep-copied (peak = 2x the layer's buffers).
+        m_layers.emplace_back(static_cast<int>(m_layers_nodes[i]),
+                              static_cast<int>(m_layers_nodes[i + 1]),
+                              layers_activfuncs[i],
+                              use_constant_weight_init,
+                              constant_weight_init);
     }
 
     AllocateBuffers();
