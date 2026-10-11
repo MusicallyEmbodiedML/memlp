@@ -119,32 +119,75 @@ inline T CategoricalCrossEntropyLogits(const T *target, const T *logits, T *logi
     // Max-shift the logits before exponentiating (log-sum-exp trick).
     T max_logit = logits[0];
     for (std::size_t i = 1; i < n; i++) {
-        if (logits[i] > max_logit) {
+        if constexpr (std::is_same_v<T, float>) {
+            max_logit = __builtin_fmaxf(max_logit, logits[i]); // single vmaxnm, no flag round-trip
+        } else if (logits[i] > max_logit) {
             max_logit = logits[i];
         }
     }
 
-    // log-sum-exp(logits) computed from the shifted exponentials.
-    T sum_exp = T(0);
-    for (std::size_t i = 0; i < n; i++) {
-        sum_exp += detail::exp(logits[i] - max_logit);
-    }
-    T log_sum_exp = max_logit + detail::log(sum_exp);
+    if constexpr (std::is_same_v<T, float>) {
+        // Hot path (float). Domain-restricted exp/log (mlp/FastMath.h): after the
+        // max shift every exponent is <= 0 and the sum lies in [1, n]. The shifted
+        // exponentials are parked in logits_grad (it is exactly `n` floats of
+        // caller scratch) so the softmax is e_i / sum, not a second round of exp().
+        float sum_exp = 0.0f;
+        // Also accumulates sum(t) and sum(t*l) here so the cross-entropy needs no
+        // loop of its own: -sum t*(l - lse) = lse*sum(t) - sum(t*l), valid for any
+        // (not just one-hot) target.
+        float sum_t = 0.0f, sum_tl = 0.0f;
+        // Two elements per iteration, written out by hand (`#pragma GCC unroll`
+        // was not honoured here): one exp is a long dependent FMA chain on which
+        // the in-order FPU stalls, two independent chains let the scheduler
+        // interleave them.
+        std::size_t i = 0;
+        for (; i + 1 < n; i += 2) {
+            const float l0 = logits[i], l1 = logits[i + 1];
+            const float e0 = ::smlp::exp_nonpos_f32(l0 - max_logit);
+            const float e1 = ::smlp::exp_nonpos_f32(l1 - max_logit);
+            logits_grad[i]     = e0;
+            logits_grad[i + 1] = e1;
+            sum_exp += e0 + e1;
+            sum_t   += target[i] + target[i + 1];
+            sum_tl   = __builtin_fmaf(target[i + 1], l1, __builtin_fmaf(target[i], l0, sum_tl));
+        }
+        if (i < n) {
+            const float e = ::smlp::exp_nonpos_f32(logits[i] - max_logit);
+            logits_grad[i] = e;
+            sum_exp += e;
+            sum_t   += target[i];
+            sum_tl   = __builtin_fmaf(target[i], logits[i], sum_tl);
+        }
+        const float log_sum_exp = max_logit + ::smlp::log_ge1_f32(sum_exp);
+        const float loss = log_sum_exp * sum_t - sum_tl;
+        const float inv_sum = 1.0f / sum_exp;
+        for (std::size_t i = 0; i < n; i++) {
+            logits_grad[i] = (logits_grad[i] * inv_sum - target[i]) * sampleSizeReciprocal;
+        }
+        return loss * sampleSizeReciprocal;
+    } else {
+        // log-sum-exp(logits) computed from the shifted exponentials.
+        T sum_exp = T(0);
+        for (std::size_t i = 0; i < n; i++) {
+            sum_exp += detail::exp(logits[i] - max_logit);
+        }
+        T log_sum_exp = max_logit + detail::log(sum_exp);
 
-    // Full cross-entropy sum, not just the one-hot fast path: supports any
-    // target distribution (probabilities), not only one-hot class labels.
-    T loss = T(0);
-    for (std::size_t i = 0; i < n; i++) {
-        loss -= target[i] * (logits[i] - log_sum_exp);
-    }
+        // Full cross-entropy sum, not just the one-hot fast path: supports any
+        // target distribution (probabilities), not only one-hot class labels.
+        T loss = T(0);
+        for (std::size_t i = 0; i < n; i++) {
+            loss -= target[i] * (logits[i] - log_sum_exp);
+        }
 
-    // Gradient w.r.t. logits is softmax(logits) - target, scaled per-sample.
-    for (std::size_t i = 0; i < n; i++) {
-        T softmax_i = detail::exp(logits[i] - log_sum_exp);
-        logits_grad[i] = (softmax_i - target[i]) * sampleSizeReciprocal;
-    }
+        // Gradient w.r.t. logits is softmax(logits) - target, scaled per-sample.
+        for (std::size_t i = 0; i < n; i++) {
+            T softmax_i = detail::exp(logits[i] - log_sum_exp);
+            logits_grad[i] = (softmax_i - target[i]) * sampleSizeReciprocal;
+        }
 
-    return loss * sampleSizeReciprocal;
+        return loss * sampleSizeReciprocal;
+    }
 }
 
 /**

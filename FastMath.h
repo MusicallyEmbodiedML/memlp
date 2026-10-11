@@ -93,6 +93,58 @@ SMLP_CODE_ATTR inline float log_f32(float x) {
     return (f + y) + fe * 0.693359375f;
 }
 
+/// e^x for x <= 0 only (the log-sum-exp shifted domain). No NaN/sign/overflow
+/// handling: branch-free except for one underflow select, rounding via the
+/// 1.5*2^23 magic-number trick instead of a float->int->float round trip, FMA
+/// reduction, and 2^n applied by an integer add into the exponent field.
+/// Returns 0 for x < -86 (e^-86 ~ 4.5e-38 is already below any probability the
+/// loss can resolve, and that keeps the exponent add clear of denormals).
+/// Precondition: x <= 0 and not NaN; x > 0 is out of contract.
+SMLP_CODE_ATTR inline float exp_nonpos_f32(float x) {
+    // e^x = 2^(x*log2e) = 2^n * 2^f, n = round(x*log2e), f in [-0.5, 0.5].
+    // Two FMAs do the reduction (f = x*log2e - n with the product unrounded);
+    // the log2e constant's own rounding error is at most |x|*3e-8, i.e. below
+    // 1e-6 for any x that still contributes visibly to a softmax sum.
+    constexpr float kMagic = 12582912.0f; // 1.5 * 2^23
+    constexpr float kLog2e = 1.44269504f;
+    const float t  = __builtin_fmaf(x, kLog2e, kMagic);
+    const float fn = t - kMagic;                                  // round(x*log2e), exact
+    const int32_t n = static_cast<int32_t>(std::bit_cast<uint32_t>(t)) - 0x4B400000;
+    const float f  = __builtin_fmaf(x, kLog2e, -fn);
+
+    // Degree-5 relative-error minimax of 2^f on [-0.5, 0.5] (max rel err 1.1e-7,
+    // constant term pinned to 1 so x = 0 is exact), Estrin form:
+    //   P = pa + f^2*pb + f^4*pc, pairing adjacent terms.
+    const float f2 = f * f;
+    const float pa = __builtin_fmaf(6.93147063e-1f, f, 1.0f);
+    const float pb = __builtin_fmaf(5.55061512e-2f, f, 2.40222171e-1f);
+    const float pc = __builtin_fmaf(1.33022282e-3f, f, 9.67293885e-3f);
+    const float y  = __builtin_fmaf(f2 * f2, pc, __builtin_fmaf(f2, pb, pa));
+
+    const float scaled = std::bit_cast<float>(
+        static_cast<uint32_t>(static_cast<int32_t>(std::bit_cast<uint32_t>(y)) + (n << 23)));
+    return x < -86.0f ? 0.0f : scaled;
+}
+
+/// ln(x) for x >= 1 finite (log-sum-exp's sum of shifted exponentials, which
+/// lies in [1, n_classes]). x = 2^e * m, m in [1, 2); ln m = 2*atanh(s),
+/// s = (m-1)/(m+1) in [0, 1/3], summed to s^11 (error < 1e-7 absolute). One
+/// division, no data-dependent branches. Precondition: x >= 1, finite.
+SMLP_CODE_ATTR inline float log_ge1_f32(float x) {
+    const uint32_t bits = std::bit_cast<uint32_t>(x);
+    const float e = static_cast<float>(static_cast<int32_t>(bits >> 23) - 127);
+    const float m = std::bit_cast<float>((bits & 0x007FFFFFu) | 0x3F800000u);
+    const float s  = (m - 1.0f) / (m + 1.0f);
+    const float s2 = s * s;
+    float q = 1.0f / 11.0f;
+    q = __builtin_fmaf(q, s2, 1.0f / 9.0f);
+    q = __builtin_fmaf(q, s2, 1.0f / 7.0f);
+    q = __builtin_fmaf(q, s2, 1.0f / 5.0f);
+    q = __builtin_fmaf(q, s2, 1.0f / 3.0f);
+    q = __builtin_fmaf(q, s2, 1.0f);
+    return __builtin_fmaf(e, 0.693147181f, 2.0f * s * q);
+}
+
 } // namespace smlp
 
 #endif // SMLP_FAST_MATH_H
