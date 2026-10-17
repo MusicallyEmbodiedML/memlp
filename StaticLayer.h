@@ -143,18 +143,47 @@ public:
     static constexpr ACTIVATION_FUNCTIONS kAct = Act;
 
     // ── Core storage (always present) ──
-    std::array<T, kWeights> m_weights{};       ///< row-major [node*NIn + input]
-    std::array<T, NOut>     m_biases{};
-    std::array<T, NOut>     m_inner_products{}; ///< cached pre-activation
+    // Every streamed array is a PhasedArray (Placement.h): weights, gradient
+    // accumulators and squared-gradient averages at SMLP_WEIGHT_PHASE, every
+    // activation / scratch stream at SMLP_ACT_PHASE, each from a 16-byte boundary.
+    WeightArray<T, kWeights> m_weights{};       ///< row-major [node*NIn + input]
+    ActArray<T, NOut>        m_biases{};
+    ActArray<T, NOut>        m_inner_products{}; ///< cached pre-activation
 
     // ── Optimizer / backprop state (sized 0 for inference-only builds) ──
-    std::array<T, EnableTraining ? kWeights : 0> m_grad_accum{};
-    std::array<T, EnableTraining ? NOut    : 0> m_bias_grad_accum{};
-    std::array<T, EnableTraining ? kWeights : 0> m_sq_grad_avg{};
-    std::array<T, EnableTraining ? NOut    : 0> m_bias_sq_grad_avg{};
-    std::array<T, EnableTraining ? NIn     : 0> m_cached_input{};
-    std::array<T, EnableTraining ? NIn     : 0> m_grads{}; ///< input-gradient (autograd)
-    std::array<T, EnableTraining ? NOut    : 0> m_act_output{}; ///< cached post-activation y (for cheap derivatives)
+    WeightArray<T, EnableTraining ? kWeights : 0> m_grad_accum{};
+    ActArray<T, EnableTraining ? NOut    : 0> m_bias_grad_accum{};
+    WeightArray<T, EnableTraining ? kWeights : 0> m_sq_grad_avg{};
+    ActArray<T, EnableTraining ? NOut    : 0> m_bias_sq_grad_avg{};
+    ActArray<T, EnableTraining ? NIn     : 0> m_cached_input{};
+    ActArray<T, EnableTraining ? NIn     : 0> m_grads{}; ///< input-gradient (autograd)
+    ActArray<T, EnableTraining ? NOut    : 0> m_act_output{}; ///< cached post-activation y (for cheap derivatives)
+
+    /// Layout check, evaluated at compile time by StaticMLP. Every PhasedArray
+    /// member starts on a 16-byte boundary (its data then sits at the phase the
+    /// array type was given: SMLP_WEIGHT_PHASE or SMLP_ACT_PHASE), and the layer
+    /// is itself 16-byte aligned and a multiple of 16 bytes, so this holds for
+    /// any layer position inside an aligned owner.
+    static constexpr bool PhasesOk() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        bool ok = alignof(StaticLayer) == 16 && sizeof(StaticLayer) % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_weights)          % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_biases)           % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_inner_products)   % 16 == 0;
+        if constexpr (EnableTraining) {
+            ok = ok
+               && __builtin_offsetof(StaticLayer, m_grad_accum)       % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_sq_grad_avg)      % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_bias_grad_accum)  % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_bias_sq_grad_avg) % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_cached_input)     % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_grads)            % 16 == 0
+               && __builtin_offsetof(StaticLayer, m_act_output)       % 16 == 0;
+        }
+#pragma GCC diagnostic pop
+        return ok;
+    }
 
     // ── Accessors (parity with dynamic Layer<T>) ──
     static constexpr int GetInputSize()  { return (int)NIn; }

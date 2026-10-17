@@ -217,6 +217,29 @@ public:
     /// Pointer to the weight at global flat index `g` (nullptr if out of range).
     T* WeightPtrAt(std::size_t g) { return weight_ptr_impl<0>(g); }
 
+    /// Compile-time layout check (Step 1): the network's own PhasedArray members
+    /// start on 16-byte boundaries (their data then sits at SMLP_ACT_PHASE) and
+    /// every layer is 16-byte aligned and sized, so each layer's streams are at
+    /// their phases wherever the owning (16-byte-aligned) instance puts the
+    /// tuple. The host asserts this.
+    static constexpr bool PhasesOk() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        bool ok = alignof(StaticMLP) == 16
+               && __builtin_offsetof(StaticMLP, m_layers) % 16 == 0
+               && __builtin_offsetof(StaticMLP, m_buf_a)  % 16 == 0
+               && __builtin_offsetof(StaticMLP, m_buf_b)  % 16 == 0;
+        if constexpr (EnableTraining) {
+            ok = ok
+               && __builtin_offsetof(StaticMLP, m_pred) % 16 == 0
+               && __builtin_offsetof(StaticMLP, m_deriv) % 16 == 0
+               && __builtin_offsetof(StaticMLP, m_bp0)  % 16 == 0
+               && __builtin_offsetof(StaticMLP, m_bp1)  % 16 == 0;
+        }
+#pragma GCC diagnostic pop
+        return ok && layers_phases_ok<0>();
+    }
+
     // ════════════════════════════════════════════════════════════════════
     //  Inference
     // ════════════════════════════════════════════════════════════════════
@@ -592,14 +615,16 @@ private:
     friend struct ::test::profile::Access;
 #endif
     // ── Forward ping-pong over the layer tuple ──
-    std::array<T, kMaxWidth> m_buf_a{};
-    std::array<T, kMaxWidth> m_buf_b{};
+    // Streamed activation buffers: ActArray (Placement.h), SMLP_ACT_PHASE bytes
+    // past a 16-byte boundary, like the layers' activation streams.
+    ActArray<T, kMaxWidth> m_buf_a{};
+    ActArray<T, kMaxWidth> m_buf_b{};
 
     // ── Training scratch (sized 0 when training is disabled) ──
-    std::array<T, EnableTraining ? kNumOutputs : 0> m_pred{};
-    std::array<T, EnableTraining ? kNumOutputs : 0> m_deriv{};
-    std::array<T, EnableTraining ? kMaxWidth   : 0> m_bp0{};
-    std::array<T, EnableTraining ? kMaxWidth   : 0> m_bp1{};
+    ActArray<T, EnableTraining ? kNumOutputs : 0> m_pred{};
+    ActArray<T, EnableTraining ? kNumOutputs : 0> m_deriv{};
+    ActArray<T, EnableTraining ? kMaxWidth   : 0> m_bp0{};
+    ActArray<T, EnableTraining ? kMaxWidth   : 0> m_bp1{};
     FastRNG m_rng{};
     std::function<void(int, T)> m_progress_callback{};
 
@@ -628,6 +653,13 @@ private:
         T* delta = (I & 1) ? m_bp1.data() : m_bp0.data();
         layer.AccumulateGradients(layer.m_cached_input.data(), err, delta);
         if constexpr (I > 0) backprop_accumulate<I - 1>(delta);
+    }
+
+    template<std::size_t I>
+    static constexpr bool layers_phases_ok() {
+        bool ok = std::tuple_element_t<I, LayersTuple>::PhasesOk();
+        if constexpr (I + 1 < kNumLayers) ok = ok && layers_phases_ok<I + 1>();
+        return ok;
     }
 
     template<std::size_t I>
