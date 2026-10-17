@@ -55,6 +55,12 @@
 #include "Loss.h"
 #include "utils/Serialise.hpp"
 
+#if defined(MEML_RUN_PROFILE)
+// Profile-only: lets tests/ProfileForwardBackward.cpp reach the back-propagation
+// buffers so the per-layer harness runs on production's own scratch.
+namespace test { namespace profile { struct Access; } }
+#endif
+
 namespace smlp {
 
 // ── Architecture description tags ──
@@ -582,6 +588,9 @@ public:
     }
 
 private:
+#if defined(MEML_RUN_PROFILE)
+    friend struct ::test::profile::Access;
+#endif
     // ── Forward ping-pong over the layer tuple ──
     std::array<T, kMaxWidth> m_buf_a{};
     std::array<T, kMaxWidth> m_buf_b{};
