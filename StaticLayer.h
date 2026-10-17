@@ -241,6 +241,11 @@ public:
                 {
                     T acc0 = T(0), acc1 = T(0), acc2 = T(0), acc3 = T(0);
                     std::size_t j = 0;
+                    // unroll 1: no complete peeling. For the 32-input layer GCC
+                    // peels this loop and hoists all 32 inputs out of the row
+                    // loop into spill slots, i.e. stack reloads inside the hot
+                    // loop (plan-mlpBetterOptimisation.md Step 1d).
+#pragma GCC unroll 1
                     for (; j + 4 <= NIn; j += 4) {
                         acc0 += w[j + 0] * input[j + 0];
                         acc1 += w[j + 1] * input[j + 1];
