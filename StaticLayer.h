@@ -176,7 +176,7 @@ public:
     // FMA sites elsewhere (e.g. RMSProp's rsqrt/div code).
 #pragma GCC push_options
 #pragma GCC optimize ("fp-contract=off")
-    SMLP_CODE_ATTR inline void forward(const T* __restrict input, T* __restrict output) {
+    __attribute__((noinline, noclone)) SMLP_CODE_ATTR void forward(const T* __restrict input, T* __restrict output) {
         if constexpr (EnableTraining) {
             for (std::size_t j = 0; j < NIn; ++j) m_cached_input[j] = input[j];
         }
@@ -265,7 +265,7 @@ public:
     }
 
     /// Accumulate gradients for a batch (matches Layer<T>::AccumulateGradients).
-    SMLP_CODE_ATTR inline void AccumulateGradients(const T* __restrict input, const T* __restrict deriv_err, T* __restrict delta_out) {
+    __attribute__((noinline, noclone)) SMLP_CODE_ATTR void AccumulateGradients(const T* __restrict input, const T* __restrict deriv_err, T* __restrict delta_out) {
         for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
         const T* __restrict w = m_weights.data();
         T* __restrict g = m_grad_accum.data();
@@ -287,7 +287,7 @@ public:
     }
 
     /// Apply accumulated gradients with RMSProp (matches Layer<T>::ApplyAccumulatedGradients).
-    SMLP_CODE_ATTR void ApplyAccumulatedGradients(float lr, T batch_size_inv) {
+    __attribute__((noinline, noclone)) SMLP_CODE_ATTR void ApplyAccumulatedGradients(float lr, T batch_size_inv) {
         // maxSq caps the squared-gradient EMA. 1e6 isn't representable in the
         // smaller fixed formats (e.g. Q17.14 maxes ~131072) and would wrap to a
         // negative raw value, so for fixed use the format's largest value — the
