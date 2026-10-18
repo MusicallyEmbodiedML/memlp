@@ -248,7 +248,7 @@ public:
         }
     }
 
-    __attribute__((noinline, noclone)) SMLP_CODE_ATTR void forward(const T* __restrict input, T* __restrict output) {
+    __attribute__((noinline, noclone)) SMLP_HOT_CODE_ATTR void forward(const T* __restrict input, T* __restrict output) {
         if constexpr (EnableTraining) {
             for (std::size_t j = 0; j < NIn; ++j) m_cached_input[j] = input[j];
         }
@@ -363,7 +363,7 @@ public:
     /// With NeedInputGrad = false (the network's first layer, whose input
     /// gradient nobody consumes) `delta_out` is never touched and may be nullptr.
     template<bool NeedInputGrad = true>
-    __attribute__((noinline, noclone)) SMLP_CODE_ATTR void AccumulateGradients(const T* __restrict input, const T* __restrict deriv_err, T* __restrict delta_out) {
+    __attribute__((noinline, noclone)) SMLP_HOT_CODE_ATTR void AccumulateGradients(const T* __restrict input, const T* __restrict deriv_err, T* __restrict delta_out) {
         if constexpr (NeedInputGrad) {
             for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
         }

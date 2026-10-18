@@ -39,6 +39,15 @@
 #define SMLP_DATA_ATTR
 #endif
 
+// The innermost streaming kernels (StaticLayer::forward / AccumulateGradients).
+// A host that owns a scratch SRAM bank (unstriped, outside the banked groups)
+// binds this to a section in that bank so the kernels' instruction fetch cannot
+// collide with the data they stream (plan-mlpBetterOptimisation.md, Step 5).
+// Falls back to SMLP_CODE_ATTR, so a host that does nothing special is unchanged.
+#ifndef SMLP_HOT_CODE_ATTR
+#define SMLP_HOT_CODE_ATTR SMLP_CODE_ATTR
+#endif
+
 // ════════════════════════════════════════════════════════════════════════
 //  Bank-phase layout (plan-mlpBetterOptimisation.md, Step 1)
 // ════════════════════════════════════════════════════════════════════════
