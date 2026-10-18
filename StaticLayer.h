@@ -299,15 +299,20 @@ public:
     }
 
     /// Accumulate gradients for a batch (matches Layer<T>::AccumulateGradients).
+    /// With NeedInputGrad = false (the network's first layer, whose input
+    /// gradient nobody consumes) `delta_out` is never touched and may be nullptr.
+    template<bool NeedInputGrad = true>
     __attribute__((noinline, noclone)) SMLP_CODE_ATTR void AccumulateGradients(const T* __restrict input, const T* __restrict deriv_err, T* __restrict delta_out) {
-        for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
+        if constexpr (NeedInputGrad) {
+            for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
+        }
         const T* __restrict w = m_weights.data();
         T* __restrict g = m_grad_accum.data();
         for (std::size_t i = 0; i < NOut; ++i) {
             T es = deriv_err[i] * activate_deriv_cached<Act>(m_act_output[i], m_inner_products[i]);
             for (std::size_t j = 0; j < NIn; ++j) {
                 g[j] += nn::fmul(input[j], es);
-                delta_out[j] += nn::fmul(es, w[j]);
+                if constexpr (NeedInputGrad) delta_out[j] += nn::fmul(es, w[j]);
             }
             m_bias_grad_accum[i] += es;
             w += NIn;

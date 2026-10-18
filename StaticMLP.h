@@ -651,7 +651,7 @@ private:
     SMLP_CODE_ATTR void backprop_accumulate(const T* err) {
         auto & layer = std::get<I>(m_layers);
         T* delta = (I & 1) ? m_bp1.data() : m_bp0.data();
-        layer.AccumulateGradients(layer.m_cached_input.data(), err, delta);
+        layer.template AccumulateGradients<(I > 0)>(layer.m_cached_input.data(), err, delta);
         if constexpr (I > 0) backprop_accumulate<I - 1>(delta);
     }
 
