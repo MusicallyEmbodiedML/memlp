@@ -326,6 +326,39 @@ public:
         }
     }
 
+    /// One block of R output rows of AccumulateGradients (float path, Step 4).
+    /// The R error terms live in registers; per input j: one load of x, R
+    /// independent read-modify-write updates of the gradient rows and, with
+    /// NeedInputGrad, one load/store of delta[j] covering all R rows. The
+    /// delta chain keeps the rows' sequential order (row i0 first), so the
+    /// result is bit-identical to the one-row-at-a-time loop (multiply and add
+    /// contract to a fused vfma in both).
+    template<std::size_t R, bool NeedInputGrad>
+    __attribute__((always_inline)) inline void accumulate_block(const T* __restrict input,
+                                                                const T* __restrict deriv_err,
+                                                                T* __restrict delta_out, std::size_t i0) {
+        const T* __restrict w = m_weights.data() + i0 * NIn;
+        T* __restrict g = m_grad_accum.data() + i0 * NIn;
+        T es[R];
+#pragma GCC unroll 4
+        for (std::size_t r = 0; r < R; ++r) {
+            es[r] = deriv_err[i0 + r] * activate_deriv_cached<Act>(m_act_output[i0 + r], m_inner_products[i0 + r]);
+            m_bias_grad_accum[i0 + r] += es[r];
+        }
+#pragma GCC unroll 1
+        for (std::size_t j = 0; j < NIn; ++j) {
+            const T x = input[j];
+#pragma GCC unroll 4
+            for (std::size_t r = 0; r < R; ++r) g[r * NIn + j] += x * es[r];
+            if constexpr (NeedInputGrad) {
+                T d = delta_out[j];
+#pragma GCC unroll 4
+                for (std::size_t r = 0; r < R; ++r) d += es[r] * w[r * NIn + j];
+                delta_out[j] = d;
+            }
+        }
+    }
+
     /// Accumulate gradients for a batch (matches Layer<T>::AccumulateGradients).
     /// With NeedInputGrad = false (the network's first layer, whose input
     /// gradient nobody consumes) `delta_out` is never touched and may be nullptr.
@@ -334,6 +367,12 @@ public:
         if constexpr (NeedInputGrad) {
             for (std::size_t j = 0; j < NIn; ++j) delta_out[j] = T(0);
         }
+        if constexpr (std::is_same_v<T, float>) {
+            std::size_t i = 0;
+            for (; i + 4 <= NOut; i += 4) accumulate_block<4, NeedInputGrad>(input, deriv_err, delta_out, i);
+            if constexpr (NOut % 4 >= 2) { accumulate_block<2, NeedInputGrad>(input, deriv_err, delta_out, i); i += 2; }
+            if constexpr (NOut % 2 == 1) accumulate_block<1, NeedInputGrad>(input, deriv_err, delta_out, i);
+        } else {
         const T* __restrict w = m_weights.data();
         T* __restrict g = m_grad_accum.data();
         for (std::size_t i = 0; i < NOut; ++i) {
@@ -345,6 +384,7 @@ public:
             m_bias_grad_accum[i] += es;
             w += NIn;
             g += NIn;
+        }
         }
     }
 
