@@ -39,6 +39,12 @@
 
 namespace smlp {
 
+#if defined(ARM_MATH_CM33) && defined(__arm__)
+inline constexpr bool kCmsisDot = true;
+#else
+inline constexpr bool kCmsisDot = false;
+#endif
+
 // ════════════════════════════════════════════════════════════════════════
 //  Seedable PRNG — replaces std::random_device/std::mt19937 (no getentropy)
 // ════════════════════════════════════════════════════════════════════════
@@ -196,19 +202,62 @@ public:
 
     // ── Forward pass ──
     // Reads NIn values from `input`, writes NOut activations to `output`.
-    // fp-contract=off scoped to just this function: the 4-way accumulator
-    // split below relies on separate VMUL.F32/VADD.F32 issue (datasheet:
-    // interleaved across independent streams, each throughput-1) beating
-    // VFMA.F32's fixed latency; without this, GCC fuses each acc[k] +=
-    // w[j]*input[j] back into a single VFMA, defeating the split's intent.
-    // Scoped (not a build-wide flag) so it doesn't also de-fuse unrelated
-    // FMA sites elsewhere (e.g. RMSProp's rsqrt/div code).
+    //
+    // Float path (plan-mlpBetterOptimisation.md Step 3): rows are processed in
+    // blocks of 4. Each input value is loaded once and feeds four independent
+    // accumulator chains, one per row, each starting at that row's bias and
+    // walking j in order (acc += w*x). NOut % 4 is handled by a 2-row and a
+    // 1-row block.
+    //
+    // Multiply and add stay SEPARATE (fp-contract=off, scoped to these two
+    // functions): measured on the RP2350 (DWT, SRAM operands), VFMA/VMLA issue
+    // every ~3 cycles and cannot overlap, while VMUL + VADD cost ~2.1 per MAC
+    // together, so the fused form makes the loop FPU-bound (4.8 vs 3.9
+    // cycles/MAC including the loads). The result is therefore a sequential
+    // unfused chain per row (golden G1), not the fused chain of 17bc32a.
 #pragma GCC push_options
 #pragma GCC optimize ("fp-contract=off")
+    template<std::size_t R>
+    __attribute__((always_inline)) inline void forward_block(const T* __restrict input, T* __restrict output,
+                                                              std::size_t i0) {
+        const T* __restrict w = m_weights.data() + i0 * NIn;
+        T acc[R];
+        for (std::size_t r = 0; r < R; ++r) acc[r] = m_biases[i0 + r];
+        std::size_t j = 0;
+        // unroll 1: no complete peeling (for the 32-input layer GCC otherwise
+        // hoists the inputs into spill slots, see Step 1d).
+#pragma GCC unroll 1
+        for (; j + 2 <= NIn; j += 2) {
+            const T x0 = input[j], x1 = input[j + 1];
+#pragma GCC unroll 4
+            for (std::size_t r = 0; r < R; ++r) {
+                acc[r] += w[r * NIn + j]     * x0;
+                acc[r] += w[r * NIn + j + 1] * x1;
+            }
+        }
+        if (j < NIn) {
+            const T x0 = input[j];
+#pragma GCC unroll 4
+            for (std::size_t r = 0; r < R; ++r) acc[r] += w[r * NIn + j] * x0;
+        }
+#pragma GCC unroll 4
+        for (std::size_t r = 0; r < R; ++r) {
+            m_inner_products[i0 + r] = acc[r];
+            output[i0 + r] = activate<Act>(acc[r]);
+            if constexpr (EnableTraining) m_act_output[i0 + r] = output[i0 + r];  // cache y for backward
+        }
+    }
+
     __attribute__((noinline, noclone)) SMLP_CODE_ATTR void forward(const T* __restrict input, T* __restrict output) {
         if constexpr (EnableTraining) {
             for (std::size_t j = 0; j < NIn; ++j) m_cached_input[j] = input[j];
         }
+        if constexpr (std::is_same_v<T, float> && !kCmsisDot) {
+            std::size_t i = 0;
+            for (; i + 4 <= NOut; i += 4) forward_block<4>(input, output, i);
+            if constexpr (NOut % 4 >= 2) { forward_block<2>(input, output, i); i += 2; }
+            if constexpr (NOut % 2 == 1) forward_block<1>(input, output, i);
+        } else {
         const T* __restrict w = m_weights.data();
         for (std::size_t i = 0; i < NOut; ++i) {
             T sum;
@@ -232,35 +281,14 @@ public:
                                  NIn, (float32_t*)&dp);
                 sum += dp;
 #else
-                // 4-way accumulator split: breaks the single-accumulator
-                // vfma.f32 dependency chain (each FMA must wait for the
-                // previous result on this core's non-pipelined-latency FPU)
-                // into 4 independent chains that can be in flight at once.
-                // Changes summation order vs. the single accumulator this
-                // replaces -- not bit-exact, see StaticMLPForwardAccumulatorTest.
-                {
-                    T acc0 = T(0), acc1 = T(0), acc2 = T(0), acc3 = T(0);
-                    std::size_t j = 0;
-                    // unroll 1: no complete peeling. For the 32-input layer GCC
-                    // peels this loop and hoists all 32 inputs out of the row
-                    // loop into spill slots, i.e. stack reloads inside the hot
-                    // loop (plan-mlpBetterOptimisation.md Step 1d).
-#pragma GCC unroll 1
-                    for (; j + 4 <= NIn; j += 4) {
-                        acc0 += w[j + 0] * input[j + 0];
-                        acc1 += w[j + 1] * input[j + 1];
-                        acc2 += w[j + 2] * input[j + 2];
-                        acc3 += w[j + 3] * input[j + 3];
-                    }
-                    sum += (acc0 + acc1) + (acc2 + acc3);
-                    for (; j < NIn; ++j) sum += w[j] * input[j];
-                }
+                for (std::size_t j = 0; j < NIn; ++j) sum += w[j] * input[j];
 #endif
             }
             m_inner_products[i] = sum;
             output[i] = activate<Act>(sum);
             if constexpr (EnableTraining) m_act_output[i] = output[i];  // cache y for backward
             w += NIn;
+        }
         }
     }
 #pragma GCC pop_options
