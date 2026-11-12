@@ -267,16 +267,33 @@ public:
 
     /// Mini-batch RMSProp training (matches dynamic MLP<T>::TrainBatch), with
     /// gradient-norm clipping at 5.0. Uses the internal FastRNG to shuffle.
+    /// Copies the samples' addresses into reused scratch and trains from them;
+    /// callers that train every tick should use the pointer overload below.
     T TrainBatch(const training_pair_t & data, float learning_rate,
                  int max_iterations = 5000, std::size_t batch_size = 8,
-                 float min_error_cost = 0.001f, bool /*output_log*/ = true) {
+                 float min_error_cost = 0.001f, bool output_log = true) {
+        const std::size_t n = data.first.size();
+        if (m_feat_ptrs.size() < n) { m_feat_ptrs.resize(n); m_label_ptrs.resize(n); }
+        for (std::size_t i = 0; i < n; ++i) {
+            m_feat_ptrs[i]  = data.first[i].data();
+            m_label_ptrs[i] = data.second[i].data();
+        }
+        return TrainBatch(m_feat_ptrs.data(), m_label_ptrs.data(), n, learning_rate,
+                          max_iterations, batch_size, min_error_cost, output_log);
+    }
+
+    /// TrainBatch over n samples given as pointers: feats[i] -> kNumInputs values,
+    /// labels[i] -> kNumOutputs values. No heap allocation once the shuffle index
+    /// scratch has grown to n, and nothing is copied.
+    T TrainBatch(const T* const* feats, const T* const* labels, std::size_t n,
+                 float learning_rate, int max_iterations = 5000,
+                 std::size_t batch_size = 8, float min_error_cost = 0.001f,
+                 bool /*output_log*/ = true) {
         static_assert(EnableTraining, "TrainBatch() requires EnableTraining=true");
-        const auto & feats = data.first;
-        const auto & labels = data.second;
-        const std::size_t n = feats.size();
         const std::size_t n_batches = (n + batch_size - 1) / batch_size;
 
-        std::vector<std::size_t> idx(n);
+        if (m_batch_idx.size() < n) m_batch_idx.resize(n);
+        std::size_t* idx = m_batch_idx.data();
         for (std::size_t i = 0; i < n; ++i) idx[i] = i;
 
         T epoch_loss = T(0);
@@ -295,9 +312,9 @@ public:
                 T batch_loss = T(0);
                 for (std::size_t i = 0; i < cur; ++i) {
                     std::size_t s = idx[cursor++];
-                    const T* out = forward_layer<0>(feats[s].data());
+                    const T* out = forward_layer<0>(feats[s]);
                     for (std::size_t o = 0; o < kNumOutputs; ++o) m_pred[o] = out[o];
-                    batch_loss += compute_loss<Loss>(labels[s].data(), m_pred.data(),
+                    batch_loss += compute_loss<Loss>(labels[s], m_pred.data(),
                                                      m_deriv.data(), kNumOutputs, T(1.0));
                     backprop_accumulate<kNumLayers - 1>(m_deriv.data());
                 }
@@ -482,6 +499,10 @@ private:
     std::array<T, EnableTraining ? kMaxWidth   : 0> m_bp1{};
     FastRNG m_rng{};
     std::function<void(int, T)> m_progress_callback{};
+    // TrainBatch scratch, reused across calls (grows to the largest batch, then
+    // no further allocation).
+    std::vector<std::size_t> m_batch_idx{};
+    std::vector<const T*> m_feat_ptrs{}, m_label_ptrs{};
 
     // One per-sample SGD step: forward (caches inputs), loss, immediate backprop.
     T train_one_sample(const T* feat, const T* label, float lr, T ssr) {

@@ -152,6 +152,16 @@ public:
 		return indices;
 	}
 
+	/// sampleIndices into a caller-owned vector (reused: no allocation once its
+	/// capacity is enough).
+	void sampleIndices(size_t nMemories, std::vector<size_t>& out) {
+		out.clear();
+		if (mem.size() > 0) {
+			std::uniform_int_distribution<size_t> dist(0, mem.size()-1);
+			for (size_t i = 0; i < std::min(nMemories, mem.size()); i++) out.push_back(dist(g));
+		}
+	}
+
 	/**
 	 * @brief Returns a reference to an item at the specified index for in-place editing.
 	 * 

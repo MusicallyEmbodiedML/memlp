@@ -68,9 +68,23 @@ inline constexpr bool is_fixed_point_v = is_fixed_point<T>::value;
 // ════════════════════════════════════════════════════════════════════════
 namespace nn {
 
-/// sqrt — integer Newton for fixed (no float), std::sqrt for float.
+/// Hardware square root for float on Arm cores with an FPU (vsqrt.f32, 14 cycles).
+/// std::sqrt keeps errno semantics, so at -Os GCC emits a call (via a veneer) per
+/// use; in RMSProp that is one call per weight per batch. Callers pass x >= 0.
+inline float hw_sqrtf(float x) {
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 4)
+    float r;
+    __asm__("vsqrt.f32 %0, %1" : "=t"(r) : "t"(x));
+    return r;
+#else
+    return std::sqrt(x);
+#endif
+}
+
+/// sqrt — integer Newton for fixed (no float), hardware sqrt for float.
 template<typename T> inline T sqrt(T x) {
     if constexpr (is_fixed_point_v<T>) return FixedPoint::sqrt(x);
+    else if constexpr (std::is_same_v<T, float>) return hw_sqrtf(x);
     else                               return std::sqrt(x);
 }
 
